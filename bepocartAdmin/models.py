@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from bepocartBackend.models import *
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.hashers import make_password
 
@@ -92,6 +93,12 @@ class Product(models.Model):
 
 
 
+class Wishlist(models.Model):
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+
+    class Meta :
+        db_table ="Whishlist"
 
 
     

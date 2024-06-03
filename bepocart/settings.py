@@ -15,6 +15,8 @@ from datetime import timedelta
 from datetime import datetime, timedelta
 import os
 
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -78,6 +80,7 @@ ROOT_URLCONF = 'bepocart.urls'
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),  
 }
+JWT_EXPIRATION_MINUTES = 120 
 
 TEMPLATES = [
     {

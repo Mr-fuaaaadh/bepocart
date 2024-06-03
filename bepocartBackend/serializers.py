@@ -42,3 +42,10 @@ class SubcatecoryBasedProductView(serializers.ModelSerializer):
     class Meta :
         model = Product
         fields = "__all__"
+
+
+class WishlistSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Wishlist
+        fields = "__all__"
+        

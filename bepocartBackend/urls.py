@@ -11,6 +11,14 @@ urlpatterns = [
     path('subcategory/<int:pk>/',SubcategoryBasedProducts.as_view(), name="SubcategoryBasedProducts"),
 
 
+    path('wishlist/',CustomerWishlist.as_view(), name="CustomerWishlist"),
+    path('wishlist/<int:pk>/',CustomerAddProductInWishlist.as_view(), name="CustomerWishlist"),
+
+
+
+
+
+
 
 
 
