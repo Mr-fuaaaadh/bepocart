@@ -35,7 +35,7 @@ class SubcatecorySerializer(serializers.ModelSerializer):
 class ProductViewSerializer(serializers.ModelSerializer):
     class Meta :
         model = Product
-        fields = ['name','description','short_description','salePrice','stock','category','image']
+        fields = ['id','name','description','short_description','salePrice','stock','category','image','created_at']
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):

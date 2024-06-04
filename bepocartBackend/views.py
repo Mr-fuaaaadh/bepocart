@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from bepocartBackend.serializers import *
+from bepocartAdmin.serializers import *
 from bepocartBackend.models import *
 from bepocartAdmin.models import *
 from datetime import datetime, timedelta
@@ -132,6 +133,28 @@ class CustomerProductView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class CustomerCarousalView(APIView):
+    def get(self, request):
+        try:
+            banner = Carousal.objects.all()
+            serializer = CarousalSerializers(banner, many=True)
+            return Response({"banner": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class CustomerOfferBannerView(APIView):
+    def get(self, request):
+        try:
+            banner = OfferBanner.objects.all()
+            serializer = OfferBannerSerializers(banner, many=True)
+            return Response({"banner": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+        
+
 class SubcategoryBasedProducts(APIView):
     def get(self, request, pk):
         try:
@@ -147,10 +170,12 @@ class SubcategoryBasedProducts(APIView):
 
 
 
+from django.db import IntegrityError
+
 class CustomerAddProductInWishlist(APIView):
     def post(self, request, pk):
         try:
-            token = request.COOKIES.get('token')
+            token = request.headers.get('Authorization')
             print("Token:", token)  
 
             if not token:
@@ -176,6 +201,10 @@ class CustomerAddProductInWishlist(APIView):
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
+            # Check if the product is already in the user's wishlist
+            if Wishlist.objects.filter(user=user, product=product).exists():
+                return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
+
             wishlist_data = {'user': user.pk, 'product': product.pk}
             wishlist_serializer = WishlistSerializers(data=wishlist_data)
             if wishlist_serializer.is_valid():
@@ -184,15 +213,18 @@ class CustomerAddProductInWishlist(APIView):
             else:
                 return Response({"message": "Unable to add product to wishlist", "errors": wishlist_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                 
+        except IntegrityError as e:
+            return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
+
 class CustomerWishlist(APIView):
-    def get(self, request):
+    def post(self, request):
         try:
-            token = request.COOKIES.get('token')
+            token = request.headers.get('Authorization')
             print("Token:", token)  
 
             if not token:
@@ -220,6 +252,21 @@ class CustomerWishlist(APIView):
                 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class CustomerProductDeleteInWishlist(APIView):
+    def delete(self, request, pk):
+        try:
+            product = Wishlist.objects.filter(pk=pk).first()
+            if product is None:
+                return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            product.delete()
+            return Response({"message": "Product deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

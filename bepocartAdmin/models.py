@@ -4,23 +4,6 @@ from bepocartBackend.models import *
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.hashers import make_password
 
-class Admin(models.Model):
-    name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100)
-    password = models.CharField(max_length=100)
-
-    def save(self, *args, **kwargs):
-        self.password = make_password(self.password)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        db_table = "Admin"
-
-
-
 class Carousal(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="banner", max_length=100)
@@ -30,9 +13,17 @@ class Carousal(models.Model):
         db_table="banner"
 
 
+class OfferBanner(models.Model):
+    name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to="offer_banner", max_length=100)
+
+    class Meta :
+        db_table = "Offer_Banner"
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(max_length=100, upload_to="category/", null=True)
+    image = models.ImageField(upload_to="category/",max_length=100, null=True)
     
     def __str__(self):
         return self.name
@@ -71,12 +62,8 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
-    discount = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
-        validators=[MinValueValidator(0), MaxValueValidator(100)], 
-        default=0
-    )
+    discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0   )
+    offer_banner = models.ForeignKey(OfferBanner, on_delete=models.CASCADE, null=True)
     offer_type = models.CharField(max_length=100, null=True)
     offer_start_date = models.DateTimeField(blank=True, null=True)
     offer_end_date = models.DateTimeField(blank=True, null=True)
