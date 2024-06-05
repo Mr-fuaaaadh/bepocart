@@ -700,7 +700,7 @@ class SubcategoryDelete(APIView):
         
         return user, None
 
-    def get(self, request):
+    def get(self, request,pk):
         user, error_response = self.authenticate(request)
         if error_response:
             return error_response

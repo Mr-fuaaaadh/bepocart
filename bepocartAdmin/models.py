@@ -88,4 +88,14 @@ class Wishlist(models.Model):
         db_table ="Whishlist"
 
 
+class Cart(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product =  models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta :
+        db_table = "Cart"
+
+
     

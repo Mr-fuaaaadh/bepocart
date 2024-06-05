@@ -55,7 +55,7 @@ class CustomerLogin(APIView):
                     'exp': expiration_time,
                     'iat': datetime.utcnow()
                 }
-                token = jwt.encode(userToken, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
+                token = jwt.encode(userToken, settings.SECRET_KEY, algorithm='HS256')
 
 
                 # Set JWT token in cookies
@@ -269,7 +269,293 @@ class CustomerProductDeleteInWishlist(APIView):
 
 
 
+class CustomerProductInCart(APIView):
+    def post(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            product = Product.objects.filter(pk=pk).first()
+            if not product:
+                return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check if the product is already in the user's Cart
+            if Cart.objects.filter(customer=user, product=product).exists():
+                return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
+
+            cart_data = {'customer': user.pk, 'product': product.pk}
+            serializer = CartModelSerializers(data=cart_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({"message": "Unable to add product to cart", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except IntegrityError:
+            return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+            return Response({"message": f"Invalid token: {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+
+
+class CustomerCartProducts(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            print("Token:", token)  
+
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                userToken = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+                return Response({"message": "Invalid token: " + str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = userToken.get('id')
+
+            if not user_id:
+                return Response({"message": "Invalid token userToken"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+            cart = Cart.objects.filter(customer=user.pk)
+            serializer = CartSerializers(cart, many=True)
+            return Response({"status":"User wishlist products","data":serializer.data},status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class CartProductDelete(APIView):
+    def get(self,request,pk):
+        try :
+            product = Cart.objects.filter(pk=pk).first()
+            if product is None :
+                return Response({"message": "Product not found in cart"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = CartModelSerializers(product, many=False)
+            return Response({"message": "Product Fetch from cart",'data':serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+    def delete(self,request,pk):
+        try :
+            product = Cart.objects.filter(pk=pk).first()
+            if product is None :
+                return Response({"message": "Product not found in cart"}, status=status.HTTP_404_NOT_FOUND)
+            product.delete()
+            return Response({"message": "Product Delete from cart"}, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        
+
+            
+
+class IncrementProductQuantity(APIView):
+
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            cart_item = Cart.objects.filter(customer=user,pk=pk).first()
+            if not cart_item:
+                return Response({"message": "Product not found in the cart"}, status=status.HTTP_404_NOT_FOUND)
+
+            cart_item.quantity += 1
+            cart_item.save()
+
+            return Response({"message": "Product quantity increased successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+class DecrementProductQuantity(APIView):
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            cart_item = Cart.objects.filter(customer=user, pk=pk).first()
+            if not cart_item:
+                return Response({"message": "Product not found in the cart"}, status=status.HTTP_404_NOT_FOUND)
+
+            if cart_item.quantity > 1:
+                cart_item.quantity -= 1
+                cart_item.save()
+                return Response({"message": "Product quantity decreased successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Quantity cannot be less than 1"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+class OfferBanerBasedProducts(APIView):
+    def post(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            offer = OfferBanner.objects.filter(pk=pk).first()
+            if not offer:
+                return Response({"message": "Offer banner not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            products = Product.objects.filter(offer_banner=offer.pk)
+            serializer = ProductViewSerializers(products, many=True)
+            if serializer:
+                return Response({'products':serializer.data}, status=status.HTTP_200_OK)
+            return Response({'message': "Products not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+        
+
+
+class ProductBigView(APIView):
+    def get(self, request, pk):
+        try:
+            product = Product.objects.filter(pk=pk).first()
+            if product:
+                serializer = OfferProductSerializers(product)
+                return Response({'product':serializer.data}, status=status.HTTP_200_OK)
+            return Response({'message':"product not found"},status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class MianCategoryBasedProducts(APIView):
+    def get(self, request, pk):
+        try:
+            main_category = Category.objects.filter(pk=pk).first()
+            if main_category:
+                products = Product.objects.filter(category__category=main_category)
+                serializer = ProductViewSerializers(products, many=True)
+                return Response({'products':serializer.data}, status=status.HTTP_200_OK)
+            return Response({'message':"Category not found"},status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class UserPasswordReset(APIView):
+    def put(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            
+            new_password = request.data.get('new_password')
+            if not new_password:
+                return Response({"message": "New password not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+            
+            user.password = make_password(new_password)
+            user.save()
+
+            return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+        
 
 
 

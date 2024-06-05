@@ -21,6 +21,23 @@ urlpatterns = [
 
 
 
+    path('cart/<int:pk>/',CustomerProductInCart.as_view(), name="CustomerProductInCart"),
+    path('cart-products/',CustomerCartProducts.as_view(), name="CustomerCartProducts"),
+    path('cart-delete/<int:pk>/',CartProductDelete.as_view(), name="CartProductDelete"),
+    path('cart/increment/<int:pk>/', IncrementProductQuantity.as_view(), name='increment-quantity'),
+    path('cart/decrement/<int:pk>/', DecrementProductQuantity.as_view(), name='decrement-quantity'),
+
+
+    path('offer-banner/<int:pk>/products/', OfferBanerBasedProducts.as_view(), name='offer-banner-products'),
+    path('product/<int:pk>/',ProductBigView.as_view(), name="ProductBigView"),
+    path('category/<int:pk>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
+
+
+
+
+
+
+
 
 
 

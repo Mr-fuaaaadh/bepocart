@@ -30,14 +30,14 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","6cec-117-193-84-227.ngrok-free.app"]
-CSRF_TRUSTED_ORIGINS = ["https://6cec-117-193-84-227.ngrok-free.app"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","fb93-59-92-205-33.ngrok-free.app"]
+CSRF_TRUSTED_ORIGINS = ["https://fb93-59-92-205-33.ngrok-free.app"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://6cec-117-193-84-227.ngrok-free.app",
+    "https://fb93-59-92-205-33.ngrok-free.app",
     # Add other origins as needed
 ]
 CORS_ALLOW_ALL_ORIGINS = True

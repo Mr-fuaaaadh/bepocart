@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
-
 class Customer(models.Model):
     username = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
@@ -17,3 +16,7 @@ class Customer(models.Model):
 
     class Meta:
         db_table = "customer"
+
+
+
+
