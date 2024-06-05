@@ -73,3 +73,33 @@ class ProductViewSerializers(serializers.ModelSerializer):
     class Meta :
         model = Product
         fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price']
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = "__all__"
+
+
+class AddressUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['address', 'email', 'phone', 'pincode', 'city', 'state', 'note']
+
+class EmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class OTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+class PasswordChangeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    new_password = serializers.CharField(min_length=8, write_only=True)
+    confirm_password = serializers.CharField(min_length=8, write_only=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match")
+        return data

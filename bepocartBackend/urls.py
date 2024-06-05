@@ -33,6 +33,25 @@ urlpatterns = [
     path('category/<int:pk>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
 
 
+    path('reset-password/', UserPasswordReset.as_view(), name='reset-password'),
+    path('add-address/', UserAddressAdd.as_view(), name='add-address'),
+    path('get-address/', UserAddressView.as_view(), name='get-address'),
+    path('update-address/<int:pk>/', UserAddressUpdate.as_view(), name='update-address'),
+    path('delete-address/<int:pk>/', UserAddressDelete.as_view(), name='delete-address'),
+
+
+    path('search-products/', UserSearchProductView.as_view(), name='search-products'),
+    path('high-products/<int:pk>/', HighToLowProducts.as_view(), name='high-products'),
+    path('low-products/<int:pk>/', LowToHighProducts.as_view(), name='low-products'),
+
+
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+
+
+
+
 
 
 

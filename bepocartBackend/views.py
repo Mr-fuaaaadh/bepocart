@@ -1,4 +1,6 @@
 import jwt
+import random
+from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,8 +10,10 @@ from bepocartAdmin.serializers import *
 from bepocartBackend.models import *
 from bepocartAdmin.models import *
 from datetime import datetime, timedelta
+from django.db.models import Q
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
-
+from django.contrib.auth.hashers import check_password, make_password
+from django.template.loader import render_to_string
 
 
 class CustomerRegistration(APIView):
@@ -521,6 +525,7 @@ class UserPasswordReset(APIView):
     def put(self, request):
         try:
             token = request.headers.get('Authorization')
+            print(token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -531,17 +536,28 @@ class UserPasswordReset(APIView):
             user = Customer.objects.filter(pk=user_id).first()
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
             
-            new_password = request.data.get('new_password')
-            if not new_password:
-                return Response({"message": "New password not provided"}, status=status.HTTP_400_BAD_REQUEST)
+            serializer = PasswordResetSerializer(data=request.data)
+            if serializer.is_valid():
+                old_password = serializer.validated_data.get('old_password')
+                new_password = serializer.validated_data.get('new_password')
+                confirm_password = serializer.validated_data.get('confirm_password')
 
-            
-            user.password = make_password(new_password)
-            user.save()
+                # Check if the old password matches the user's current password
+                if old_password and not check_password(old_password, user.password):
+                    return Response({"message": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+                # Check if the new password and confirm password match
+                if new_password != confirm_password:
+                    return Response({"message": "New password and confirm password do not match"}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Update the user's password
+                user.password = make_password(new_password)
+                user.save()
+
+                return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -555,13 +571,293 @@ class UserPasswordReset(APIView):
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return None
 
+
+class UserAddressAdd(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            address_data = request.data.copy()
+            address_data['user'] = user.id
+            serializer = AddressSerializer(data=address_data)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Address added successfully"}, status=status.HTTP_201_CREATED)
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        except IntegrityError:
+            return Response({"message": "Address already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+            return Response({"message": f"Invalid token: {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+
+
+class UserAddressView(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            userAddress = Address.objects.filter(user=user.pk)
+            serializer = AddressSerializer(userAddress, many=True)
+            return Response({'address': serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+
+class UserAddressUpdate(APIView):
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            userAddress = Address.objects.filter(pk=pk).first()
+            if not userAddress:
+                return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = AddressUpdateSerializer(userAddress, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+class UserAddressDelete(APIView):
+    def delete(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            userAddress = Address.objects.filter(pk=pk).first()
+            if not userAddress:
+                return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            userAddress.delete()
+            return Response({"message": "Address deleted successfully"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+class UserSearchProductView(APIView):
+    def post(self, request):
+        try:
+            query = request.query_params.get('q', '')
+            if not query:
+                return Response({"message": "No search query provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Search products by name, description, short description, and category name
+            products = Product.objects.filter(
+                Q(name__icontains=query) |
+                Q(description__icontains=query) |
+                Q(short_description__icontains=query) 
+                # Q(category__name_icontains=query)
+            )
+
+            if products.exists():
+                serializer = ProductSerializer(products, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "No products found"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            
+
+class HighToLowProducts(APIView):
+    def post(self, request, pk):
+        try:
+            sort_order = request.query_params.get('sort', 'high_to_low')
+            category = Subcategory.objects.filter(pk=pk).first()
+            
+            if not category:
+                return Response({"message": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if sort_order == 'high_to_low':
+                products = Product.objects.filter(category=category.pk).order_by('-salePrice')
+            elif sort_order == 'low_to_high':
+                products = Product.objects.filter(category=category.pk).order_by('salePrice')
+            else:
+                return Response({"message": "Invalid sort order"}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = ProductSerializer(products, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LowToHighProducts(APIView):
+    def post(self, request,pk):
+        try:
+            sort_order = request.query_params.get('sort', 'low_to_high')
+            category = Subcategory.objects.filter(pk=pk).first()
+
+            if not category:
+                return Response({"message": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if sort_order == 'low_to_high':
+                products = Product.objects.filter(category=category.pk).order_by('salePrice')
+            elif sort_order == 'high_to_low' : 
+                products = Product.objects.filter(category=category.pk).order_by('-salePrice')
+            else:
+                return Response({"message": "Invalid sort order"}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = ProductSerializer(products, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 
 
+class ForgotPasswordView(APIView):
+    def post(self, request):
+        serializer = EmailSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            user = Customer.objects.filter(email=email).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            otp_instance = OTP.objects.filter(user=user).first()
+            if otp_instance:
+                otp = random.randint(100000, 999999)
+                otp_instance.otp = otp
+                otp_instance.save()
+            else:
+                otp = random.randint(100000, 999999)
+                OTP.objects.create(user=user, otp=otp)
+            
+            # Render email template with OTP value
+            email_body = render_to_string('otp.html', {'otp': otp})
+
+            # Send email
+            send_mail(
+                'Your OTP Code',
+                email_body,
+                settings.EMAIL_HOST_USER,  
+                [email],  
+                fail_silently=False,
+            )
+            return Response({"message": "OTP sent to email"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTPView(APIView):
+    def post(self, request):
+        serializer = OTPSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            otp = serializer.validated_data['otp']
+            user = Customer.objects.filter(email=email).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            valid_otp = OTP.objects.filter(user=user, otp=otp).first()
+            if not valid_otp:
+                return Response({"message": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # OTP verified, proceed to change password
+            return Response({"message": "OTP verified"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ChangePasswordView(APIView):
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            new_password = serializer.validated_data['new_password']
+            confirm_password = serializer.validated_data['confirm_password']
 
+            user = Customer.objects.filter(email=email).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            user.password = make_password(new_password)
+            user.save()
 
-
-
+            return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

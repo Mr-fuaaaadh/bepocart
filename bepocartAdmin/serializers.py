@@ -55,7 +55,13 @@ class OfferProductSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class PasswordResetSerializer(serializers.Serializer):
+    old_password = serializers.CharField()
+    new_password = serializers.CharField(min_length=8, write_only=True)
+    confirm_password = serializers.CharField(min_length=8, write_only=True)
 
+    
+    
 
 
 
