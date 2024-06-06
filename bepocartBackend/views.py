@@ -325,7 +325,7 @@ class CustomerCartProducts(APIView):
     def post(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("Token:", token)  
+            print("Token:", token)
 
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -346,10 +346,44 @@ class CustomerCartProducts(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
                 
-            cart = Cart.objects.filter(customer=user.pk)
+            cart = Cart.objects.filter(customer=user)
+            if not cart:
+                return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
+
             serializer = CartSerializers(cart, many=True)
-            return Response({"status":"User wishlist products","data":serializer.data},status=status.HTTP_200_OK)
+
+            # Calculate total price, discounted price, and total quantity
+            total_price = 0
+            total_discounted_price = 0
+            for item in cart:
+                product = item.product
+                original_price = product.price if product.price is not None else 0
+                sale_price = product.salePrice if product.salePrice is not None else original_price
+                quantity = item.quantity
                 
+                total_price += original_price * quantity
+                total_discounted_price += sale_price * quantity
+            
+            if total_discounted_price <= 500 :
+                shipping_fee = 60
+                Subtottal = total_discounted_price + shipping_fee
+            else :
+                shipping_fee = 0
+                Subtottal = total_discounted_price + shipping_fee
+
+
+            response_data = {
+                "status": "User cart products",
+                "data": serializer.data,
+                "Discount": total_price,
+                "Shipping Charge ": shipping_fee,
+                "Total Price": total_discounted_price,
+                "Subtottal": Subtottal
+
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -817,10 +851,11 @@ class ForgotPasswordView(APIView):
             # Send email
             send_mail(
                 'Your OTP Code',
-                email_body,
+                '',
                 settings.EMAIL_HOST_USER,  
                 [email],  
                 fail_silently=False,
+                html_message=email_body
             )
             return Response({"message": "OTP sent to email"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -861,3 +896,129 @@ class ChangePasswordView(APIView):
 
             return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class UserProfileUpdate(APIView):
+    def get(self,request):
+        try:
+            token = request.COOKIES.get('token')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            
+            serializer = UserProfileSErilizers(user, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+    def put(self,request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            
+            serializer = UserProfileSErilizers(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+
+class CreateOrder(APIView):
+    def post(self, request,pk):
+        token = request.headers.get('Authorization')
+        if not token:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_id = user_token.get('id')
+        if not user_id:
+            return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = Customer.objects.filter(pk=user_id).first()
+        if not user:
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        cart_items = Cart.objects.filter(customer=user)
+        if not cart_items.exists():
+            return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+
+        address_id =Address.objects.filter(pk=pk).first()
+        if not address_id:
+            return Response({"message": "Address ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        address = Address.objects.filter(pk=address_id.pk, user=user).first()
+        if not address:
+            return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        order = Order.objects.create(customer=user, address=address, status='pending')
+        for item in cart_items:
+            OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                quantity=item.quantity,  
+                price=item.product.salePrice * item.quantity 
+            )
+           
+            item.product.stock -= item.quantity
+            item.product.save()
+
+        # Calculate the total price of the order
+        order.calculate_total()
+
+        # Clear the cart after ordering
+        cart_items.delete()
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+

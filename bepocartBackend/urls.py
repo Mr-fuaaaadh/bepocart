@@ -38,6 +38,8 @@ urlpatterns = [
     path('get-address/', UserAddressView.as_view(), name='get-address'),
     path('update-address/<int:pk>/', UserAddressUpdate.as_view(), name='update-address'),
     path('delete-address/<int:pk>/', UserAddressDelete.as_view(), name='delete-address'),
+    path('profile/', UserProfileUpdate.as_view(), name='profile'),
+
 
 
     path('search-products/', UserSearchProductView.as_view(), name='search-products'),
@@ -48,6 +50,9 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+
+
+    path('order/create/<int:order>/', CreateOrder.as_view(), name='create_order'),
 
 
 

@@ -30,14 +30,14 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","fb93-59-92-205-33.ngrok-free.app"]
-CSRF_TRUSTED_ORIGINS = ["https://fb93-59-92-205-33.ngrok-free.app"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","9ed9-117-193-85-29.ngrok-free.app"]
+CSRF_TRUSTED_ORIGINS = ["https://9ed9-117-193-85-29.ngrok-free.app"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://fb93-59-92-205-33.ngrok-free.app",
+    "https://9ed9-117-193-85-29.ngrok-free.app",
     # Add other origins as needed
 ]
 CORS_ALLOW_ALL_ORIGINS = True
@@ -85,7 +85,7 @@ JWT_EXPIRATION_MINUTES = 120
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

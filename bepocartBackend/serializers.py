@@ -39,9 +39,10 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
+    mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = "__all__"
+        fields = ['id','name','short_description','description','price','salePrice','stock','category','image','discount','offer_banner','offer_type','mainCategory']
 
 
 class WishlistSerializers(serializers.ModelSerializer):
@@ -52,13 +53,14 @@ class WishlistSerializers(serializers.ModelSerializer):
 class CartSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source ='product.name')
     salePrice = serializers.CharField(source ='product.salePrice')
+    price = serializers.IntegerField(source ='product.price')
     image = serializers.ImageField(source ='product.image')
     mainCategory = serializers.CharField(source ='product.category.pk')
 
 
     class Meta :
         model = Cart
-        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity']
+        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price']
 
 
 
@@ -103,3 +105,23 @@ class PasswordChangeSerializer(serializers.Serializer):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError("Passwords do not match")
         return data
+
+
+
+class UserProfileSErilizers(serializers.ModelSerializer):
+    class Meta :
+        model = Customer
+        fields = ['username', 'email', 'phone']
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'quantity', 'price']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items']

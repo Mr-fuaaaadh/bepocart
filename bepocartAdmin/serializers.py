@@ -62,6 +62,14 @@ class PasswordResetSerializer(serializers.Serializer):
 
     
     
+class AdminOrderSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Order
+        fields = "__all__"
 
 
 
+class AdminOrderItemSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = OrderItem
+        fields = "__all__"

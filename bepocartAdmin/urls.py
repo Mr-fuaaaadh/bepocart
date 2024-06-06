@@ -41,6 +41,16 @@ urlpatterns = [
     path('Bepocart-Offer-Product-Update/<int:pk>/',OfferProductUpdate.as_view()),
 
 
+    path('Bepocart-Orders/',AllOrders.as_view()),
+    path('Bepocart-Order-Item/<int:customer>/',AllOrderItems.as_view()),
+
+
+
+
+
+    
+
+
 
 
 

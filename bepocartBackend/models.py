@@ -41,3 +41,28 @@ class OTP(models.Model):
 
     class Meta :
         db_table = "OTP"
+
+
+
+
+class Order(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=50)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+
+    def calculate_total(self):
+        from bepocartAdmin.models import Product
+        self.total_amount = sum(item.total_price() for item in self.order_items.all())
+        self.save()
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
+    product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def total_price(self):
+        return self.price * self.quantity
