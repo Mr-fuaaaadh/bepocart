@@ -70,24 +70,24 @@ class AdminLogin(APIView):
 class CarousalAdd(APIView):
     def post(self, request):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
             
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = CarousalSerializers(data=request.data)
             if serializer.is_valid():
@@ -107,24 +107,24 @@ class CarousalAdd(APIView):
 class CarousalView(APIView):
     def get(self, request):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             carousal = Carousal.objects.all()
             serializer = CarousalSerializers(carousal, many=True)
@@ -150,24 +150,24 @@ class CarousalUpdate(APIView):
 
     def put(self, request, pk):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             try:
                 carousal = Carousal.objects.get(pk=pk)
@@ -201,24 +201,24 @@ class CarousalDelete(APIView):
         
     def delete(self, request, pk):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             try:
                 carousal = Carousal.objects.get(pk=pk)

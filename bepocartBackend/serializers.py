@@ -33,9 +33,11 @@ class SubcatecorySerializer(serializers.ModelSerializer):
 
 
 class ProductViewSerializer(serializers.ModelSerializer):
+    mainCategory = serializers.CharField(source ='category.category.pk')
+
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image','created_at',]
+        fields = ['id','name','description','short_description','salePrice','stock','category','image','created_at','mainCategory']
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
@@ -50,12 +52,20 @@ class WishlistSerializers(serializers.ModelSerializer):
         model = Wishlist
         fields = "__all__"
 
+
+class WishlistSerializersView(serializers.ModelSerializer):
+    mainCategory = serializers.IntegerField(source ='product.category.category.pk')
+    class Meta :
+        model = Wishlist
+        fields = ['id','user','product','mainCategory']
+
+
 class CartSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source ='product.name')
     salePrice = serializers.CharField(source ='product.salePrice')
     price = serializers.IntegerField(source ='product.price')
     image = serializers.ImageField(source ='product.image')
-    mainCategory = serializers.CharField(source ='product.category.pk')
+    mainCategory = serializers.CharField(source ='product.category.category.pk')
 
 
     class Meta :

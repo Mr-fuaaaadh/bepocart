@@ -251,7 +251,7 @@ class CustomerWishlist(APIView):
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
                 
             wishlist = Wishlist.objects.filter(user=user.pk)
-            serializer = WishlistSerializers(wishlist, many=True)
+            serializer = WishlistSerializersView(wishlist, many=True)
             return Response({"status":"User wishlist products","data":serializer.data},status=status.HTTP_200_OK)
                 
         except Exception as e:
@@ -866,6 +866,12 @@ class VerifyOTPView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             otp = serializer.validated_data['otp']
+            print(email)
+            print(otp)
+            if not otp :
+                return Response({"message": "OTP not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
             user = Customer.objects.filter(email=email).first()
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -887,9 +893,13 @@ class ChangePasswordView(APIView):
             new_password = serializer.validated_data['new_password']
             confirm_password = serializer.validated_data['confirm_password']
 
+
             user = Customer.objects.filter(email=email).first()
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            if new_password != confirm_password :
+                return Response({"message": "Password is not match !"}, status=status.HTTP_404_NOT_FOUND)
             
             user.password = make_password(new_password)
             user.save()
