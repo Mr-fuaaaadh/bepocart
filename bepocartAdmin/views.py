@@ -240,24 +240,24 @@ class CarousalDelete(APIView):
 class OfferBannerAdd(APIView):
     def post(self, request):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             try:
                 serializer = OfferBannerSerializers(data=request.data)
                 if serializer.is_valid():
@@ -275,24 +275,24 @@ class OfferBannerAdd(APIView):
 class OfferBannerView(APIView):
      def get(self, request):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             banner = OfferBanner.objects.all()
             serializer = OfferBannerSerializers(banner, many=True)
@@ -317,24 +317,24 @@ class OfferBannerDelete(APIView):
         
     def delete(self, request, pk):
         try:
-            token = request.COOKIES.get('token')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # # token = request.COOKIES.get('token')
+            # # if token is None:
+            # #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # # try:
+            # #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # # except ExpiredSignatureError:
+            # #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # # except (DecodeError, InvalidTokenError):
+            # #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # # user_id = payload.get('id')
+            # # if user_id is None:
+            # #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             try:
                 banner = OfferBanner.objects.get(pk=pk)
@@ -732,35 +732,35 @@ class SubcategoryDelete(APIView):
 #######################################  PRODUCT MANAGEMENT ########################################
 
 class ProductAdd(APIView):
-    def authenticate(self, request):
-            token = request.COOKIES.get('token')
-            if not token:
-                return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    # def authenticate(self, request):
+    #         token = request.COOKIES.get('token')
+    #         if not token:
+    #             return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
             
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except DecodeError:
-                return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-            except InvalidTokenError:
-                return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         try:
+    #             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    #         except ExpiredSignatureError:
+    #             return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         except DecodeError:
+    #             return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         except InvalidTokenError:
+    #             return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if not user_id:
-                return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         user_id = payload.get('id')
+    #         if not user_id:
+    #             return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if not user:
-                return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    #         user = User.objects.filter(pk=user_id).first()
+    #         if not user:
+    #             return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            return user, None
+    #         return user, None
 
 
     def post(self, request):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         
         try:
             serializer = ProductSerializer(data=request.data)
@@ -776,38 +776,38 @@ class ProductAdd(APIView):
 
 class ProductView(APIView):
 
-    def authenticate(self, request):
-            token = request.COOKIES.get('token')
-            if not token:
-                return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    # def authenticate(self, request):
+    #         token = request.COOKIES.get('token')
+    #         if not token:
+    #             return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
             
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except DecodeError:
-                return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-            except InvalidTokenError:
-                return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         try:
+    #             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    #         except ExpiredSignatureError:
+    #             return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         except DecodeError:
+    #             return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         except InvalidTokenError:
+    #             return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if not user_id:
-                return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+    #         user_id = payload.get('id')
+    #         if not user_id:
+    #             return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if not user:
-                return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    #         user = User.objects.filter(pk=user_id).first()
+    #         if not user:
+    #             return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            return user, None
+    #         return user, None
 
     def get(self, request):
 
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         try :
-            products = Product.objects.all()
-            serializer = ProductSerializer(products,many=True)
+            products = Product.objects.filter(offer_type__isnull=True)
+            serializer = ProductSerializerView(products,many=True)
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -877,46 +877,46 @@ class ProductUpdate(APIView):
 
 
 class ProductDelete(APIView):
-    def authenticate(self, request):
-        token = request.COOKIES.get('token')
-        if not token:
-            return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    # # def authenticate(self, request):
+    # #     token = request.COOKIES.get('token')
+    # #     if not token:
+    # #         return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user_id = payload.get('id')
-            if not user_id:
-                return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+    # #     try:
+    # #         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    # #         user_id = payload.get('id')
+    # #         if not user_id:
+    # #             return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if not user:
-                return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    # #         user = User.objects.filter(pk=user_id).first()
+    # #         if not user:
+    # #             return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            return user, None
-        except ExpiredSignatureError:
-            return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-        except (DecodeError, InvalidTokenError):
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    # #         return user, None
+    # #     except ExpiredSignatureError:
+    # #         return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+    # #     except (DecodeError, InvalidTokenError):
+    # #         return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    def get(self, request, pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+    # # def get(self, request, pk):
+    # #     user, error_response = self.authenticate(request)
+    # #     if error_response:
+    # #         return error_response
 
-        try:
-            product = Product.objects.filter(pk=pk).first()
-            if not product:
-                return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     try:
+    #         product = Product.objects.filter(pk=pk).first()
+    #         if not product:
+    #             return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = ProductSerializer(product, many=False)
-            return Response({"message": "Product details retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    #         serializer = ProductSerializer(product, many=False)
+    #         return Response({"message": "Product details retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+    #     except Exception as e:
+    #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
 
         try:
             product = Product.objects.filter(pk=pk).first()

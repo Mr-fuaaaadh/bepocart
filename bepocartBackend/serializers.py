@@ -41,7 +41,7 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
-    mainCategory = serializers.CharField(source ='category.category.pk')
+    mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta :
         model = Product
         fields = ['id','name','short_description','description','price','salePrice','stock','category','image','discount','offer_banner','offer_type','mainCategory']

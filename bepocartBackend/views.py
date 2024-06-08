@@ -1030,5 +1030,54 @@ class CreateOrder(APIView):
 
         serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
 
 
+
+class DiscountSaleProducts(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="DISCOUNT SALE").order_by('-pk')
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for discount sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class FlashSaleProducts(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="FLASH SALE").order_by('-pk')
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for flash sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class FIftypercontageProducts(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="50%").order_by('-pk')
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for 50 percantage sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class BuyOneGetOneOffer(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="BUY 1 GET 1").order_by('-pk')
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for BUY 1 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

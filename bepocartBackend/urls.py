@@ -54,6 +54,13 @@ urlpatterns = [
 
     path('order/create/<int:order>/', CreateOrder.as_view(), name='create_order'),
 
+    path('discount-sale/', DiscountSaleProducts.as_view(), name='discount-sale'),
+    path('flash-sale/', FlashSaleProducts.as_view(), name='flash-sale'),
+    path('offers/', FIftypercontageProducts.as_view(), name='offers'),
+    path('buy-1-get-1/', BuyOneGetOneOffer.as_view(), name='BuyOneGetOneOffer'),
+
+
+
 
 
 
