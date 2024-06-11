@@ -135,3 +135,44 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items']
+
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProducyImage
+        fields = "__all__"
+
+
+class ProductSerializerWithMultipleImage(serializers.ModelSerializer):
+    class Meta :
+        model = ProducyImage
+        fields = ['id','product','color','image1','image2','image3','image4','image5']
+
+
+
+class CustomerOrderSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = "__all__"
+
+
+class CustomerOrderItems(serializers.ModelSerializer):
+    productName = serializers.CharField(source ='product.name')
+    productImage = serializers.ImageField(source ='product.image')
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName']
+
+
+
+class RecentlyViewedProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecentlyViewedProduct
+        fields = ['user', 'product', 'viewed_at']
+
+class RecomendedProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'description', 'salePrice', 'image'] 

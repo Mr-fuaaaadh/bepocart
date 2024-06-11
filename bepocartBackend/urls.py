@@ -39,6 +39,8 @@ urlpatterns = [
     path('update-address/<int:pk>/', UserAddressUpdate.as_view(), name='update-address'),
     path('delete-address/<int:pk>/', UserAddressDelete.as_view(), name='delete-address'),
     path('profile/', UserProfileUpdate.as_view(), name='profile'),
+    path('profile-view/', UserProfileView.as_view(), name='UserProfileView'),
+
 
 
 
@@ -52,12 +54,24 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
 
-    path('order/create/<int:order>/', CreateOrder.as_view(), name='create_order'),
+    path('order/create/<int:pk>/', CreateOrder.as_view(), name='create_order'),
 
     path('discount-sale/', DiscountSaleProducts.as_view(), name='discount-sale'),
     path('flash-sale/', FlashSaleProducts.as_view(), name='flash-sale'),
     path('offers/', FIftypercontageProducts.as_view(), name='offers'),
     path('buy-1-get-1/', BuyOneGetOneOffer.as_view(), name='BuyOneGetOneOffer'),
+    path('buy-2-get-1/', BuyToGetOne.as_view(), name='BuyToGetOne'),
+
+
+    path('product-images/<int:pk>/', ProducViewWithMultipleImage.as_view(), name='ProductSerializerWithMultipleImage'),
+
+    path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
+    path('orders/<int:pk>/products/', CustomerOrderProducts.as_view(), name='customer-order-products'),
+
+    path('recently-viewed/', RecentlyViewedProductsView.as_view(), name='recently-viewed-products'),
+    path('recommended/', RecommendedProductsView.as_view(), name='recommended-products'),
+]
+
 
 
 
@@ -77,4 +91,3 @@ urlpatterns = [
 
 
     
-]

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
+from bepocartAdmin.models import *
 class Customer(models.Model):
     username = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
@@ -66,4 +67,15 @@ class OrderItem(models.Model):
 
     def total_price(self):
         return self.price * self.quantity
+    
+
+
+class RecentlyViewedProduct(models.Model):
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+        ordering = ['-viewed_at']
     

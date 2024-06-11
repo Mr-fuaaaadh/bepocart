@@ -10,10 +10,12 @@ from bepocartAdmin.serializers import *
 from bepocartBackend.models import *
 from bepocartAdmin.models import *
 from datetime import datetime, timedelta
+from django.db.models import Count
 from django.db.models import Q
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
 from django.contrib.auth.hashers import check_password, make_password
 from django.template.loader import render_to_string
+from django.db import transaction
 
 
 class CustomerRegistration(APIView):
@@ -179,36 +181,44 @@ from django.db import IntegrityError
 class CustomerAddProductInWishlist(APIView):
     def post(self, request, pk):
         try:
+            # Retrieve the token from the request headers
             token = request.headers.get('Authorization')
-            print("Token:", token)  
-
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            # Decode the JWT token
             try:
-                userToken = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             except jwt.ExpiredSignatureError:
                 return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
             except (jwt.DecodeError, jwt.InvalidTokenError) as e:
-                return Response({"message": "Invalid token: " + str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = userToken.get('id')
-
+            user_id = user_token.get('id')
             if not user_id:
                 return Response({"message": "Invalid token userToken"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            # Check if the user exists
             user = Customer.objects.filter(pk=user_id).first()
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-                
+
+            # Check if the product exists
             product = Product.objects.filter(pk=pk).first()
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Update or create the recently viewed product entry
+            recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
+            if not created:
+                recently_viewed.viewed_at = timezone.now()
+                recently_viewed.save()
 
             # Check if the product is already in the user's wishlist
             if Wishlist.objects.filter(user=user, product=product).exists():
                 return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Add the product to the wishlist
             wishlist_data = {'user': user.pk, 'product': product.pk}
             wishlist_serializer = WishlistSerializers(data=wishlist_data)
             if wishlist_serializer.is_valid():
@@ -216,8 +226,8 @@ class CustomerAddProductInWishlist(APIView):
                 return Response({"message": "Product added to wishlist successfully"}, status=status.HTTP_201_CREATED)
             else:
                 return Response({"message": "Unable to add product to wishlist", "errors": wishlist_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-                
-        except IntegrityError as e:
+
+        except IntegrityError:
             return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -291,6 +301,14 @@ class CustomerProductInCart(APIView):
             product = Product.objects.filter(pk=pk).first()
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            product = Product.objects.get(pk=product.pk)
+            recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
+            if not created:
+                recently_viewed.viewed_at = timezone.now()
+                recently_viewed.save()
+                
+
 
             # Check if the product is already in the user's Cart
             if Cart.objects.filter(customer=user, product=product).exists():
@@ -759,6 +777,7 @@ class UserSearchProductView(APIView):
     def post(self, request):
         try:
             query = request.query_params.get('q', '')
+            print
             if not query:
                 return Response({"message": "No search query provided"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -771,7 +790,7 @@ class UserSearchProductView(APIView):
             )
 
             if products.exists():
-                serializer = ProductSerializer(products, many=True)
+                serializer = ProductSerializerView(products, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "No products found"}, status=status.HTTP_404_NOT_FOUND)
@@ -978,58 +997,69 @@ class UserProfileUpdate(APIView):
 
 
 class CreateOrder(APIView):
-    def post(self, request,pk):
-        token = request.headers.get('Authorization')
+    def post(self, request, pk):
+        # Check if token exists in cookies
+        token = request.COOKIES.get('token')
         if not token:
             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
+            # Decode and verify the user token
             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # Retrieve user ID from the token
         user_id = user_token.get('id')
         if not user_id:
             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # Retrieve user from the database
         user = Customer.objects.filter(pk=user_id).first()
         if not user:
             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if cart is empty
         cart_items = Cart.objects.filter(customer=user)
         if not cart_items.exists():
             return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
 
-        address_id =Address.objects.filter(pk=pk).first()
-        if not address_id:
-            return Response({"message": "Address ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        address = Address.objects.filter(pk=address_id.pk, user=user).first()
+        # Retrieve and validate address
+        address = Address.objects.filter(pk=pk, user=user).first()
         if not address:
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        order = Order.objects.create(customer=user, address=address, status='pending')
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                quantity=item.quantity,  
-                price=item.product.salePrice * item.quantity 
-            )
-           
-            item.product.stock -= item.quantity
-            item.product.save()
+        try:
+            # Create order within a transaction
+            with transaction.atomic():
+                order = Order.objects.create(customer=user, address=address, status='pending')
 
-        # Calculate the total price of the order
-        order.calculate_total()
+                # Create order items
+                for item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price=item.product.salePrice * item.quantity
+                    )
 
-        # Clear the cart after ordering
-        cart_items.delete()
+                    # Deduct stock from product
+                    item.product.stock -= item.quantity
+                    item.product.save()
 
-        serializer = OrderSerializer(order)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                # Calculate the total price of the order
+                order.calculate_total()
+
+                # Clear the cart after ordering
+                cart_items.delete()
+
+            serializer = OrderSerializer(order)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
 
@@ -1081,3 +1111,224 @@ class BuyOneGetOneOffer(APIView):
             return Response({'error': 'No products found for BUY 1 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class BuyToGetOne(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="BUY 2 GET 1").order_by('-pk')
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for BUY 2 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class ProducViewWithMultipleImage(APIView):
+    def get(self, request, pk):
+        try:
+            product = ProducyImage.objects.filter(product_id=pk)
+            serializer = ProductSerializerWithMultipleImage(product,many=True)
+            return Response({"product":serializer.data},status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class UserProfileView(APIView):
+    def post(self,request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            
+            serializer = UserProfileSErilizers(user, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
+
+class CustomerOrders(APIView):
+    def get(self, request):
+        try:
+            token = request.COOKIES.get('token')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            user_orders = Order.objects.filter(customer=user)
+            if not user_orders.exists():
+                return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = CustomerOrderSerializers(user_orders, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+        
+
+
+class CustomerOrderProducts(APIView):
+    def get(self, request, pk):
+        try:
+            order = Order.objects.filter(pk=pk).first()
+            if not order:
+                return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            order_items = OrderItem.objects.filter(order=order)
+            if not order_items.exists():
+                return Response({"message": "No items found for this order"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = CustomerOrderItems(order_items, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class RecentlyViewedProductsView(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product')[:10]
+            products = [item.product for item in recently_viewed]
+            serializer = ProductSerializer(products, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # def post(self, request, product_id):
+    #     try:
+    #         token = request.COOKIES.get('token')
+    #         if not token:
+    #             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    #         user_id = self._validate_token(token)
+    #         if not user_id:
+    #             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    #         user = Customer.objects.filter(pk=user_id).first()
+    #         if not user:
+    #             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    #         product = Product.objects.get(pk=product_id)
+    #         recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
+    #         if not created:
+    #             recently_viewed.viewed_at = timezone.now()
+    #             recently_viewed.save()
+
+    #         return Response({"message": "Product added to recently viewed"}, status=status.HTTP_200_OK)
+    #     except Product.DoesNotExist:
+    #         return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     except Exception as e:
+    #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+        
+
+
+class RecommendedProductsView(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            print("andi",token)
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Fetch recently viewed products by the user
+            recently_viewed_products = RecentlyViewedProduct.objects.filter(user=user).values_list('product', flat=True)
+
+            # Fetch products from user's orders
+            ordered_products = OrderItem.objects.filter(order__customer=user).values_list('product', flat=True)
+
+            # Combine recently viewed and ordered products to find similar ones
+            product_ids = list(set(recently_viewed_products) | set(ordered_products))
+
+            if not product_ids:
+                return Response({"message": "No recommendations available"}, status=status.HTTP_200_OK)
+
+            # Fetch products that are similar to the ones the user interacted with
+            similar_products = Product.objects.filter(category__products__id__in=product_ids).exclude(id__in=product_ids).distinct()
+
+            # Serialize the recommended products
+            serializer = RecomendedProductSerializer(similar_products, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+        

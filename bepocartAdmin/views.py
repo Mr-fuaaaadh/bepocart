@@ -5,7 +5,7 @@ from rest_framework import status
 from django.conf import settings
 from .serializers import *
 from bepocartBackend.serializers import *
-
+from django.db import IntegrityError, DatabaseError
 from .models import *
 from datetime import datetime, timedelta
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
@@ -581,35 +581,7 @@ class SubcategoryAdd(APIView):
 
 
 class SubcategoryView(APIView):
-    def authenticate(self, request):
-        token = request.COOKIES.get('token')
-        if not token:
-            return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        except ExpiredSignatureError:
-            return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-        except DecodeError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-        except InvalidTokenError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        user_id = payload.get('id')
-        if not user_id:
-            return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        user = User.objects.filter(pk=user_id).first()
-        if not user:
-            return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        return user, None
-
     def get(self, request):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
-        
         try:
             subcategories = Subcategory.objects.all().values()
             serializer = SubcategorySerializer(subcategories, many=True)
@@ -1152,7 +1124,30 @@ class AllOrderItems(APIView):
         
             
 
+class ProductImageCreateView(APIView):
+    def post(self, request, pk):
+        try:
+            product = Product.objects.get(pk=pk)
+        except Product.DoesNotExist:
+            return Response({'status': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+        except DatabaseError:
+            return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        data = request.data.copy()  # Make a mutable copy of request data
+        data['product'] = product.pk  # Set the product field in the data
 
-            
+        serializer = ProductImageSerializer(data=data)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response({'status': 'Integrity error occurred'}, status=status.HTTP_400_BAD_REQUEST)
+            except DatabaseError:
+                return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Log detailed serializer errors for debugging
+            print("Serializer errors:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

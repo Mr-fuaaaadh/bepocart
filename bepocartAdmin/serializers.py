@@ -28,17 +28,19 @@ class SubcategorySerializer(serializers.ModelSerializer):
         fields =  "__all__"
 
 class ProductSerializer(serializers.ModelSerializer):
-    # categoryName = serializers.CharField(source ='category.name')
+
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image']
+        fields = ['id','name','description','short_description','salePrice','stock','category','image',]
 
 
 class ProductSerializerView(serializers.ModelSerializer):
     categoryName = serializers.CharField(source ='category.name')
+    mainCategory = serializers.CharField(source ='category.category.pk')
+
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image','categoryName']
+        fields = ['id','name','description','short_description','salePrice','stock','category','image','categoryName','mainCategory']
 
 
 class CarousalSerializers(serializers.ModelSerializer):
