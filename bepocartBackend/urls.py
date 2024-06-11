@@ -70,6 +70,7 @@ urlpatterns = [
 
     path('recently-viewed/', RecentlyViewedProductsView.as_view(), name='recently-viewed-products'),
     path('recommended/', RecommendedProductsView.as_view(), name='recommended-products'),
+    path('filtered-products/<int:pk>/', FilteredProductsView.as_view(), name='filtered-products'),
 ]
 
 

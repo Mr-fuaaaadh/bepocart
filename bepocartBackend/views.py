@@ -208,15 +208,16 @@ class CustomerAddProductInWishlist(APIView):
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # Update or create the recently viewed product entry
+           
+            # Check if the product is already in the user's wishlist
+            if Wishlist.objects.filter(user=user, product=product).exists():
+                return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
+            
+             # Update or create the recently viewed product entry
             recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
             if not created:
                 recently_viewed.viewed_at = timezone.now()
                 recently_viewed.save()
-
-            # Check if the product is already in the user's wishlist
-            if Wishlist.objects.filter(user=user, product=product).exists():
-                return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Add the product to the wishlist
             wishlist_data = {'user': user.pk, 'product': product.pk}
@@ -1091,7 +1092,7 @@ class FlashSaleProducts(APIView):
 class FIftypercontageProducts(APIView):
     def get(self, request):
         try:
-            discount_sale = Product.objects.filter(offer_type="50%").order_by('-pk')
+            discount_sale = Product.objects.filter(offer_type="50 %").order_by('-pk')
             serializer = SubcatecoryBasedProductView(discount_sale, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
@@ -1240,9 +1241,9 @@ class RecentlyViewedProductsView(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product')[:10]
+            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product').order_by('-pk')[:10]
             products = [item.product for item in recently_viewed]
-            serializer = ProductSerializer(products, many=True)
+            serializer = RecomendedProductSerializer(products, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1289,7 +1290,6 @@ class RecommendedProductsView(APIView):
     def post(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("andi",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1302,7 +1302,7 @@ class RecommendedProductsView(APIView):
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             # Fetch recently viewed products by the user
-            recently_viewed_products = RecentlyViewedProduct.objects.filter(user=user).values_list('product', flat=True)
+            recently_viewed_products = RecentlyViewedProduct.objects.filter(user=user).values_list('product', flat=True).order_by('-pk')
 
             # Fetch products from user's orders
             ordered_products = OrderItem.objects.filter(order__customer=user).values_list('product', flat=True)
@@ -1314,7 +1314,7 @@ class RecommendedProductsView(APIView):
                 return Response({"message": "No recommendations available"}, status=status.HTTP_200_OK)
 
             # Fetch products that are similar to the ones the user interacted with
-            similar_products = Product.objects.filter(category__products__id__in=product_ids).exclude(id__in=product_ids).distinct()
+            similar_products = Product.objects.filter(category__products__id__in=product_ids).exclude(id__in=product_ids).distinct()[:10]
 
             # Serialize the recommended products
             serializer = RecomendedProductSerializer(similar_products, many=True)
@@ -1331,4 +1331,16 @@ class RecommendedProductsView(APIView):
             return None
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return None
-        
+class FilteredProductsView(APIView):
+    def post(self, request,pk):
+        try:
+            min_price = request.data.get('min_price', 0)
+            max_price = request.data.get('max_price', 1000000)
+            category = Subcategory.objects.filter(pk=pk).first()
+            
+
+            filtered_products = Product.objects.filter(category=category,salePrice__gte=min_price, salePrice__lte=max_price)
+            serializer = ProductSerializer(filtered_products, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

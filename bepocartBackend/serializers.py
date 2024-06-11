@@ -173,6 +173,7 @@ class RecentlyViewedProductSerializer(serializers.ModelSerializer):
         fields = ['user', 'product', 'viewed_at']
 
 class RecomendedProductSerializer(serializers.ModelSerializer):
+    mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'salePrice', 'image'] 
+        fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory'] 

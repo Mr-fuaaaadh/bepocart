@@ -583,7 +583,7 @@ class SubcategoryAdd(APIView):
 class SubcategoryView(APIView):
     def get(self, request):
         try:
-            subcategories = Subcategory.objects.all().values()
+            subcategories = Subcategory.objects.all()
             serializer = SubcategorySerializer(subcategories, many=True)
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -592,34 +592,34 @@ class SubcategoryView(APIView):
 
 
 class SubcategoryUpdate(APIView):
-    def authenticate(self, request):
-        token = request.COOKIES.get('token')
-        if not token:
-            return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    # def authenticate(self, request):
+    #     token = request.COOKIES.get('token')
+    #     if not token:
+    #         return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        except ExpiredSignatureError:
-            return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-        except DecodeError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-        except InvalidTokenError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     try:
+    #         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    #     except ExpiredSignatureError:
+    #         return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     except DecodeError:
+    #         return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     except InvalidTokenError:
+    #         return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user_id = payload.get('id')
-        if not user_id:
-            return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     user_id = payload.get('id')
+    #     if not user_id:
+    #         return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user = User.objects.filter(pk=user_id).first()
-        if not user:
-            return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     user = User.objects.filter(pk=user_id).first()
+    #     if not user:
+    #         return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        return user, None
+    #     return user, None
 
     def get(self, request,pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         
         try:
             subcategories = Subcategory.objects.get(pk=pk)
@@ -650,34 +650,34 @@ class SubcategoryUpdate(APIView):
 
 
 class SubcategoryDelete(APIView):
-    def authenticate(self, request):
-        token = request.COOKIES.get('token')
-        if not token:
-            return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    # def authenticate(self, request):
+    #     token = request.COOKIES.get('token')
+    #     if not token:
+    #         return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        except ExpiredSignatureError:
-            return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-        except DecodeError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-        except InvalidTokenError:
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     try:
+    #         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    #     except ExpiredSignatureError:
+    #         return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     except DecodeError:
+    #         return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     except InvalidTokenError:
+    #         return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user_id = payload.get('id')
-        if not user_id:
-            return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+    #     user_id = payload.get('id')
+    #     if not user_id:
+    #         return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user = User.objects.filter(pk=user_id).first()
-        if not user:
-            return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     user = User.objects.filter(pk=user_id).first()
+    #     if not user:
+    #         return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        return user, None
+    #     return user, None
 
     def get(self, request,pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         
         try:
             subcategories = Subcategory.objects.get(pk=pk)
@@ -689,12 +689,12 @@ class SubcategoryDelete(APIView):
 
 
     def delete(self, request, pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         try :
             subcategory = Subcategory.objects.get(pk=pk)
-            Subcategory.delete()
+            subcategory.delete()
             return Response({"status":"success","messege":"Subcatecory delete successfuly completed"},status=status.HTTP_200_OK)
         except Exception as e :
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
