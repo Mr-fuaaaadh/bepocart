@@ -564,12 +564,12 @@ class SubcategoryAdd(APIView):
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
+        # user, error_response = self.authenticate(request)
+        # if error_response:
+        #     return error_response
         
         try:
-            serializer = SubcategorySerializer(data=request.data)
+            serializer = SubcategoryModelSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"status": "success", "message": "Subcategory successfully created"}, status=status.HTTP_201_CREATED)
@@ -1061,29 +1061,29 @@ class OfferProductUpdate(APIView):
 class AllOrders(APIView):
     def get(self, request):
         try:
-            token = request.COOKIES.get('token')
-            if not token:
-                return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if not token:
+            #     return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-                user_id = payload.get('id')
-                if not user_id:
-                    return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            #     user_id = payload.get('id')
+            #     if not user_id:
+            #         return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-                user = User.objects.filter(pk=user_id).first()
-                if not user:
-                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            #     user = User.objects.filter(pk=user_id).first()
+            #     if not user:
+            #         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
                 # Fetch orders belonging to the authenticated user
                 order_products = Order.objects.all()
                 serializer = AdminOrderSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1093,29 +1093,29 @@ class AllOrders(APIView):
 class AllOrderItems(APIView):
     def get(self, request,customer):
         try:
-            token = request.COOKIES.get('token')
-            if not token:
-                return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.COOKIES.get('token')
+            # if not token:
+            #     return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-                user_id = payload.get('id')
-                if not user_id:
-                    return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            #     user_id = payload.get('id')
+            #     if not user_id:
+            #         return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-                user = User.objects.filter(pk=user_id).first()
-                if not user:
-                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            #     user = User.objects.filter(pk=user_id).first()
+            #     if not user:
+            #         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                # Fetch orders belonging to the authenticated user
+            #     # Fetch orders belonging to the authenticated user
                 order_products = OrderItem.objects.filter(order=customer)
                 serializer = AdminOrderItemSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

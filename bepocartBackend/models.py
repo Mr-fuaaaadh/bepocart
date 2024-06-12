@@ -60,6 +60,7 @@ class Order(models.Model):
         self.save()
 
 class OrderItem(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE,null=True)
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()

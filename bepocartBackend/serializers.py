@@ -153,7 +153,7 @@ class ProductSerializerWithMultipleImage(serializers.ModelSerializer):
 
 class CustomerOrderSerializers(serializers.ModelSerializer):
     class Meta:
-        model = Order
+        model = OrderItem
         fields = "__all__"
 
 

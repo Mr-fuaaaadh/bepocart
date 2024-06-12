@@ -66,7 +66,6 @@ urlpatterns = [
     path('product-images/<int:pk>/', ProducViewWithMultipleImage.as_view(), name='ProductSerializerWithMultipleImage'),
 
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
-    path('orders/<int:pk>/products/', CustomerOrderProducts.as_view(), name='customer-order-products'),
 
     path('recently-viewed/', RecentlyViewedProductsView.as_view(), name='recently-viewed-products'),
     path('recommended/', RecommendedProductsView.as_view(), name='recommended-products'),

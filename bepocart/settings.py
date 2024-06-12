@@ -30,16 +30,21 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","8f5a-59-92-197-197.ngrok-free.app"]
-CSRF_TRUSTED_ORIGINS = ["https://8f5a-59-92-197-197.ngrok-free.app"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","stylus-interracial-floppy-msn.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://stylus-interracial-floppy-msn.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://8f5a-59-92-197-197.ngrok-free.app",
+    "https://stylus-interracial-floppy-msn.trycloudflare.com",
     # Add other origins as needed
 ]
+CORS_ORIGIN_WHITELIST = (
+    "http://localhost:3000",
+    "https://stylus-interracial-floppy-msn.trycloudflare.com",
+
+)
 CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_COOKIE = True

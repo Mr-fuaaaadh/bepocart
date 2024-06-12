@@ -303,14 +303,11 @@ class CustomerProductInCart(APIView):
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            product = Product.objects.get(pk=product.pk)
             recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
             if not created:
                 recently_viewed.viewed_at = timezone.now()
                 recently_viewed.save()
                 
-
-
             # Check if the product is already in the user's Cart
             if Cart.objects.filter(customer=user, product=product).exists():
                 return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1001,6 +998,7 @@ class CreateOrder(APIView):
     def post(self, request, pk):
         # Check if token exists in cookies
         token = request.COOKIES.get('token')
+        print("token", token)
         if not token:
             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1040,6 +1038,7 @@ class CreateOrder(APIView):
                 # Create order items
                 for item in cart_items:
                     OrderItem.objects.create(
+                        customer = user,
                         order=order,
                         product=item.product,
                         quantity=item.quantity,
@@ -1173,9 +1172,9 @@ class UserProfileView(APIView):
 
 
 class CustomerOrders(APIView):
-    def get(self, request):
+    def post(self, request):
         try:
-            token = request.COOKIES.get('token')
+            token = request.headers.get('Authorization')
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1187,7 +1186,7 @@ class CustomerOrders(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            user_orders = Order.objects.filter(customer=user)
+            user_orders = OrderItem.objects.filter(customer=user)
             if not user_orders.exists():
                 return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1208,21 +1207,7 @@ class CustomerOrders(APIView):
         
 
 
-class CustomerOrderProducts(APIView):
-    def get(self, request, pk):
-        try:
-            order = Order.objects.filter(pk=pk).first()
-            if not order:
-                return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-            order_items = OrderItem.objects.filter(order=order)
-            if not order_items.exists():
-                return Response({"message": "No items found for this order"}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = CustomerOrderItems(order_items, many=True)
-            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 
@@ -1331,6 +1316,8 @@ class RecommendedProductsView(APIView):
             return None
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return None
+
+
 class FilteredProductsView(APIView):
     def post(self, request,pk):
         try:
