@@ -30,19 +30,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","stylus-interracial-floppy-msn.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://stylus-interracial-floppy-msn.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","sample-houston-cet-travel.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://sample-houston-cet-travel.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://stylus-interracial-floppy-msn.trycloudflare.com",
+    "https://sample-houston-cet-travel.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://stylus-interracial-floppy-msn.trycloudflare.com",
+    "https://sample-houston-cet-travel.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True

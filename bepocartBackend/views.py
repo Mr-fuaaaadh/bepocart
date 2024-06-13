@@ -1125,15 +1125,23 @@ class BuyToGetOne(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
 class ProducViewWithMultipleImage(APIView):
     def get(self, request, pk):
         try:
-            product = ProducyImage.objects.filter(product_id=pk)
-            serializer = ProductSerializerWithMultipleImage(product,many=True)
-            return Response({"product":serializer.data},status=status.HTTP_200_OK)
-        except Product.DoesNotExist:
-            return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+            product_images = ProducyImage.objects.filter(product_id=pk)
+
+            for product_image in product_images:
+                sizes = product_image.size.all()  # Fetch all related sizes
+                size_names = [size.name for size in sizes]  # List comprehension to get the names
+                print(size_names)
+
+            if not product_images.exists():
+                return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+            return Response({"product": serializer.data}, status=status.HTTP_200_OK)
+        except ProducyImage.DoesNotExist:
+            return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -1190,7 +1198,7 @@ class CustomerOrders(APIView):
             if not user_orders.exists():
                 return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = CustomerOrderSerializers(user_orders, many=True)
+            serializer = CustomerOrderItems(user_orders, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:

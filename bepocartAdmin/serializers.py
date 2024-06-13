@@ -88,3 +88,10 @@ class AdminOrderItemSerializers(serializers.ModelSerializer):
     class Meta :
         model = OrderItem
         fields = "__all__"
+
+
+
+class ProductSizeSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Size
+        fields = "__all__"

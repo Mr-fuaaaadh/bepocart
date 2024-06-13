@@ -145,9 +145,14 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializerWithMultipleImage(serializers.ModelSerializer):
-    class Meta :
+    size_names = serializers.SerializerMethodField()
+
+    class Meta:
         model = ProducyImage
-        fields = ['id','product','color','image1','image2','image3','image4','image5']
+        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3', 'image4', 'image5','size', 'size_names']
+
+    def get_size_names(self, obj):
+        return [size.name for size in obj.size.all()]
 
 
 
@@ -160,10 +165,9 @@ class CustomerOrderSerializers(serializers.ModelSerializer):
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
     productImage = serializers.ImageField(source ='product.image')
-
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order']
 
 
 

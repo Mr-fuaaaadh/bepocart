@@ -79,6 +79,13 @@ class Product(models.Model):
         ]
 
 
+class Size(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta :
+        db_table = "Size"
+
+
 class ProducyImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     color = models.CharField(max_length=100,null=True)
@@ -87,6 +94,7 @@ class ProducyImage(models.Model):
     image3 = models.ImageField(max_length=100, upload_to='product/Images')
     image4 = models.ImageField(max_length=100, upload_to='product/Images')
     image5 = models.ImageField(max_length=100, upload_to='product/Images')
+    size = models.ManyToManyField(Size)
 
     class Meta :
         db_table = 'ProductImage'
