@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from.models import *
+from bepocartBackend.models import *
+
 from django.contrib.auth import get_user_model
 User = get_user_model() 
 
@@ -46,7 +48,7 @@ class ProductSerializerView(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image','categoryName','mainCategory']
+        fields = ['id','name','description','short_description','salePrice','stock','category','image','categoryName','mainCategory','price']
 
 
 class CarousalSerializers(serializers.ModelSerializer):
@@ -83,6 +85,13 @@ class AdminOrderSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class AdminOrderViewsSerializers(serializers.ModelSerializer):
+    customerImage = serializers.ImageField(source ='customer.image')
+    customerName  = serializers.CharField(source ='customer.username')
+    class Meta :
+        model = Order
+        fields = ['id','customer','total_amount','created_at','updated_at','status','address','customerImage','customerName']
+
 
 class AdminOrderItemSerializers(serializers.ModelSerializer):
     class Meta :
@@ -95,3 +104,18 @@ class ProductSizeSerializers(serializers.ModelSerializer):
     class Meta :
         model = Size
         fields = "__all__"
+
+
+
+class AdminCoupenSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Coupon
+        fields = "__all__"
+
+
+
+class AdminallCoupenSerializers(serializers.ModelSerializer):
+    category  = serializers.CharField(source ='discount_category.name')
+    class Meta :
+        model = Coupon
+        fields = ['id','code','coupon_type','discount','start_date','end_date','status','max_uses','used_count','discount_product','discount_category','category']

@@ -131,7 +131,6 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
-
     class Meta:
         model = Order
         fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items']
@@ -165,9 +164,12 @@ class CustomerOrderSerializers(serializers.ModelSerializer):
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
     productImage = serializers.ImageField(source ='product.image')
+    salePrice = serializers.CharField(source ='product.salePrice')
+    offer_type = serializers.CharField(source ='product.offer_type')
+
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type']
 
 
 
@@ -181,3 +183,10 @@ class RecomendedProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory'] 
+
+
+
+class UserProfileSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Customer
+        fields = ['image']

@@ -9,6 +9,7 @@ from django.db import IntegrityError, DatabaseError
 from .models import *
 from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime, timedelta
+from django.core.exceptions import ValidationError
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
 from django.contrib.auth import get_user_model
 User = get_user_model() 
@@ -1078,7 +1079,7 @@ class AllOrders(APIView):
 
                 # Fetch orders belonging to the authenticated user
                 order_products = Order.objects.all()
-                serializer = AdminOrderSerializers(order_products, many=True)
+                serializer = AdminOrderViewsSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
             # except ExpiredSignatureError:
@@ -1110,7 +1111,7 @@ class AllOrderItems(APIView):
 
             #     # Fetch orders belonging to the authenticated user
                 order_products = OrderItem.objects.filter(order=customer)
-                serializer = AdminOrderItemSerializers(order_products, many=True)
+                serializer = CustomerOrderItems(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
             # except ExpiredSignatureError:
@@ -1221,3 +1222,36 @@ class ProductSizeView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class AdminCouponCreation(APIView):
+    def post(self, request):
+        try:
+            serializer = AdminCoupenSerializers(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message":"coupen created successfuly","data":serializer.data}, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as ve:
+            return Response({"error": "Validation Error", "details": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError as ie:
+            return Response({"error": "Integrity Error", "details": str(ie)}, status=status.HTTP_400_BAD_REQUEST)
+        except DatabaseError as de:
+            return Response({"error": "Database Error", "details": str(de)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AdminCoupensView(APIView):
+    def get(self, request):
+        try:
+            coupons = Coupon.objects.all()
+            serializer = AdminallCoupenSerializers(coupons, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        

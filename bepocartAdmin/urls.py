@@ -46,14 +46,16 @@ urlpatterns = [
     path('Bepocart-Product-images-delete/<int:pk>/',ProductMultipleImageDelete.as_view()),
 
 
-
-
     path('Bepocart-Orders/',AllOrders.as_view()),
     path('Bepocart-Order-Item/<int:customer>/',AllOrderItems.as_view()),
 
 
     path('Bepocart-product-size/',ProductSizeAdd.as_view()),
     path('Bepocart-product-size-view/',ProductSizeView.as_view()),
+
+    path('Bepocart-promotion-coupen/',AdminCouponCreation.as_view()),
+    path('Bepocart-promotion-coupen-views/',AdminCoupensView.as_view()),
+
 
 
 

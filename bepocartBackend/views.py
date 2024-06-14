@@ -55,14 +55,13 @@ class CustomerLogin(APIView):
             if customer and customer.check_password(password):
                 # Generate JWT token
                 expiration_time = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-                userToken = {
+                user_token = {
                     'id': customer.pk,
                     'email': customer.email,
                     'exp': expiration_time,
                     'iat': datetime.utcnow()
                 }
-                token = jwt.encode(userToken, settings.SECRET_KEY, algorithm='HS256')
-
+                token = jwt.encode(user_token, settings.SECRET_KEY, algorithm='HS256')
 
                 # Set JWT token in cookies
                 response = Response({
@@ -75,7 +74,7 @@ class CustomerLogin(APIView):
                     value=token,
                     httponly=True,
                     samesite='Lax',
-                    # secure=settings.SECURE_COOKIE
+                    secure=settings.SECURE_COOKIE,  
                 )
                 return response
             else:
@@ -996,15 +995,17 @@ class UserProfileUpdate(APIView):
 
 class CreateOrder(APIView):
     def post(self, request, pk):
-        # Check if token exists in cookies
         token = request.COOKIES.get('token')
-        print("token", token)
-        if not token:
+        print("Token from Cookie:", token)
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+            print("Token from Cookie:", token)
+        else:
             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
+            
         try:
-            # Decode and verify the user token
             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            print("Decoded User Token:", user_token)
         except jwt.ExpiredSignatureError:
             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
         except (jwt.DecodeError, jwt.InvalidTokenError):
@@ -1030,15 +1031,37 @@ class CreateOrder(APIView):
         if not address:
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Retrieve and validate coupon (if provided)
+        coupon_code = request.data.get('coupon_code')
+        print(coupon_code)
+        coupon = None
+        if coupon_code:
+            coupon = Coupon.objects.filter(code=coupon_code, status='Active').first()
+            if not coupon:
+                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieve and validate payment method
+        payment_method = request.data.get('payment_method')
+        print(payment_method)
+        if not payment_method:
+            return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if payment_method not in ['COD', 'razorpay']:
+            return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             # Create order within a transaction
             with transaction.atomic():
-                order = Order.objects.create(customer=user, address=address, status='pending')
+                order = Order.objects.create(
+                    customer=user, 
+                    address=address, 
+                    status='pending', 
+                    payment_method=payment_method
+                )
 
                 # Create order items
                 for item in cart_items:
                     OrderItem.objects.create(
-                        customer = user,
+                        customer=user,
                         order=order,
                         product=item.product,
                         quantity=item.quantity,
@@ -1052,14 +1075,33 @@ class CreateOrder(APIView):
                 # Calculate the total price of the order
                 order.calculate_total()
 
+                # Apply coupon if available
+                if coupon:
+                    discount_value = 0
+                    if coupon.coupon_type == 'Percentage':
+                        applicable_items = cart_items.filter(product__category=coupon.discount_category)
+                        discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (coupon.discount / 100)
+                    elif coupon.coupon_type == 'Fixed Amount':
+                        discount_value = coupon.discount
+                    order.total_amount -= min(discount_value, order.total_amount)  # Ensure discount doesn't exceed total
+                    order.coupon = coupon
+                    order.save()
+
+                # Add 40 rupees for COD payment method
+                if payment_method == 'COD':
+                    order.total_amount += 40
+
+                order.save()
+
                 # Clear the cart after ordering
                 cart_items.delete()
 
             serializer = OrderSerializer(order)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"message":"Order success","data":serializer.data}, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
 
 
@@ -1339,3 +1381,74 @@ class FilteredProductsView(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class UserProfileImageSetting(APIView):
+    def post(self,request):
+
+        try:
+            token = request.headers.get('Authorization')
+            print(token)
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Decode the JWT token
+            try:
+                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = user_token.get('id')
+            if not user_id:
+                return Response({"message": "Invalid token: user ID not found"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = Customer.objects.filter(pk=user_id).first()
+            print(user)
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = UserProfileSerializers(user,partial=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request):
+        try:
+            # Fetch the token from cookies
+            token = request.headers.get('Authorization')
+            print(token)
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Decode the JWT token
+            try:
+                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = user_token.get('id')
+            if not user_id:
+                return Response({"message": "Invalid token: user ID not found"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the user from the database
+            user = Customer.objects.filter(pk=user_id).first()
+            print(user)
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Handle the uploaded file
+            serializer = UserProfileSerializers(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                print("success")
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
