@@ -96,6 +96,7 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
+            
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -991,118 +992,98 @@ class UserProfileUpdate(APIView):
             return None
 
 
-
-
 class CreateOrder(APIView):
     def post(self, request, pk):
-        token = request.COOKIES.get('token')
-        print("Token from Cookie:", token)
-        if isinstance(token, bytes):
-            token = token.decode('utf-8')
-            print("Token from Cookie:", token)
-        else:
+        token = request.headers.get('Authorization')
+        if not token:
             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-            
+        
         try:
             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            print("Decoded User Token:", user_token)
         except jwt.ExpiredSignatureError:
             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Retrieve user ID from the token
         user_id = user_token.get('id')
         if not user_id:
             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Retrieve user from the database
         user = Customer.objects.filter(pk=user_id).first()
         if not user:
             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if cart is empty
         cart_items = Cart.objects.filter(customer=user)
         if not cart_items.exists():
             return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieve and validate address
         address = Address.objects.filter(pk=pk, user=user).first()
         if not address:
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Retrieve and validate coupon (if provided)
         coupon_code = request.data.get('coupon_code')
-        print(coupon_code)
+        print("coupon code:", coupon_code)  # Ensure coupon code is correctly received
+
         coupon = None
         if coupon_code:
-            coupon = Coupon.objects.filter(code=coupon_code, status='Active').first()
-            if not coupon:
+            try:
+                coupon = Coupon.objects.get(code=coupon_code)
+            except Coupon.DoesNotExist:
+                print('Coupon not found')
+                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if coupon.status != 'Active':
+                print('Coupon is not active')
                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieve and validate payment method
+            print('Coupon is active')
+
         payment_method = request.data.get('payment_method')
-        print(payment_method)
+        print("Payment method:", payment_method)
         if not payment_method:
             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
         if payment_method not in ['COD', 'razorpay']:
             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Create order within a transaction
             with transaction.atomic():
                 order = Order.objects.create(
-                    customer=user, 
-                    address=address, 
-                    status='pending', 
+                    customer=user,
+                    address=address,
+                    status='pending',
                     payment_method=payment_method
                 )
 
-                # Create order items
                 for item in cart_items:
                     OrderItem.objects.create(
                         customer=user,
                         order=order,
                         product=item.product,
                         quantity=item.quantity,
-                        price=item.product.salePrice * item.quantity
+                        price=item.product.salePrice
                     )
 
-                    # Deduct stock from product
                     item.product.stock -= item.quantity
                     item.product.save()
 
-                # Calculate the total price of the order
+                # Apply the coupon if present
+                if coupon:
+                    order.coupon = coupon
+
+                # Calculate and save total amount
                 order.calculate_total()
 
-                # Apply coupon if available
-                if coupon:
-                    discount_value = 0
-                    if coupon.coupon_type == 'Percentage':
-                        applicable_items = cart_items.filter(product__category=coupon.discount_category)
-                        discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (coupon.discount / 100)
-                    elif coupon.coupon_type == 'Fixed Amount':
-                        discount_value = coupon.discount
-                    order.total_amount -= min(discount_value, order.total_amount)  # Ensure discount doesn't exceed total
-                    order.coupon = coupon
-                    order.save()
-
-                # Add 40 rupees for COD payment method
-                if payment_method == 'COD':
-                    order.total_amount += 40
-
-                order.save()
-
-                # Clear the cart after ordering
                 cart_items.delete()
 
-            serializer = OrderSerializer(order)
-            return Response({"message":"Order success","data":serializer.data}, status=status.HTTP_201_CREATED)
+                # Serialize order data
+                serializer = OrderSerializer(order)
+                print(serializer.data)  # Debug: print serialized data
 
+            return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            print(f"Error: {str(e)}")  # Debug: print error message
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    
 
 
 
@@ -1388,7 +1369,6 @@ class UserProfileImageSetting(APIView):
 
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1451,4 +1431,15 @@ class UserProfileImageSetting(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CoupensAll(APIView):
+    def get(self, request):
+        try:
+            coupon = Coupon.objects.all()
+            serializer = CouponSerilizers(coupon, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     

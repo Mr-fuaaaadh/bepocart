@@ -23,26 +23,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","flex-hiring-trailers-spy.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://flex-hiring-trailers-spy.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","hats-joseph-chair-villa.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://hats-joseph-chair-villa.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://flex-hiring-trailers-spy.trycloudflare.com",
+    "https://hats-joseph-chair-villa.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://flex-hiring-trailers-spy.trycloudflare.com",
+    "https://hats-joseph-chair-villa.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True

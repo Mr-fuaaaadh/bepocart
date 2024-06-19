@@ -68,9 +68,9 @@ class Coupon(models.Model):
     discount = models.DecimalField(max_digits=10, decimal_places=2) 
     start_date = models.DateField()
     end_date = models.DateField()
-    status = models.CharField(default='In Active')  # True if the coupon is active
-    max_uses = models.IntegerField(default=1)  # Number of times the coupon can be used
-    used_count = models.IntegerField(default=0)  # Number of times the coupon has been used
+    status = models.CharField(default='In Active')  
+    max_uses = models.IntegerField(default=1) 
+    used_count = models.IntegerField(default=0)
     discount_product = models.ForeignKey('bepocartAdmin.Product', null=True, blank=True, on_delete=models.SET_NULL)
     discount_category = models.ForeignKey('bepocartAdmin.Subcategory', null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -115,13 +115,33 @@ class Order(models.Model):
     status = models.CharField(max_length=50)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    coupon = models.ForeignKey(Coupon,on_delete=models.CASCADE, null=True)
-    payment_method = models.CharField(max_length=20,null=True)
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, null=True)
+    payment_method = models.CharField(max_length=20, null=True)
 
     def calculate_total(self):
-        from bepocartAdmin.models import Product
-        self.total_amount = sum(item.total_amount() for item in self.order_items.all())
-        self.save()
+        total = sum(item.price * item.quantity for item in self.order_items.all())
+        discount_value = 0
+        
+        if self.coupon:
+            if self.coupon.coupon_type == 'Percentage':
+                applicable_items = self.order_items.filter(product__category=self.coupon.discount_category)
+                discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (self.coupon.discount / 100)
+            elif self.coupon.coupon_type == 'Fixed Amount':
+                discount_value = self.coupon.discount
+
+            total -= min(discount_value, total)
+            print(f"Discount applied: {discount_value}, Total after discount: {total}")  # Debug statement
+
+        self.total_amount = total
+
+        if self.payment_method == 'COD':
+            self.total_amount += 40
+        
+        self.save()  # Save the order after calculating total
+        print(f"Final total amount saved: {self.total_amount}")  # Debug statement
+
+
+
 
 class OrderItem(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE,null=True)

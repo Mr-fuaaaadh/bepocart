@@ -72,6 +72,8 @@ urlpatterns = [
     path('filtered-products/<int:pk>/', FilteredProductsView.as_view(), name='filtered-products'),
 
     path('profile-image/', UserProfileImageSetting.as_view(), name='UserProfileImageSetting'),
+    path('cupons/', CoupensAll.as_view(), name='CoupensAll'),
+
 
 ]
 

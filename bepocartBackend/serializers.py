@@ -130,10 +130,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'quantity', 'price']
 
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
+    items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items']
+        fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon']
 
 
 
@@ -190,3 +190,11 @@ class UserProfileSerializers(serializers.ModelSerializer):
     class Meta :
         model = Customer
         fields = ['image']
+
+
+
+
+class CouponSerilizers(serializers.ModelSerializer):
+    class Meta :
+        model = Coupon
+        fields = "__all__"
