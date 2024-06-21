@@ -113,6 +113,8 @@ class Cart(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product =  models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
+    color = models.ForeignKey(ProducyImage,on_delete=models.CASCADE,null=True)
+    size = models.ForeignKey(Size, on_delete=models.CASCADE,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta :

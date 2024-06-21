@@ -117,6 +117,7 @@ class Order(models.Model):
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
     coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=20, null=True)
+    payment_id = models.CharField(max_length=100, null=True)
 
     def calculate_total(self):
         total = sum(item.price * item.quantity for item in self.order_items.all())

@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","hats-joseph-chair-villa.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://hats-joseph-chair-villa.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","ideal-buying-darkness-studio.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://ideal-buying-darkness-studio.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://hats-joseph-chair-villa.trycloudflare.com",
+    "https://ideal-buying-darkness-studio.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://hats-joseph-chair-villa.trycloudflare.com",
+    "https://ideal-buying-darkness-studio.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
@@ -82,7 +82,7 @@ ROOT_URLCONF = 'bepocart.urls'
 # settings.py
 
 # Your JWT settings
-JWT_EXPIRATION_MINUTES = 60  # Example expiration time
+JWT_EXPIRATION_MINUTES = 120  # Example expiration time
 
 # Other Django settings
 
@@ -180,3 +180,9 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'muhammadfuhad3@gmail.com'
 EMAIL_HOST_PASSWORD = 'imci azii rmjo ssxv'
+
+
+# settings.py
+
+RAZORPAY_KEY_ID = 'rzp_test_m3k00iFqtte9HH'
+RAZORPAY_KEY_SECRET = 'rzp_test_m3k00iFqtte9HH,aqxiVFElq2fca4w2w0P8s887'

@@ -88,10 +88,32 @@ class AdminOrderSerializers(serializers.ModelSerializer):
 class AdminOrderViewsSerializers(serializers.ModelSerializer):
     customerImage = serializers.ImageField(source ='customer.image')
     customerName  = serializers.CharField(source ='customer.username')
+    # name = serializers.CharField(source='coupon.code')
     class Meta :
         model = Order
-        fields = ['id','customer','total_amount','created_at','updated_at','status','address','customerImage','customerName']
+        fields = ['id','customer','total_amount','created_at','updated_at','status','address','customerImage','customerName','coupon']
 
+
+
+class AdminOrderViewsSerializers(serializers.ModelSerializer):
+    customerImage = serializers.ImageField(source='customer.image')
+    customerName = serializers.CharField(source='customer.username')
+    couponName = serializers.SerializerMethodField()  # Use SerializerMethodField for custom logic
+    couponType = serializers.SerializerMethodField()  # Adding couponType to handle coupon_type attribute
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,
+            'updated_at', 'status', 'address', 'customerImage', 
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id'
+        ]
+
+    def get_couponName(self, obj):
+        return obj.coupon.code if obj.coupon else None  # Return the coupon code or None
+
+    def get_couponType(self, obj):
+        return obj.coupon.coupon_type if obj.coupon else None 
 
 class AdminOrderItemSerializers(serializers.ModelSerializer):
     class Meta :

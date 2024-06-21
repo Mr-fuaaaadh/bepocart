@@ -3,7 +3,7 @@ from  bepocartAdmin.views import *
 
 urlpatterns = [
     path("register/",AdminRegister.as_view()),
-    path("",AdminLogin.as_view()),
+    path("login/",AdminLogin.as_view()),
 
     path('Bepocart-Banner/',CarousalAdd.as_view()),
     path('Bepocart-Banners/',CarousalView.as_view()),
