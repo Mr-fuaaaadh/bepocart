@@ -35,6 +35,13 @@ class SubcategorySerializer(serializers.ModelSerializer):
         model = Subcategory
         fields =  ['id','name','image','category','categoryName']
 
+
+
+class SubCategoryUpdateSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = Subcategory
+        fields = "__all__"
+
 class ProductSerializer(serializers.ModelSerializer):
 
     class Meta :

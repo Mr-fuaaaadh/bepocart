@@ -1,4 +1,4 @@
-import razorpay
+# import razorpay
 import jwt
 from django.shortcuts import get_object_or_404
 import random
