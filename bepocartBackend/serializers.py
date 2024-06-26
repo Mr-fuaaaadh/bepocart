@@ -55,9 +55,15 @@ class WishlistSerializers(serializers.ModelSerializer):
 
 class WishlistSerializersView(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='product.category.category.pk')
+    category = serializers.CharField(source = "product.category.name")
+    productName = serializers.CharField(source='product.name')
+    productImage = serializers.ImageField(source='product.image')
+    productPrice = serializers.IntegerField(source ="product.salePrice")
+
+
     class Meta :
         model = Wishlist
-        fields = ['id','user','product','mainCategory']
+        fields = ['id','user','product','mainCategory','productName','productImage','productPrice','category']
 
 
 class CartSerializers(serializers.ModelSerializer):

@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","newton-greek-perfectly-vaccine.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://newton-greek-perfectly-vaccine.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","michelle-miniature-depot-studied.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://michelle-miniature-depot-studied.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://newton-greek-perfectly-vaccine.trycloudflare.com",
+    "https://michelle-miniature-depot-studied.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://newton-greek-perfectly-vaccine.trycloudflare.com",
+    "https://michelle-miniature-depot-studied.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
@@ -82,7 +82,7 @@ ROOT_URLCONF = 'bepocart.urls'
 # settings.py
 
 # Your JWT settings
-JWT_EXPIRATION_MINUTES = 120  # Example expiration time
+JWT_EXPIRATION_MINUTES = 14400  # Example expiration time
 
 # Other Django settings
 

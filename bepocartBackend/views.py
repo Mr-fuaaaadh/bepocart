@@ -51,7 +51,9 @@ class CustomerLogin(APIView):
         serializer = CustomerLoginSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data.get('email')
+            print("email       :",email)
             password = serializer.validated_data.get('password')
+            print("Password       :",password)
             customer = Customer.objects.filter(email=email).first()
 
             if customer and customer.check_password(password):
@@ -112,7 +114,20 @@ class CategoryView(APIView):
                 "message": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+class AllSubCategoryView(APIView):
+    def get(self, request):
+        try:
+            subcategories = Subcategory.objects.all()
+            serializer = SubcategorySerializer(subcategories, many=True)
+            return Response({
+                "status": "success",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class SubcategoryView(APIView):
     def get(self, request,pk):
@@ -134,7 +149,7 @@ class SubcategoryView(APIView):
 class CustomerProductView(APIView):
     def get(self, request):
         try:
-            products = Product.objects.all()
+            products = Product.objects.all().order_by('-id')
             serializer = ProductViewSerializer(products, many=True)
             return Response({"products": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -183,12 +198,11 @@ from django.db import IntegrityError
 class CustomerAddProductInWishlist(APIView):
     def post(self, request, pk):
         try:
-            # Retrieve the token from the request headers
             token = request.headers.get('Authorization')
+            print("Authorized Token    :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Decode the JWT token
             try:
                 user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             except jwt.ExpiredSignatureError:
@@ -239,7 +253,7 @@ class CustomerAddProductInWishlist(APIView):
 
 
 class CustomerWishlist(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             print("Token:", token)  
@@ -341,7 +355,7 @@ class CustomerProductInCart(APIView):
 
 
 class CustomerCartProducts(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             print("Token:", token)
@@ -552,8 +566,10 @@ class ProductBigView(APIView):
         try:
             product = Product.objects.filter(pk=pk).first()
             if product:
-                serializer = OfferProductSerializers(product)
-                return Response({'product':serializer.data}, status=status.HTTP_200_OK)
+                serializer = CustomerAllProductSerializers(product)
+                product_image = ProducyImage.objects.filter(product=product)
+                image_serializer = ProductImageSerializer(product_image, many=True) 
+                return Response({'product':serializer.data,'images':image_serializer.data}, status=status.HTTP_200_OK)
             return Response({'message':"product not found"},status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1220,7 +1236,7 @@ class BuyOneGetOneOffer(APIView):
         try:
             discount_sale = Product.objects.filter(offer_type="BUY 1 GET 1").order_by('-pk')
             serializer = SubcatecoryBasedProductView(discount_sale, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({"data":serializer.data}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({'error': 'No products found for BUY 1 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -1394,7 +1410,7 @@ class RecentlyViewedProductsView(APIView):
 
 
 class RecommendedProductsView(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             if not token:

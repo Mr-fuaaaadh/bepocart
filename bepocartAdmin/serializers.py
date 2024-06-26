@@ -79,6 +79,14 @@ class OfferProductSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 
+
+class CustomerAllProductSerializers(serializers.ModelSerializer):
+    categoryName = serializers.CharField(source="category.name")
+    class Meta :
+        model = Product
+        fields = ['id','name','short_description','description','price','salePrice','stock','category','image','discount','offer_banner','offer_type','categoryName']
+
+
 class PasswordResetSerializer(serializers.Serializer):
     old_password = serializers.CharField()
     new_password = serializers.CharField(min_length=8, write_only=True)
