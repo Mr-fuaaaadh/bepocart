@@ -437,6 +437,7 @@ class CartProductDelete(APIView):
     def delete(self,request,pk):
         try :
             product = Cart.objects.filter(pk=pk).first()
+            print("id",product)
             if product is None :
                 return Response({"message": "Product not found in cart"}, status=status.HTTP_404_NOT_FOUND)
             product.delete()
@@ -1193,6 +1194,18 @@ class CreateOrder(APIView):
 
 
 
+class RelatedProduct(APIView):
+    def get(self, request, pk):
+        try:
+            product = Product.objects.get(pk=pk)
+            related_products = Product.objects.filter(category=product.category).exclude(pk=product.pk)[:8]
+            serializer = ProductSerializer(related_products, many=True)
+            return Response({"data":serializer.data})
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=404)
+
+
+
 
 class DiscountSaleProducts(APIView):
     def get(self, request):
@@ -1237,6 +1250,17 @@ class BuyOneGetOneOffer(APIView):
             discount_sale = Product.objects.filter(offer_type="BUY 1 GET 1").order_by('-pk')
             serializer = SubcatecoryBasedProductView(discount_sale, many=True)
             return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({'error': 'No products found for BUY 1 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class BuyOneGetOneOfferFree(APIView):
+    def get(self, request):
+        try:
+            discount_sale = Product.objects.filter(offer_type="BUY 1 GET 1").order_by('-pk')[:4]
+            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({'error': 'No products found for BUY 1 GET 1 sale'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -1350,7 +1374,7 @@ class CustomerOrders(APIView):
 
 
 class RecentlyViewedProductsView(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             if not token:
@@ -1364,7 +1388,7 @@ class RecentlyViewedProductsView(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product').order_by('-pk')[:10]
+            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product').order_by('-pk')[:6]
             products = [item.product for item in recently_viewed]
             serializer = RecomendedProductSerializer(products, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)

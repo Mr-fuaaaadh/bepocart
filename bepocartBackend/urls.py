@@ -31,6 +31,7 @@ urlpatterns = [
 
     path('offer-banner/<int:pk>/products/', OfferBanerBasedProducts.as_view(), name='offer-banner-products'),
     path('product/<int:pk>/',ProductBigView.as_view(), name="ProductBigView"),
+    path('related-products/<int:pk>/',RelatedProduct.as_view(), name="RelatedProduct"),
     path('category/<int:pk>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
 
 
@@ -61,6 +62,7 @@ urlpatterns = [
     path('flash-sale/', FlashSaleProducts.as_view(), name='flash-sale'),
     path('offers/', FIftypercontageProducts.as_view(), name='offers'),
     path('buy-1-get-1/', BuyOneGetOneOffer.as_view(), name='BuyOneGetOneOffer'),
+    path('buy-1-get-1-free/', BuyOneGetOneOfferFree.as_view(), name='BuyOneGetOneOffer'),
     path('buy-2-get-1/', BuyToGetOne.as_view(), name='BuyToGetOne'),
 
 
