@@ -2,10 +2,13 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from bepocartAdmin.models import *
 class Customer(models.Model):
-    username = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=100,null=True, blank=False)
+    last_name = models.CharField(max_length=100,null=True, blank=False)
     email = models.EmailField(max_length=100)
     phone = models.CharField(max_length=10)
     image = models.ImageField(max_length=100, upload_to='UserProfile',null=True)
+    place = models.CharField(max_length=100, null=True,blank=False)
+    zip_code = models.CharField(max_length=6,null=True,blank=False)
     password = models.CharField(max_length=100)
 
     def save(self, *args, **kwargs):

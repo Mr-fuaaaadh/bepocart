@@ -100,7 +100,6 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
-            
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -390,29 +389,28 @@ class CustomerCartProducts(APIView):
             total_discounted_price = 0
             for item in cart:
                 product = item.product
-                original_price = product.price if product.price is not None else 0
-                sale_price = product.salePrice if product.salePrice is not None else original_price
+                original_price = product.price if product.price is not None else product.salePrice
+                sale_price = product.salePrice if product.salePrice is not None else 0
                 quantity = item.quantity
                 
                 total_price += original_price * quantity
                 total_discounted_price += sale_price * quantity
-            
-            if total_discounted_price <= 500 :
-                shipping_fee = 60
-                Subtottal = total_discounted_price + shipping_fee
-            else :
-                shipping_fee = 0
-                Subtottal = total_discounted_price + shipping_fee
 
+            if total_discounted_price <= 500:
+                shipping_fee = 60
+            else:
+                shipping_fee = 0
+                
+            subtotal = total_discounted_price + shipping_fee
+            discount_offer = total_price - total_discounted_price
 
             response_data = {
                 "status": "User cart products",
                 "data": serializer.data,
-                "Discount": total_price,
-                "Shipping Charge ": shipping_fee,
-                "Total Price": total_discounted_price,
-                "Subtottal": Subtottal
-
+                "Discount": discount_offer,
+                "Shipping": shipping_fee,
+                "TotalPrice": total_price,
+                "Subtotal": subtotal
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
@@ -794,17 +792,15 @@ class UserAddressDelete(APIView):
 class UserSearchProductView(APIView):
     def post(self, request):
         try:
-            query = request.query_params.get('q', '')
-            print
+            query = request.data.get('q', '')
+            
             if not query:
                 return Response({"message": "No search query provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Search products by name, description, short description, and category name
             products = Product.objects.filter(
                 Q(name__icontains=query) |
                 Q(description__icontains=query) |
-                Q(short_description__icontains=query) 
-                # Q(category__name_icontains=query)
+                Q(short_description__icontains=query)
             )
 
             if products.exists():
@@ -1300,7 +1296,7 @@ class ProducViewWithMultipleImage(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class UserProfileView(APIView):
-    def post(self,request):
+    def get(self,request):
         try:
             token = request.headers.get('Authorization')
             if not token:
@@ -1316,7 +1312,7 @@ class UserProfileView(APIView):
 
             
             serializer = UserProfileSErilizers(user, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({"data":serializer.data}, status=status.HTTP_200_OK)
         
 
         except Exception as e:

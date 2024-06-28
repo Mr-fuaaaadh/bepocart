@@ -72,11 +72,12 @@ class CartSerializers(serializers.ModelSerializer):
     price = serializers.IntegerField(source ='product.price')
     image = serializers.ImageField(source ='product.image')
     mainCategory = serializers.CharField(source ='product.category.category.pk')
+    offer_type = serializers.CharField(source='product.offer_type')
 
 
     class Meta :
         model = Cart
-        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size']
+        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type']
 
 
 
@@ -127,7 +128,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 class UserProfileSErilizers(serializers.ModelSerializer):
     class Meta :
         model = Customer
-        fields = ['username', 'email', 'phone']
+        fields = "__all__"
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
