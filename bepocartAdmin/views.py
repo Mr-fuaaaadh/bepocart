@@ -1135,7 +1135,6 @@ class AllOrders(APIView):
                 if not user:
                     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                # Fetch orders belonging to the authenticated user
                 order_products = Order.objects.all()
                 serializer = AdminOrderViewsSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
@@ -1146,6 +1145,7 @@ class AllOrders(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
+            print("Exception:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 

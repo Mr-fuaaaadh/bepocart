@@ -128,7 +128,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 class UserProfileSErilizers(serializers.ModelSerializer):
     class Meta :
         model = Customer
-        fields = "__all__"
+        fields = ['first_name','last_name','email','password','zip_code','place','image','phone']
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -140,7 +140,7 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon']
+        fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id"]
 
 
 
@@ -176,7 +176,7 @@ class CustomerOrderItems(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type','created_at']
 
 
 

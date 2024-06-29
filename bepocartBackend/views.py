@@ -376,10 +376,12 @@ class CustomerCartProducts(APIView):
 
             user = Customer.objects.filter(pk=user_id).first()
             if not user:
+                print("User not found")
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
                 
             cart = Cart.objects.filter(customer=user)
             if not cart:
+                print("Cart is empty")
                 return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = CartSerializers(cart, many=True)
@@ -681,7 +683,7 @@ class UserAddressAdd(APIView):
 
 
 class UserAddressView(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             if not token:
@@ -945,7 +947,8 @@ class ChangePasswordView(APIView):
 class UserProfileUpdate(APIView):
     def get(self,request):
         try:
-            token = request.COOKIES.get('token')
+            token = request.headers.get('Authorization')
+            print("Update token      :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -974,9 +977,10 @@ class UserProfileUpdate(APIView):
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return None
 
-    def put(self,request):
+    def put(self, request):
         try:
             token = request.headers.get('Authorization')
+            print("token    :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -985,17 +989,21 @@ class UserProfileUpdate(APIView):
                 return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
             user = Customer.objects.filter(pk=user_id).first()
+            print("User  :",user)
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            
             serializer = UserProfileSErilizers(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                print("User data updated successfully:", serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                print("Serializer errors:", serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            print("Exception:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):
@@ -1180,6 +1188,7 @@ class CreateOrder(APIView):
                 if payment_method == 'razorpay':
                     order.payment_id = request.data.get('id')
                     print("payment id     :",order.payment_id)
+                    order.save() 
                 cart_items.delete()
 
                 # Serialize order data
@@ -1299,6 +1308,7 @@ class UserProfileView(APIView):
     def get(self,request):
         try:
             token = request.headers.get('Authorization')
+            print("token   :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1330,7 +1340,7 @@ class UserProfileView(APIView):
 
 
 class CustomerOrders(APIView):
-    def post(self, request):
+    def get(self, request):
         try:
             token = request.headers.get('Authorization')
             if not token:
@@ -1344,7 +1354,7 @@ class CustomerOrders(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            user_orders = OrderItem.objects.filter(customer=user)
+            user_orders = OrderItem.objects.filter(customer=user).order_by('-id')
             if not user_orders.exists():
                 return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1352,6 +1362,7 @@ class CustomerOrders(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print("Exceotion  :",str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):

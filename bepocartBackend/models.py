@@ -152,6 +152,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True,null=True,blank=False)
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def total_price(self):
