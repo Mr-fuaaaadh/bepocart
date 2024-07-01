@@ -1395,7 +1395,7 @@ class RecentlyViewedProductsView(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product').order_by('-pk')[:6]
+            recently_viewed = RecentlyViewedProduct.objects.filter(user=user).select_related('product').order_by('-pk')[:5]
             products = [item.product for item in recently_viewed]
             serializer = RecomendedProductSerializer(products, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
