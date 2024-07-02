@@ -153,6 +153,8 @@ class OrderItem(models.Model):
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True,null=True,blank=False)
+    color = models.CharField(max_length=20,null=True)
+    size = models.CharField(max_length=100, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def total_price(self):

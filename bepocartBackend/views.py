@@ -1171,7 +1171,9 @@ class CreateOrder(APIView):
                         order=order,
                         product=item.product,
                         quantity=item.quantity,
-                        price=item.product.salePrice
+                        price=item.product.salePrice,
+                        color = item.color,
+                        size = item.size
                     )
 
                     item.product.stock -= item.quantity

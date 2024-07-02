@@ -134,7 +134,7 @@ class UserProfileSErilizers(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price']
+        fields = ['id', 'product', 'quantity', 'price','']
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
@@ -176,7 +176,7 @@ class CustomerOrderItems(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type','created_at']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type','created_at','color','size']
 
 
 

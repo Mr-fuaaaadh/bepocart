@@ -844,58 +844,66 @@ class ProductView(APIView):
 
     
 class ProductUpdate(APIView):
-    def authenticate(self, request):
-        token = request.COOKIES.get('token')
-        if not token:
-            return None, Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user_id = payload.get('id')
-            if not user_id:
-                return None, Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            user = User.objects.filter(pk=user_id).first()
-            if not user:
-                return None, Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            return user, None
-        except ExpiredSignatureError:
-            return None, Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-        except (DecodeError, InvalidTokenError):
-            return None, Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
     def get(self, request, pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
-
         try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+        
             product = Product.objects.filter(pk=pk).first()
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = ProductSerializer(product, many=False)
             return Response({"message": "Product details retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+        
         except Exception as e:
+            print(f"Exception: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, pk):
-        user, error_response = self.authenticate(request)
-        if error_response:
-            return error_response
-
         try:
+            token = request.headers.get('Authorization')
+            print("token   :",token)
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+        
             product = Product.objects.filter(pk=pk).first()
             if not product:
+                print("product not found")
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = ProductSerializer(product, data=request.data, context={'user': user})
+            serializer = ProductSerializer(product, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "Product updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+            print(serializer.errors)
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
         except Exception as e:
+            print(f"Exception: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1103,10 +1111,11 @@ class OfferProductUpdate(APIView):
                 if not product:
                     return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                serializer = OfferProductSerializers(product, data=request.data, context={'user': user})
+                serializer = OfferProductSerializers(product, data=request.data)
                 if serializer.is_valid():
                     serializer.save()
                     return Response({"message": "Product updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+                print("error    :",serializer.errors)
                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
             except ExpiredSignatureError:
@@ -1115,7 +1124,12 @@ class OfferProductUpdate(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
+
+
+
+
+################################################### ORDER MANAGEMENT #######################################################
 
 
 class AllOrders(APIView):
@@ -1149,6 +1163,33 @@ class AllOrders(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
+class OrderStatusUpdation(APIView):
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+                user_id = payload.get('id')
+                if not user_id:
+                    return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+                user = User.objects.filter(pk=user_id).first()
+                if not user:
+                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+            
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except Exception as e:
+            print("Exception:", str(e))
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
 
 class AllOrderItems(APIView):
     def get(self, request,customer):
@@ -1191,39 +1232,35 @@ class ProductImageCreateView(APIView):
             print("Product ID:", product.pk)
         except Product.DoesNotExist:
             return Response({'status': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
-        except DatabaseError:
+        except DatabaseError as db_error:
+            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        data = request.data.copy()
+        data = request.data
         data['product'] = product.pk
-
-        print("Received data:", data)
 
         serializer = ProductImageSerializer(data=data)
         if serializer.is_valid():
             try:
                 product_image = serializer.save()
                 size_ids = data.getlist('size', [])
-                print("Size IDs:", size_ids)
-
                 size_ids = [int(size_id) for size_id in size_ids]
                 sizes = Size.objects.filter(id__in=size_ids)
                 if sizes.count() != len(size_ids):
                     return Response({'status': 'One or more size IDs are invalid'}, status=status.HTTP_400_BAD_REQUEST)
-
+                
                 product_image.size.set(sizes)  # Ensure 'sizes' is the correct field name
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except IntegrityError as e:
-                print("Integrity Error:", e)
+            except IntegrityError as integrity_error:
+                print("Integrity Error:", integrity_error)
                 return Response({'status': 'Integrity error occurred'}, status=status.HTTP_400_BAD_REQUEST)
-            except DatabaseError as e:
-                print("Database Error:", e)
+            except DatabaseError as db_error:
+                print("Database Error:", db_error)
                 return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             print("Serializer Errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 
