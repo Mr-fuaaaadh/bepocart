@@ -1169,7 +1169,7 @@ class OrderStatusUpdation(APIView):
             token = request.headers.get('Authorization')
             if not token:
                 return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
-            
+
             try:
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
                 user_id = payload.get('id')
@@ -1179,8 +1179,20 @@ class OrderStatusUpdation(APIView):
                 user = User.objects.filter(pk=user_id).first()
                 if not user:
                     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-                
-            
+
+                order = Order.objects.filter(pk=pk).first()
+                if not order:
+                    return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+                new_status = request.data.get('status')
+                if not new_status:
+                    return Response({"error": "No status provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+                order.status = new_status
+                order.save()
+
+                return Response({"status": "Order status updated successfully"}, status=status.HTTP_200_OK)
+
             except ExpiredSignatureError:
                 return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
             except (DecodeError, InvalidTokenError):
@@ -1403,11 +1415,17 @@ class AdminCouponCreation(APIView):
             if user is None:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            serializer = AdminCoupenSerializers(data=request.data)
+            data = request.data.copy()  # Make a copy of request data
+            data['discount_product'] = list(map(int,data.get('discount_product', [])))
+            data['discount_category'] = list(map(int, data.get('discount_category', [])))
+
+            serializer = AdminCoupenSerializers(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message":"coupen created successfuly","data":serializer.data}, status=status.HTTP_201_CREATED)
+                print(serializer.data)
+                return Response({"message": "Coupon created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
             else:
+                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as ve:
             return Response({"error": "Validation Error", "details": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1442,9 +1460,54 @@ class AdminCoupensView(APIView):
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             coupons = Coupon.objects.all()
+            data = Coupon.objects.all()
+            for i in data :
+                print(i.start_date)
+                print(i.end_date)
+
             serializer = AdminallCoupenSerializers(coupons, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+class AdminCouponDelete(APIView):
+    def delete(self,request,pk):
+        try :
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            coupons = Coupon.objects.filter(pk=pk).first()
+            if coupons is None:
+                return Response({"error": "Coupon not found"}, status=status.HTTP_404_NOT_FOUND)
+            coupons.delete()
+            return Response({"status": "success", "message": "Coupon deleted successfully"}, status=status.HTTP_200_OK)  
+
+
+        except Exception as e:
+            return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
 
         

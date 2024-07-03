@@ -1,4 +1,4 @@
-# import razorpay
+import razorpay
 import jwt
 from django.shortcuts import get_object_or_404
 import random
@@ -1107,6 +1107,100 @@ class UserProfileUpdate(APIView):
 #             print(f"Error: {str(e)}") 
 #             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# class CreateOrder(APIView):
+#     def post(self, request, pk):
+#         token = request.headers.get('Authorization')
+#         if not token:
+#             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+#         try:
+#             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+#         except jwt.ExpiredSignatureError:
+#             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+#         except (jwt.DecodeError, jwt.InvalidTokenError):
+#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+#         user_id = user_token.get('id')
+#         if not user_id:
+#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+#         user = Customer.objects.filter(pk=user_id).first()
+#         if not user:
+#             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         cart_items = Cart.objects.filter(customer=user)
+#         if not cart_items.exists():
+#             return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         address = Address.objects.filter(pk=pk, user=user).first()
+#         if not address:
+#             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         coupon_code = request.data.get('coupon_code')
+#         print("coupen   :",coupon_code)
+#         coupon = None
+#         if coupon_code:
+#             try:
+#                 coupon = Coupon.objects.get(code=coupon_code)
+#             except Coupon.DoesNotExist:
+#                 return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             if coupon.status != 'Active':
+#                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         payment_method = request.data.get('payment_method')
+#         print("payment method   :",payment_method)
+
+#         if not payment_method:
+#             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
+#         if payment_method not in ['COD', 'razorpay']:
+#             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             with transaction.atomic():
+#                 order = Order.objects.create(
+#                     customer=user,
+#                     address=address,
+#                     status='pending',
+#                     payment_method=payment_method
+#                 )
+
+#                 for item in cart_items:
+#                     OrderItem.objects.create(
+#                         customer=user,
+#                         order=order,
+#                         product=item.product,
+#                         quantity=item.quantity,
+#                         price=item.product.salePrice,
+#                         color = item.color,
+#                         size = item.size
+#                     )
+
+#                     item.product.stock -= item.quantity
+#                     item.product.save()
+
+#                 # Apply the coupon if present
+#                 if coupon:
+#                     order.coupon = coupon
+
+#                 # Calculate and save total amount
+#                 order.calculate_total()
+
+#                 # If payment method is razorpay, create a razorpay order
+#                 if payment_method == 'razorpay':
+#                     order.payment_id = request.data.get('id')
+#                     print("payment id     :",order.payment_id)
+#                     order.save() 
+#                 cart_items.delete()
+
+#                 # Serialize order data
+#                 serializer = OrderSerializer(order)
+#                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+#         except Exception as e:
+#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 class CreateOrder(APIView):
     def post(self, request, pk):
         token = request.headers.get('Authorization')
@@ -1137,7 +1231,6 @@ class CreateOrder(APIView):
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
         coupon_code = request.data.get('coupon_code')
-        print("coupen   :",coupon_code)
         coupon = None
         if coupon_code:
             try:
@@ -1149,8 +1242,6 @@ class CreateOrder(APIView):
                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
         payment_method = request.data.get('payment_method')
-        print("payment method   :",payment_method)
-
         if not payment_method:
             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
         if payment_method not in ['COD', 'razorpay']:
@@ -1172,8 +1263,8 @@ class CreateOrder(APIView):
                         product=item.product,
                         quantity=item.quantity,
                         price=item.product.salePrice,
-                        color = item.color,
-                        size = item.size
+                        color=item.color,
+                        size=item.size
                     )
 
                     item.product.stock -= item.quantity
@@ -1188,12 +1279,22 @@ class CreateOrder(APIView):
 
                 # If payment method is razorpay, create a razorpay order
                 if payment_method == 'razorpay':
-                    order.payment_id = request.data.get('id')
-                    print("payment id     :",order.payment_id)
-                    order.save() 
+                    # Initialize Razorpay client with API credentials
+                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                    
+                    # Create Razorpay order
+                    razorpay_order = razorpay_client.order.create({
+                        'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
+                        'currency': 'INR',
+                        'payment_capture': 1  # Auto capture payment
+                    })
+
+                    # Update order with Razorpay order ID
+                    order.payment_id = razorpay_order['id']
+                    order.save()
+
                 cart_items.delete()
 
-                # Serialize order data
                 serializer = OrderSerializer(order)
                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:

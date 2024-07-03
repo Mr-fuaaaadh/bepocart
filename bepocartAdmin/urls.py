@@ -47,6 +47,8 @@ urlpatterns = [
 
 
     path('Bepocart-Orders/',AllOrders.as_view()),
+    path('Bepocart-Order-status-update/<int:pk>/',OrderStatusUpdation.as_view()),
+
     path('Bepocart-Order-Item/<int:customer>/',AllOrderItems.as_view()),
 
 
@@ -55,6 +57,8 @@ urlpatterns = [
 
     path('Bepocart-promotion-coupen/',AdminCouponCreation.as_view()),
     path('Bepocart-promotion-coupen-views/',AdminCoupensView.as_view()),
+    path('Bepocart-promotion-coupen-delete/<int:pk>/',AdminCouponDelete.as_view()),
+
 
 
 

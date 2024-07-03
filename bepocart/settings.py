@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","isa-pointing-relax-potentially.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://isa-pointing-relax-potentially.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","reliance-appropriations-capital-information.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://reliance-appropriations-capital-information.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://isa-pointing-relax-potentially.trycloudflare.com",
+    "https://reliance-appropriations-capital-information.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://isa-pointing-relax-potentially.trycloudflare.com",
+    "https://reliance-appropriations-capital-information.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
@@ -184,5 +184,5 @@ EMAIL_HOST_PASSWORD = 'imci azii rmjo ssxv'
 
 # settings.py
 
-RAZORPAY_KEY_ID = 'rzp_test_m3k00iFqtte9HH'
-RAZORPAY_KEY_SECRET = 'rzp_test_m3k00iFqtte9HH,aqxiVFElq2fca4w2w0P8s887'
+RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
+RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'

@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from bepocartAdmin.models import *
+from django.utils import timezone
+
+current_time = timezone.now()
+
 class Customer(models.Model):
     first_name = models.CharField(max_length=100,null=True, blank=False)
     last_name = models.CharField(max_length=100,null=True, blank=False)
@@ -67,49 +71,48 @@ class RecentlyViewedProduct(models.Model):
 
 class Coupon(models.Model):
     code = models.CharField(max_length=20, unique=True)
-    coupon_type = models.CharField(max_length=20,default='Percentage')
+    coupon_type = models.CharField(max_length=20, default='Percentage')
     discount = models.DecimalField(max_digits=10, decimal_places=2) 
-    start_date = models.DateField()
-    end_date = models.DateField()
-    status = models.CharField(default='In Active')  
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    status = models.CharField(max_length=20, default='In Active')  
     max_uses = models.IntegerField(default=1) 
     used_count = models.IntegerField(default=0)
-    discount_product = models.ForeignKey('bepocartAdmin.Product', null=True, blank=True, on_delete=models.SET_NULL)
-    discount_category = models.ForeignKey('bepocartAdmin.Subcategory', null=True, blank=True, on_delete=models.SET_NULL)
+    discount_product = models.ManyToManyField('bepocartAdmin.Product', blank=True)
+    discount_category = models.ManyToManyField('bepocartAdmin.Subcategory', blank=True)
 
     def __str__(self):
         return self.code
 
     def is_valid(self):
         return (
-            self.status and
+            self.status == 'Active' and
             self.used_count < self.max_uses and
-            self.start_date <= timezone.now() <= self.end_date
+            self.start_date <= timezone.now().date() <= self.end_date
         )
     
-    class Meta :
-        db_table ="Coupen"
+    class Meta:
+        db_table = "Coupon"
 
     def apply_coupon(self, order_total, products=None):
         if not self.is_valid():
             return order_total, False
 
-        if self.discount_product and (not products or self.discount_product not in products):
+        if self.discount_product.exists() and (not products or not any(p in self.discount_product.all() for p in products)):
             return order_total, False
 
-        if self.discount_category and (not products or not any(p.category == self.discount_category for p in products)):
+        if self.discount_category.exists() and (not products or not any(p.category in self.discount_category.all() for p in products)):
             return order_total, False
 
-        if self.coupon_type == 'percentage':
+        if self.coupon_type.lower() == 'percentage':
             discount_amount = (self.discount / 100) * order_total
         else:
             discount_amount = self.discount
 
         new_total = max(order_total - discount_amount, 0)
-        self.used_count += 1
-        self.save()
+        self.used_count += 1  
+        self.save()  
         return new_total, True
-    
     
 class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)

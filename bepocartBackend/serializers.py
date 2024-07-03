@@ -73,11 +73,12 @@ class CartSerializers(serializers.ModelSerializer):
     image = serializers.ImageField(source ='product.image')
     mainCategory = serializers.CharField(source ='product.category.category.pk')
     offer_type = serializers.CharField(source='product.offer_type')
+    stock = serializers.IntegerField(source ='product.stock')
 
 
     class Meta :
         model = Cart
-        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type']
+        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type','stock']
 
 
 
@@ -91,7 +92,7 @@ class ProductViewSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price']
+        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price','stock']
 
 
 class AddressSerializer(serializers.ModelSerializer):
