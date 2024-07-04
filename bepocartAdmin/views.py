@@ -1507,6 +1507,264 @@ class AdminCouponDelete(APIView):
         
 
 
+class AdminCouponUpdate(APIView):
+    
+    def get(self, request, pk):
+        try:
+            coupon = Coupon.objects.filter(pk=pk).first()
+            if not coupon:
+                return Response({"error": f"Coupon with id {pk} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = AdminCoupenSerializers(coupon)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"error": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                coupon = Coupon.objects.get(pk=pk)
+            except Coupon.DoesNotExist:
+                return Response({"error": f"Coupon with id {pk} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = AdminCoupenSerializers(coupon, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+            else:
+                print(serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class AdminBlogCreate(APIView):
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = BlogSerializers(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+            else:
+                print(serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class AdminBlogView(APIView):
+    def get(self, request,):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            blog = Blog.objects.all()
+            serializer = BlogSerializers(blog, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class AdminBlogDelete(APIView):
+    def get(self, request, pk):
+        try:
+            blog = Blog.objects.filter(pk=pk).first()
+            if blog is None:
+                return Response({'error': "Blog not found"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = BlogSerializers(blog)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            blog = Blog.objects.filter(pk=pk).first()
+            if blog is None:
+                return Response({"error": "Blog not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            blog.delete()
+            return Response({"success": "Blog deleted successfully"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class AdminBlogUpdate(APIView):
+    def get(self, request, pk):
+        try:
+            blog = Blog.objects.filter(pk=pk).first()
+            if blog is None:
+                return Response({'error': "Blog not found"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = BlogSerializers(blog)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            blog = Blog.objects.filter(pk=pk).first()
+            if blog is None:
+                return Response({"error": "Blog not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = BlogSerializers(blog, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Blog update successfully completed", "data": serializer.data}, status=status.HTTP_200_OK)
+            return Response({"error": "Invalid data", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class AdminCustomerView(APIView):
+    def get(self, request):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            customers = Customer.objects.all()
+            serializer = AdminCustomerViewSerilizers(customers, many=True)  
+            return Response({"message": "Customers data fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+        
+
+
+
+            
+            
+
+            
+
+        
+
+
 
 
 

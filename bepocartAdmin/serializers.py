@@ -158,3 +158,16 @@ class AdminallCoupenSerializers(serializers.ModelSerializer):
     class Meta :
         model = Coupon
         fields = ['id','code','coupon_type','discount','start_date','end_date','status','max_uses','used_count','discount_product','discount_category','category']
+
+
+
+class BlogSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Blog
+        fields = "__all__"
+
+
+class AdminCustomerViewSerilizers(serializers.ModelSerializer):
+    class Meta :
+        model = Customer
+        fields ="__all__"

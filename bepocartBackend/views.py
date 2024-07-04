@@ -1457,11 +1457,11 @@ class CustomerOrders(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            user_orders = OrderItem.objects.filter(customer=user).order_by('-id')
+            user_orders = Order.objects.filter(customer=user).order_by('-id')
             if not user_orders.exists():
                 return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = CustomerOrderItems(user_orders, many=True)
+            serializer = OrderSerializer(user_orders, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -1476,6 +1476,46 @@ class CustomerOrders(APIView):
             return None
         except (jwt.DecodeError, jwt.InvalidTokenError):
             return None
+        
+
+class CustomerOrderItems(APIView):
+    def get(self, request, pk):
+        try:
+            # token = request.headers.get('Authorization')
+            # if not token:
+            #     return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # user_id = self._validate_token(token)
+            # if not user_id:
+            #     return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # user = Customer.objects.filter(pk=user_id).first()
+            # if not user:
+            #     return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            user_orders = OrderItem.objects.filter(order=pk)
+            if not user_orders.exists():
+                return Response({"message": "No orders found for this user"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = CustomerOrderSerializers(user_orders, many=True)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Exceotion  :",str(e))
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # def _validate_token(self, token):
+    #     try:
+    #         user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    #         return user_token.get('id')
+    #     except jwt.ExpiredSignatureError:
+    #         return None
+    #     except (jwt.DecodeError, jwt.InvalidTokenError):
+    #         return None
+        
+            
+
+
         
 
 

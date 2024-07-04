@@ -121,6 +121,24 @@ class Cart(models.Model):
         db_table = "Cart"
 
 
+class Blog(models.Model):
+    title = models.CharField(max_length=200)
+    image = models.ImageField(max_length=100, upload_to="blog")
+    content = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(blank=True, null=True)
+
+    def publish(self):
+        self.published_at = timezone.now()
+        self.save()
+
+    def __str__(self):
+        return self.title
+    
+    class Meta :
+        db_table = "Blog"
+
 
 
 

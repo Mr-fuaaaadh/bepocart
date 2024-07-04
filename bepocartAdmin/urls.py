@@ -58,6 +58,18 @@ urlpatterns = [
     path('Bepocart-promotion-coupen/',AdminCouponCreation.as_view()),
     path('Bepocart-promotion-coupen-views/',AdminCoupensView.as_view()),
     path('Bepocart-promotion-coupen-delete/<int:pk>/',AdminCouponDelete.as_view()),
+    path('Bepocart-promotion-coupen-update/<int:pk>/',AdminCouponUpdate.as_view()),
+
+    path('Bepocart-Blog/',AdminBlogCreate.as_view()),
+    path('Bepocart-Blogs/',AdminBlogView.as_view()),
+    path('Bepocart-Blog-update/<int:pk>/',AdminBlogUpdate.as_view()),
+    path('Bepocart-Blog-delete/<int:pk>/',AdminBlogDelete.as_view()),
+
+
+    path('Bepocart-customers/',AdminCustomerView.as_view()),
+
+
+
 
 
 

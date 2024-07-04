@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","reliance-appropriations-capital-information.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://reliance-appropriations-capital-information.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","magnet-stage-consecutive-combining.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://magnet-stage-consecutive-combining.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://reliance-appropriations-capital-information.trycloudflare.com",
+    "https://magnet-stage-consecutive-combining.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://reliance-appropriations-capital-information.trycloudflare.com",
+    "https://magnet-stage-consecutive-combining.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
