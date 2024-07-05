@@ -100,6 +100,12 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
+            data = User.objects.all()
+            for i in data :
+                print(i.username)
+                print(i.password)
+
+
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -293,7 +299,7 @@ class CustomerProductDeleteInWishlist(APIView):
             if product is None:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             product.delete()
-            return Response({"message": "Product deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            return Response({"message": "Product deleted successfully"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1722,5 +1728,21 @@ class CoupensAll(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+
+
+class BlogView(APIView):
+    def get(self, request):
+        try:
+            blog = Blog.objects.all().order_by('id')
+            serializer = BlogSerializer(blog, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     

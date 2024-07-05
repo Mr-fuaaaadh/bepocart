@@ -116,7 +116,8 @@ class Coupon(models.Model):
     
 class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateField(auto_now_add=True)
+    created_time = models.TimeField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -124,6 +125,11 @@ class Order(models.Model):
     coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=20, null=True)
     payment_id = models.CharField(max_length=100, null=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.created_time:
+            self.created_time = timezone.now().time()
+        super().save(*args, **kwargs)
 
     def calculate_total(self):
         total = sum(item.price * item.quantity for item in self.order_items.all())

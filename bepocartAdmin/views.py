@@ -10,9 +10,11 @@ from .models import *
 from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
+import pandas as pd
+import openpyxl
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
-from django.contrib.auth import get_user_model
-User = get_user_model() 
+from django.contrib.auth.models import User
 
 class AdminRegister(APIView):
     def post(self, request):
@@ -22,8 +24,10 @@ class AdminRegister(APIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "User registration is successfully completed", "data": serializer.data}, status=status.HTTP_201_CREATED)
+            print(serializer.errors)
             return Response({"message": "Invalid request", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(f"Exception status: {str(e)}")
             return Response({"message": "An error occurred", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1149,7 +1153,7 @@ class AllOrders(APIView):
                 if not user:
                     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                order_products = Order.objects.all()
+                order_products = Order.objects.all().order_by('-id')
                 serializer = AdminOrderViewsSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
@@ -1420,9 +1424,9 @@ class AdminCouponCreation(APIView):
             data['discount_category'] = list(map(int, data.get('discount_category', [])))
 
             serializer = AdminCoupenSerializers(data=data)
+            print(serializer)
             if serializer.is_valid():
                 serializer.save()
-                print(serializer.data)
                 return Response({"message": "Coupon created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
             else:
                 print(serializer.errors)
@@ -1434,6 +1438,7 @@ class AdminCouponCreation(APIView):
         except DatabaseError as de:
             return Response({"error": "Database Error", "details": str(de)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
+            print(f"Exception status: {str(e)}")
             return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1460,11 +1465,7 @@ class AdminCoupensView(APIView):
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             coupons = Coupon.objects.all()
-            data = Coupon.objects.all()
-            for i in data :
-                print(i.start_date)
-                print(i.end_date)
-
+            
             serializer = AdminallCoupenSerializers(coupons, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1755,7 +1756,34 @@ class AdminCustomerView(APIView):
 
         
 
+class ExportOrderDataView(APIView):
+    def get(self, request, *args, **kwargs):
+        date = request.GET.get('date', None)
+        # end_date = request.GET.get('end_date', None)
+        
+        # Query orders based on selected date range
+        if date :
+            orders = Order.objects.filter(created_at=[date])
+        else:
+            orders = Order.objects.all()
 
+        data = {
+            'Customer': [order.customer.first_name for order in orders],
+            'Email': [order.customer.email for order in orders],
+            'Phone': [order.customer.phone for order in orders],
+            'Total': [order.total_amount for order in orders],
+            'Date': [order.created_at for order in orders],
+        }
+        df = pd.DataFrame(data)
+
+        excel_file = "order_data.xlsx"
+
+        df.to_excel(excel_file, index=False)
+
+        with open(excel_file, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename=' + excel_file
+            return response
 
             
             

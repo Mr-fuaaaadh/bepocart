@@ -67,6 +67,7 @@ urlpatterns = [
 
 
     path('Bepocart-customers/',AdminCustomerView.as_view()),
+    path('export-orders/', ExportOrderDataView.as_view(), name='export_orders'),
 
 
 

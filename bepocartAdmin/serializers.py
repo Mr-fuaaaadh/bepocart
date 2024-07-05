@@ -1,14 +1,42 @@
 from rest_framework import serializers
 from.models import *
 from bepocartBackend.models import *
-
-from django.contrib.auth import get_user_model
-User = get_user_model() 
+from django.contrib.auth.models import User
 
 class AdminSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    password_confirm = serializers.CharField(write_only=True)
+    is_active = serializers.BooleanField(default=True)
+    is_superuser = serializers.BooleanField(default=False)
+
     class Meta:
         model = User
-        fields = "__all__"
+        fields = ['username', 'password', 'password_confirm', 'id', 'email', 'is_active', 'is_superuser']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'password_confirm': {'write_only': True},
+        }
+
+    def validate(self, data):
+        """
+        Check that the two password entries match.
+        """
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError("Passwords do not match.")
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')  # Remove the password confirmation field
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        user.is_active = validated_data.get('is_active', True)
+        user.is_superuser = validated_data.get('is_superuser', False)
+        user.save()
+        return user
+
 
 class AdminLoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()

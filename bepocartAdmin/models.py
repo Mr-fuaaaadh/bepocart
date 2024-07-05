@@ -127,7 +127,7 @@ class Blog(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
-    published_at = models.DateTimeField(blank=True, null=True)
+    published_at = models.CharField(default="Active", null=True)
 
     def publish(self):
         self.published_at = timezone.now()

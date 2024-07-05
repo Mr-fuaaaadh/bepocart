@@ -79,6 +79,8 @@ urlpatterns = [
     
     path('cupons/', CoupensAll.as_view(), name='CoupensAll'),
 
+    path('blog/',BlogView.as_view(),name="blog")
+
 
 ]
 
