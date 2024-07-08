@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from bepocartAdmin.models import *
 from django.utils import timezone
+import uuid
 
 current_time = timezone.now()
 
@@ -115,21 +116,32 @@ class Coupon(models.Model):
         return new_total, True
     
 class Order(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    order_id = models.CharField(max_length=20, null=True, unique=True, editable=False)
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
     created_at = models.DateField(auto_now_add=True)
     created_time = models.TimeField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, null=True)
+    address = models.ForeignKey('Address', on_delete=models.CASCADE)
+    coupon = models.ForeignKey('Coupon', on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=20, null=True)
     payment_id = models.CharField(max_length=100, null=True)
     
     def save(self, *args, **kwargs):
         if not self.created_time:
             self.created_time = timezone.now().time()
+        
+        if not self.order_id:
+            self.order_id = self.generate_order_id()
+        
         super().save(*args, **kwargs)
+        self.calculate_total()
+
+    def generate_order_id(self):
+        date_str = timezone.now().strftime('%Y%m%d')
+        unique_id = uuid.uuid4().hex[:6].upper()  # Generate a random unique identifier
+        return f'{date_str}-{unique_id}'
 
     def calculate_total(self):
         total = sum(item.price * item.quantity for item in self.order_items.all())
@@ -143,15 +155,18 @@ class Order(models.Model):
                 discount_value = self.coupon.discount
 
             total -= min(discount_value, total)
-            print(f"Discount applied: {discount_value}, Total after discount: {total}")  # Debug statement
+            print(f"Discount applied: {discount_value}, Total after discount: {total}")  
 
         self.total_amount = total
 
         if self.payment_method == 'COD':
             self.total_amount += 40
         
-        self.save()  # Save the order after calculating total
-        print(f"Final total amount saved: {self.total_amount}")  # Debug statement
+        super().save(update_fields=['total_amount'])  # Save the order after calculating total
+        print(f"Final total amount saved: {self.total_amount}")
+
+    def __str__(self):
+        return self.order_id
 
 
 

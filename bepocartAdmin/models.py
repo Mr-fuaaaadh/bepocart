@@ -142,4 +142,20 @@ class Blog(models.Model):
 
 
 
+class Coin(models.Model):
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    amount = models.IntegerField(default=0)
+    source = models.CharField(max_length=100) 
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} - {self.amount} coins from {self.source}"
     
+
+
+class CoinValue(models.Model):
+    coin = models.CharField(max_length=100)
+    value = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.coin} - {self.value}"

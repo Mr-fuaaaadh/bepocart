@@ -147,7 +147,7 @@ class AdminOrderViewsSerializers(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'total_amount', 'created_at','coupon' ,
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
             'updated_at', 'status', 'address', 'customerImage', 
             'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id'
         ]
@@ -199,3 +199,31 @@ class AdminCustomerViewSerilizers(serializers.ModelSerializer):
     class Meta :
         model = Customer
         fields ="__all__"
+
+
+class OrderInvoiceBillSerializer(serializers.ModelSerializer):
+    customerImage = serializers.ImageField(source='customer.image')
+    customerName = serializers.CharField(source='customer.first_name')
+    lastName = serializers.CharField(source='customer.last_name')
+    address = serializers.CharField(source='address.address')
+    email = serializers.CharField(source='address.email')
+    phone = serializers.CharField(source='address.phone')
+    pincode = serializers.CharField(source='address.pincode')
+    city = serializers.CharField(source='address.city') 
+    state = serializers.CharField(source='address.state')    
+    couponName = serializers.SerializerMethodField()  # Use SerializerMethodField for custom logic
+    couponType = serializers.SerializerMethodField()  # Adding couponType to handle coupon_type attribute
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
+            'updated_at', 'status', 'address', 'customerImage', 
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','lastName','address','email','phone','pincode','city','state'
+        ]
+
+    def get_couponName(self, obj):
+        return obj.coupon.code if obj.coupon else None  # Return the coupon code or None
+
+    def get_couponType(self, obj):
+        return obj.coupon.coupon_type if obj.coupon else None 

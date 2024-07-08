@@ -48,8 +48,8 @@ urlpatterns = [
 
     path('Bepocart-Orders/',AllOrders.as_view()),
     path('Bepocart-Order-status-update/<int:pk>/',OrderStatusUpdation.as_view()),
-
     path('Bepocart-Order-Item/<int:customer>/',AllOrderItems.as_view()),
+    path('Bepocart-Order-Bill/<str:order_id>/',OrderInvoiceBillCreating.as_view()),
 
 
     path('Bepocart-product-size/',ProductSizeAdd.as_view()),

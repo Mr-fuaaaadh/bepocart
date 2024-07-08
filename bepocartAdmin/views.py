@@ -1786,7 +1786,32 @@ class ExportOrderDataView(APIView):
             return response
 
             
-            
+class OrderInvoiceBillCreating(APIView):
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            order_items = OrderItem.objects.filter(order=order)
+            if not order_items.exists():
+                return Response({"error": "Order Items not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            order_serializer = OrderInvoiceBillSerializer(order)
+            order_items_serializer = CustomerOrderItems(order_items, many=True)
+
+            return Response({
+                "message": "Order data fetched successfully",
+                "data": order_serializer.data,
+                "order_items": order_items_serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
 
             
 

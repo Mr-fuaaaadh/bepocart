@@ -87,6 +87,7 @@ class CustomerLogin(APIView):
                     "message": "Invalid email or password"
                 }, status=status.HTTP_401_UNAUTHORIZED)
         else:
+            print(serializer.errors)
             return Response({
                 "status": "error",
                 "message": "Invalid data",
@@ -100,12 +101,7 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
-            data = User.objects.all()
-            for i in data :
-                print(i.username)
-                print(i.password)
-
-
+            # data = Order.objects.all().delete()
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -823,7 +819,7 @@ class UserSearchProductView(APIView):
             
 
 class HighToLowProducts(APIView):
-    def post(self, request, pk):
+    def get(self, request, pk):
         try:
             sort_order = request.query_params.get('sort', 'high_to_low')
             category = Subcategory.objects.filter(pk=pk).first()
@@ -845,7 +841,7 @@ class HighToLowProducts(APIView):
 
 
 class LowToHighProducts(APIView):
-    def post(self, request,pk):
+    def get(self, request,pk):
         try:
             sort_order = request.query_params.get('sort', 'low_to_high')
             category = Subcategory.objects.filter(pk=pk).first()
@@ -1593,6 +1589,8 @@ class RecommendedProductsView(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
+            print
+            (token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
