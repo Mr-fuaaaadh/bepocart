@@ -227,3 +227,23 @@ class OrderInvoiceBillSerializer(serializers.ModelSerializer):
 
     def get_couponType(self, obj):
         return obj.coupon.coupon_type if obj.coupon else None 
+
+
+
+
+class CoinModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoinValue
+        fields = "__all__"
+
+
+
+class AdminCustomerCoinSerializer(serializers.ModelSerializer):
+    firstName = serializers.CharField(source='user.first_name')
+    lastName = serializers.CharField(source='user.last_name')
+
+    class Meta:
+        model = Coin
+        fields = ['id','user','amount','timestamp','source','firstName','lastName']
+
+

@@ -53,6 +53,8 @@ class AdminLogin(APIView):
                         if isinstance(token, bytes):
                             token = token.decode('utf-8')
 
+                        
+
                         response = Response({"token": token}, status=status.HTTP_200_OK)
                         response.set_cookie('token', token, httponly=True, secure=True)
                         return response
@@ -1396,6 +1398,37 @@ class ProductSizeView(APIView):
         
 
 
+class ProductSizeDelete(APIView):
+    def delete(self, request, pk):
+        try:
+            size = Size.objects.filter(pk=pk).first()
+            if size is None:
+                return Response({"error": "Size not found"}, status=status.HTTP_404_NOT_FOUND)
+            size.delete()
+            return Response({"message": "Size deleted successfully"}, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProductSizeUpdate(APIView):
+    def put(self, request, pk):
+        try:
+            size = Size.objects.filter(pk=pk).first()
+            if size is None:
+                return Response({"error": "Size not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = ProductSizeSerializers(size, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+        
+
+
 
 class AdminCouponCreation(APIView):
     def post(self, request):
@@ -1815,10 +1848,97 @@ class OrderInvoiceBillCreating(APIView):
 
             
 
+class AdminCoinCreating(APIView):
+    def post(self, request):
+        serializer = CoinModelSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Coin created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class AdminCoinFetching(APIView):
+    def get(self, request):
+        try:
+            coins = CoinValue.objects.all()
+            serializer = CoinModelSerializer(coins, many=True)
+            return Response({"message": "Coins fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": "Error fetching coins", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class AdminCoinDelete(APIView):
+    def delete(self, request, pk):
+        try:
+            coin = CoinValue.objects.get(id=pk)
+            coin.delete()
+            return Response({"message": "Coin deleted successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": "Error deleting coin", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    
+
+class AdminCoinUpdate(APIView):
+    def put(self, request, pk):
+        try:
+            coin = CoinValue.objects.get(pk=pk)
+            serializer = CoinModelSerializer(coin, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Coin updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Validation error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except CoinValue.DoesNotExist:
+            return Response({"message": "Coin not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"message": "Error updating coin", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
 
 
 
+class AdminCustomerCOinDAtaView(APIView):
+    def get(self, request, pk):
+        try:
+            # Retrieve token from request headers
+            token = request.headers.get('Authorization')
+            print("TOken    :",token)
+            if not token:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            try:
+                # Decode JWT token
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        
+            # Extract user ID from token payload
+            user_id = payload.get('id')
+            if not user_id:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user (admin) based on user ID
+            user = User.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Fetch customer based on provided pk
+            customer = Customer.objects.filter(pk=pk).first()
+            print("User     :",customer)
+            if not customer:
+                return Response({"message": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Fetch coin data associated with the customer
+            coin_data = Coin.objects.filter(user=customer.pk)
+            serializer = AdminCustomerCoinSerializer(coin_data, many=True)
+            
+            return Response({"message": "Customer data fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

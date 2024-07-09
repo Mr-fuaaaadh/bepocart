@@ -70,6 +70,8 @@ urlpatterns = [
 
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
     path('order-items/<int:pk>/', CustomerOrderItems.as_view(), name='CustomerOrderItems'),
+    path('order-items/', CustomerAllOrderItems.as_view(), name='CustomerAllOrderItems'),
+
 
     path('recently-viewed/', RecentlyViewedProductsView.as_view(), name='recently-viewed-products'),
     path('recommended/', RecommendedProductsView.as_view(), name='recommended-products'),
@@ -79,7 +81,9 @@ urlpatterns = [
     
     path('cupons/', CoupensAll.as_view(), name='CoupensAll'),
 
-    path('blog/',BlogView.as_view(),name="blog")
+    path('blog/',BlogView.as_view(),name="blog"),
+    path('coin/',CustomerCoinView.as_view(),name="coin")
+
 
 
 ]

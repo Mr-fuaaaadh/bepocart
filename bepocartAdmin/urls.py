@@ -54,6 +54,10 @@ urlpatterns = [
 
     path('Bepocart-product-size/',ProductSizeAdd.as_view()),
     path('Bepocart-product-size-view/',ProductSizeView.as_view()),
+    path('Bepocart-product-size-delete/<int:pk>/',ProductSizeDelete.as_view()),
+    path('Bepocart-product-size-update/<int:pk>/',ProductSizeUpdate.as_view()),
+
+
 
     path('Bepocart-promotion-coupen/',AdminCouponCreation.as_view()),
     path('Bepocart-promotion-coupen-views/',AdminCoupensView.as_view()),
@@ -68,6 +72,21 @@ urlpatterns = [
 
     path('Bepocart-customers/',AdminCustomerView.as_view()),
     path('export-orders/', ExportOrderDataView.as_view(), name='export_orders'),
+
+    path('Bepocart-Bcoin/',AdminCoinCreating.as_view()),
+    path('Bepocart-coins/',AdminCoinFetching.as_view()),
+    path('Bepocart-coin-delete/<int:pk>/',AdminCoinDelete.as_view()),
+    path('Bepocart-coin-update/<int:pk>/',AdminCoinUpdate.as_view()),
+
+
+    path('Bepocart-user-coins/<int:pk>/',AdminCustomerCOinDAtaView.as_view()),
+
+
+
+
+
+
+
 
 
 

@@ -168,6 +168,16 @@ class CustomerOrderSerializers(serializers.ModelSerializer):
         model = OrderItem
         fields = "__all__"
 
+class CustomerAllOrderSerializers(serializers.ModelSerializer):
+    image = serializers.ImageField(source ='product.image')
+    name = serializers.CharField(source ='product.name')
+    price_ = serializers.CharField(source ='product.price')
+    sale_price = serializers.IntegerField(source ='product.salePrice')
+
+    class Meta:
+        model = OrderItem
+        fields = ['customer','order','product','quantity','created_at','color','size','price','image','name','price_','sale_price']
+
 
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
@@ -211,4 +221,10 @@ class CouponSerilizers(serializers.ModelSerializer):
 class BlogSerializer(serializers.ModelSerializer):
     class Meta :
         model = Blog
+        fields = "__all__"
+
+
+class CustomerCoinSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Coin
         fields = "__all__"
