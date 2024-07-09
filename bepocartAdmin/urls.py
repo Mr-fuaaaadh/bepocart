@@ -81,6 +81,10 @@ urlpatterns = [
 
     path('Bepocart-user-coins/<int:pk>/',AdminCustomerCOinDAtaView.as_view()),
 
+    path('Bepocart-Product-Review/',AdminViewAllProductReviw.as_view()),
+    path('Bepocart-approve-review/<int:pk>/', UpdateReviewStatus.as_view(), name='approve-review'),
+
+
 
 
 

@@ -1194,6 +1194,22 @@ class OrderStatusUpdation(APIView):
                 if not new_status:
                     return Response({"error": "No status provided"}, status=status.HTTP_400_BAD_REQUEST)
 
+                if new_status == "Completed":
+                    coin_value = CoinValue.objects.first()  
+                    if coin_value:
+                        # Check if this is the user's first completed order
+                        user_orders = Order.objects.filter(customer=order.customer, status="Completed").count()
+                        if user_orders == 0:
+                            coins_to_add = coin_value.first_payment_value
+                            print("first order data saved ")
+                        else:
+                            order_total_amount = float(order.total_amount)  
+                            coins_to_add = (order_total_amount * coin_value.payment_value) / 100
+                            print("second order data saved ")
+
+                        coin_record = Coin.objects.create(user=order.customer, amount=coins_to_add, source="Order reward")
+                        coin_record.save()
+
                 order.status = new_status
                 order.save()
 
@@ -1942,3 +1958,87 @@ class AdminCustomerCOinDAtaView(APIView):
         except Exception as e:
             print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class AdminViewAllProductReviw(APIView):
+    def get(self, request):
+        try:
+            # Retrieve token from request headers
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                # Decode JWT token
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Extract user ID from token payload
+            user_id = payload.get('id')
+            if not user_id:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user (admin) based on user ID
+            user = User.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+
+            product_reviews = Review.objects.all().order_by("id")
+            serializer = AdminProductReviewSerializer(product_reviews, many=True)
+            return Response({"data":serializer.data,"message":"Review fetching successfully completed"})
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class UpdateReviewStatus(APIView):
+    def put(self, request, pk):
+        try:
+            # Retrieve token from request headers
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                # Decode JWT token
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Extract user ID from token payload
+            user_id = payload.get('id')
+            if not user_id:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user (admin) based on user ID
+            user = User.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Fetch the review based on review ID
+            review = Review.objects.filter(pk=pk).first()
+            if not review:
+                return Response({"error": "Review not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Update the review status to "Approved"
+            review.status = "Approved"
+            review.save()
+
+            return Response({"message": "Review status updated to Approved"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+

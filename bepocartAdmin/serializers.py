@@ -247,3 +247,17 @@ class AdminCustomerCoinSerializer(serializers.ModelSerializer):
         fields = ['id','user','amount','timestamp','source','firstName','lastName']
 
 
+
+class AdminProductReviewSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(source='user.image')
+    product_image = serializers.ImageField(source='product.image')
+    product_name = serializers.CharField(source='product.name')
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+
+
+    class Meta :
+        model = Review
+        fields = ['id','user','product','rating','review_text','status','created_at','image','product_image','first_name','last_name','product_name']
+
+

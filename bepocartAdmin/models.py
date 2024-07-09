@@ -156,9 +156,14 @@ from django.core.exceptions import ValidationError
 class CoinValue(models.Model):
     coin = models.IntegerField()
     value = models.FloatField()
-    login_value = models.IntegerField(default=10, null=True)
-    payment_value = models.IntegerField(default=100, null=True)
-    timestamp = models.DateField(auto_now_add=True,null=True)
+    login_value = models.IntegerField(default=10,null=True)
+    first_payment_value = models.IntegerField(default=100,null=True)
+    payment_value = models.FloatField(null=True) 
+    referral_point = models.IntegerField(default=10,null=True)
+    review_reward = models.IntegerField(default=10,null=True)
+    birthday_reward = models.IntegerField(default=10,null=True)
+    anniversary_reward = models.IntegerField(default=10,null=True)
+    timestamp = models.DateField(auto_now_add=True, null=True)
 
     def __str__(self):
         return f"{self.coin} - {self.value}"
@@ -166,6 +171,8 @@ class CoinValue(models.Model):
     def clean(self):
         if CoinValue.objects.exists() and not self.pk:
             raise ValidationError("Only one instance of CoinValue is allowed.")
+        if not (0 <= self.payment_value <= 100):
+            raise ValidationError("Payment value must be a percentage between 0 and 100.")
         super().clean()
 
     def save(self, *args, **kwargs):

@@ -71,6 +71,8 @@ urlpatterns = [
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
     path('order-items/<int:pk>/', CustomerOrderItems.as_view(), name='CustomerOrderItems'),
     path('order-items/', CustomerAllOrderItems.as_view(), name='CustomerAllOrderItems'),
+    path('product-review/<int:pk>/', CreateProductReview.as_view(), name='CreateProductReview'),
+    path('review/<int:pk>/', CustomerProductReviewView.as_view(), name='CustomerProductReviewView'),
 
 
     path('recently-viewed/', RecentlyViewedProductsView.as_view(), name='recently-viewed-products'),

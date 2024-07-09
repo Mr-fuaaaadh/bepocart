@@ -183,3 +183,19 @@ class OrderItem(models.Model):
 
     def total_price(self):
         return self.price * self.quantity
+    
+
+class Review(models.Model):
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])
+    review_text = models.TextField()
+    status = models.CharField(default="Pending",null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Review of {self.product.name} by {self.user.first_name}'
+    
+
+    class Meta :
+        db_table = "Review"

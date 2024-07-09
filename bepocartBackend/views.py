@@ -1811,12 +1811,97 @@ class CustomerCoinView(APIView):
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
+            # Fetch coins related to the user
             coins = Coin.objects.filter(user=user)
             serializer = CustomerCoinSerializers(coins, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # Fetch coin value
+            coin_value = CoinValue.objects.first()
+            if not coin_value:
+                return Response({"message": "No coin value found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            coin_value_serializer = CoinValueModelSerilizers(coin_value)
+            
+            return Response({
+                "message": "Success", 
+                "data": serializer.data, 
+                "coinValue": coin_value_serializer.data
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class CreateProductReview(APIView):
+    def post(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                # Decode JWT token
+                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = user_token.get('id')
+            if not user_id:
+                return Response({"message": "Invalid token: user ID not found"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user based on user ID
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Fetch product based on product ID (pk)
+            product = Product.objects.filter(pk=pk).first()
+            if not product:
+                return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Extract review details from request data
+            data = {
+                'user': user.pk,
+                'product': product.pk,
+                'rating': request.data.get('rating'),
+                'review_text': request.data.get('review_text'),
+            }
+
+            # Validate and save review
+            serializer = ReviewModelSerilizers(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class CustomerProductReviewView(APIView):
+    def get(self, request, pk):
+        try:
+            product = Product.objects.filter(pk=pk).first()
+            if not product:
+                return Response({"status": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            reviews = Review.objects.filter(product=product,status="Approved").all()
+            serializer = ReviewModelSerilizers(reviews, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+        
+
         
 
 

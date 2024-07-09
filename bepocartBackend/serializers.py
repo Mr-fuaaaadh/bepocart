@@ -228,3 +228,18 @@ class CustomerCoinSerializers(serializers.ModelSerializer):
     class Meta:
         model = Coin
         fields = "__all__"
+
+
+
+class CoinValueModelSerilizers(serializers.ModelSerializer):
+    class Meta :
+        model = CoinValue
+        fields = ['value']
+
+
+
+class ReviewModelSerilizers(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = "__all__"
+        
