@@ -52,10 +52,10 @@ urlpatterns = [
     path('Bepocart-Order-Bill/<str:order_id>/',OrderInvoiceBillCreating.as_view()),
 
 
-    path('Bepocart-product-size/',ProductSizeAdd.as_view()),
-    path('Bepocart-product-size-view/',ProductSizeView.as_view()),
-    path('Bepocart-product-size-delete/<int:pk>/',ProductSizeDelete.as_view()),
-    path('Bepocart-product-size-update/<int:pk>/',ProductSizeUpdate.as_view()),
+    path('Bepocart-product-varient/<int:pk>/',VarientProductAdding.as_view()),
+    path('Bepocart-product-varient-view/<int:pk>/',VarientProductDataView.as_view()),
+    # path('Bepocart-product-size-delete/<int:pk>/',ProductSizeDelete.as_view()),
+    # path('Bepocart-product-size-update/<int:pk>/',ProductSizeUpdate.as_view()),
 
 
 

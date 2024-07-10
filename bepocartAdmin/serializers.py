@@ -61,7 +61,7 @@ class SubcategorySerializer(serializers.ModelSerializer):
     categoryName = serializers.CharField(source ='category.name')
     class Meta :
         model = Subcategory
-        fields =  ['id','name','image','category','categoryName']
+        fields =  ['id','name','image','category','categoryName','slug']
 
 
 
@@ -74,7 +74,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image',]
+        fields = ['id','name','description','short_description','salePrice','category','image','slug']
 
 
 class ProductSerializerView(serializers.ModelSerializer):
@@ -83,7 +83,7 @@ class ProductSerializerView(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image','categoryName','mainCategory','price']
+        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price']
 
 
 class CarousalSerializers(serializers.ModelSerializer):
@@ -112,7 +112,7 @@ class CustomerAllProductSerializers(serializers.ModelSerializer):
     categoryName = serializers.CharField(source="category.name")
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','stock','category','image','discount','offer_banner','offer_type','categoryName']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','offer_banner','offer_type','categoryName']
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -165,10 +165,10 @@ class AdminOrderItemSerializers(serializers.ModelSerializer):
 
 
 
-class ProductSizeSerializers(serializers.ModelSerializer):
-    class Meta :
-        model = Size
-        fields = "__all__"
+# class ProductSizeSerializers(serializers.ModelSerializer):
+#     class Meta :
+#         model = Size
+#         fields = "__all__"
 
 
 
@@ -260,4 +260,11 @@ class AdminProductReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ['id','user','product','rating','review_text','status','created_at','image','product_image','first_name','last_name','product_name']
 
+
+
+
+class ProductVarientModelSerilizers(serializers.ModelSerializer):
+    class Meta:
+        model = Productverient
+        fields = "__all__"
 

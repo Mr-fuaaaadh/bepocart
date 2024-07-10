@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","ati-acts-weight-timeline.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://ati-acts-weight-timeline.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","port-mile-beverly-retro.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://port-mile-beverly-retro.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://ati-acts-weight-timeline.trycloudflare.com",
+    "https://port-mile-beverly-retro.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://ati-acts-weight-timeline.trycloudflare.com",
+    "https://port-mile-beverly-retro.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True

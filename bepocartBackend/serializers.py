@@ -37,14 +37,14 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','stock','category','image','created_at','mainCategory']
+        fields = ['id','name','description','short_description','salePrice','category','image','created_at','mainCategory']
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','stock','category','image','discount','offer_banner','offer_type','mainCategory']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','offer_banner','offer_type','mainCategory']
 
 
 class WishlistSerializers(serializers.ModelSerializer):
@@ -73,12 +73,12 @@ class CartSerializers(serializers.ModelSerializer):
     image = serializers.ImageField(source ='product.image')
     mainCategory = serializers.CharField(source ='product.category.category.pk')
     offer_type = serializers.CharField(source='product.offer_type')
-    stock = serializers.IntegerField(source ='product.stock')
+    # stock = serializers.IntegerField(source ='product.stock')
 
 
     class Meta :
         model = Cart
-        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type','stock']
+        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type']
 
 
 
@@ -92,7 +92,7 @@ class ProductViewSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price','stock']
+        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -152,14 +152,11 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializerWithMultipleImage(serializers.ModelSerializer):
-    size_names = serializers.SerializerMethodField()
 
     class Meta:
         model = ProducyImage
-        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3', 'image4', 'image5','size', 'size_names']
+        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3', 'image4', 'image5',]
 
-    def get_size_names(self, obj):
-        return [size.name for size in obj.size.all()]
 
 
 
@@ -239,7 +236,11 @@ class CoinValueModelSerilizers(serializers.ModelSerializer):
 
 
 class ReviewModelSerilizers(serializers.ModelSerializer):
+    first_name = serializers.CharField(source ='user.first_name')
+    last_name = serializers.CharField(source ='user.last_name')
+    image = serializers.ImageField(source ='user.image')
+
     class Meta:
         model = Review
-        fields = "__all__"
+        fields = ['user','product','rating','review_text','status','created_at','first_name','last_name','image']
         

@@ -102,7 +102,6 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
-
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -181,9 +180,9 @@ class CustomerOfferBannerView(APIView):
         
 
 class SubcategoryBasedProducts(APIView):
-    def get(self, request, pk):
+    def get(self, request, slug):
         try:
-            subcategory = Subcategory.objects.filter(pk=pk).first()
+            subcategory = get_object_or_404(Subcategory,slug=slug)
             print(subcategory)
         except Subcategory.DoesNotExist:
             return Response({"message": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -566,20 +565,58 @@ class OfferBanerBasedProducts(APIView):
         
 
 
+# class ProductBigView(APIView):
+#     def get(self, request, pk):
+#         try:
+#             product = Product.objects.filter(pk=pk).first()
+#             if product:
+#                 serializer = CustomerAllProductSerializers(product)
+
+
+#                 product_image = ProducyImage.objects.filter(product=product)
+#                 image_serializer = ProductSerializerWithMultipleImage(product_image, many=True) 
+
+
+#                 product_varient = Productverient.objects.filter(color=product_image)
+#                 varient_serializer = ProductVarientModelSerilizers(product_varient, many=True)
+
+#                 return Response({'product':serializer.data,'images':image_serializer.data,"varient":varient_serializer.data}, status=status.HTTP_200_OK)
+#             return Response({'message':"product not found"},status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
 class ProductBigView(APIView):
     def get(self, request, pk):
         try:
             product = Product.objects.filter(pk=pk).first()
             if product:
+                # Serialize main product details
                 serializer = CustomerAllProductSerializers(product)
-                product_image = ProducyImage.objects.filter(product=product)
-                image_serializer = ProductSerializerWithMultipleImage(product_image, many=True) 
-                return Response({'product':serializer.data,'images':image_serializer.data}, status=status.HTTP_200_OK)
-            return Response({'message':"product not found"},status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch and serialize product images
+                product_images = ProducyImage.objects.filter(product=product)
+                image_serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+
+                # Fetch and serialize product variants based on colors from product images
+                product_colors = product_images.values_list('id', flat=True)  # Assuming id is the correct field
+                product_variants = Productverient.objects.filter(color_id__in=product_colors)
+                variant_serializer = ProductVarientModelSerilizers(product_variants, many=True)
+
+                # Return response with product details, images, and variants
+                return Response({
+                    'product': serializer.data,
+                    'images': image_serializer.data,
+                    'variants': variant_serializer.data
+                }, status=status.HTTP_200_OK)
+            
+            return Response({'message': "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+        
 
 class MianCategoryBasedProducts(APIView):
     def get(self, request, pk):
@@ -1272,7 +1309,7 @@ class CreateOrder(APIView):
                         size=item.size
                     )
 
-                    item.product.stock -= item.quantity
+                    # item.product.stock -= item.quantity
                     item.product.save()
 
                 # Apply the coupon if present

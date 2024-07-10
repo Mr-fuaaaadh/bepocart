@@ -9,7 +9,7 @@ urlpatterns = [
     path('subcategorys/',AllSubCategoryView.as_view(), name="AllSubCategoryView"),
     path('category/<int:pk>/',SubcategoryView.as_view(), name="subcategory"),
     path('products/',CustomerProductView.as_view(), name="product"),
-    path('subcategory/<int:pk>/',SubcategoryBasedProducts.as_view(), name="SubcategoryBasedProducts"),
+    path('subcategory/<slug:slug>/',SubcategoryBasedProducts.as_view(), name="SubcategoryBasedProducts"),
     path('banners/',CustomerCarousalView.as_view(), name="CustomerCarousalView"),
     path('offer-banner/',CustomerOfferBannerView.as_view(), name="CustomerOfferBannerView"),
 
