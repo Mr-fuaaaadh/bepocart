@@ -54,8 +54,8 @@ urlpatterns = [
 
     path('Bepocart-product-varient/<int:pk>/',VarientProductAdding.as_view()),
     path('Bepocart-product-varient-view/<int:pk>/',VarientProductDataView.as_view()),
-    # path('Bepocart-product-size-delete/<int:pk>/',ProductSizeDelete.as_view()),
-    # path('Bepocart-product-size-update/<int:pk>/',ProductSizeUpdate.as_view()),
+    path('Bepocart-product-varient-delete/<int:pk>/',VarientProductSizeDelete.as_view()),
+    path('Bepocart-product-varient-update/<int:pk>/',VarientProductDataupdate.as_view()),
 
 
 

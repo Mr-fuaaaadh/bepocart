@@ -977,6 +977,7 @@ class OfferProductAdd(APIView):
                     serializer.save()
                     return Response({"message": "Offer product added successfully"}, status=status.HTTP_201_CREATED)
                 else:
+                    print(serializer.errors)
                     return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
             except ExpiredSignatureError:
@@ -1433,17 +1434,17 @@ class VarientProductAdding(APIView):
     def post(self, request, pk):
         try:
             product_image = ProducyImage.objects.filter(pk=pk).first()
-            print(product_image)
             if product_image is None:
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
             data = request.data
             data['color'] = product_image.pk  
 
-            serializer = ProductVarientModelSerilizers(data=data)
+            serializer = ColorAndSizeSerilizers(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except DatabaseError as db_error:
             print("Database error:", db_error)
@@ -1457,11 +1458,45 @@ class VarientProductDataView(APIView):
             product_image = Productverient.objects.filter(color=pk)
             if product_image is None:           
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-            serializer = ProductVarientModelSerilizers(product_image,many=True)
+            serializer = ProductImageVarientModelSerilizers(product_image,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except DatabaseError as db_error:
             print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VarientProductSizeDelete(APIView):
+    def delete(self,request,pk):
+        try:
+            product_image = Productverient.objects.filter(pk=pk).first()
+            if product_image is None:
+                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            product_image.delete()
+            return Response({"message": "Product deleted successfully"}, status=status.HTTP_200_OK)
+        except DatabaseError as db_error:
+            print("Database error:", db_error)
+            return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class VarientProductDataupdate(APIView):
+    def put(self, request, pk):
+        try:
+            product_image = Productverient.objects.filter(pk=pk).first()
+            if product_image is None:
+                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            serilizer = ProductVarientModelSerilizers(product_image, request.data, partial=True)
+            if serilizer.is_valid():
+                serilizer.save()
+                return Response(serilizer.data, status=status.HTTP_200_OK)
+            print(serilizer.errors)
+            return Response(serilizer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except DatabaseError as db_error:
+            print("Database error:", db_error)
+            return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+            
         
 
         

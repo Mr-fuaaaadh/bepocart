@@ -264,7 +264,22 @@ class AdminProductReviewSerializer(serializers.ModelSerializer):
 
 
 class ProductVarientModelSerilizers(serializers.ModelSerializer):
+    color_name = serializers.CharField(source="color.color")
+    class Meta:
+        model = Productverient
+        fields = ["id","color","size","stock","color_name"]
+
+
+
+class ColorAndSizeSerilizers(serializers.ModelSerializer):
     class Meta:
         model = Productverient
         fields = "__all__"
+
+
+class ProductImageVarientModelSerilizers(serializers.ModelSerializer):
+    productImage = serializers.ImageField(source="product.image")
+    class Meta:
+        model = Productverient
+        fields = ["id","product","size","stock","productImage"]
 

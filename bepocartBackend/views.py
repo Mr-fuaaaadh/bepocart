@@ -387,6 +387,78 @@ class CustomerCartProducts(APIView):
                 print("Cart is empty")
                 return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
 
+            products_with_offers = []
+            products_without_offers = []
+
+            for product in cart:
+                if product.product.offer_type is None:
+                    products_without_offers.append(product)
+                else:
+                    products_with_offers.append(product)
+
+            sum_data = sum(i.product.salePrice * i.quantity for i in cart)
+            print("All Cart Sum:", sum_data)
+
+            total_with_offers = 0
+            total_without_offers = 0
+            total_free_quantity = 0
+
+            cart_management_option_1 = "offer_apply"  # Apply offers
+            cart_management_option_2 = "no_offer_apply"  # Do not apply offers
+
+            user_selected_option = cart_management_option_2
+
+            if user_selected_option == cart_management_option_1:
+                for product in products_with_offers:
+                    if product.product.offer_type == "BUY 1 GET 1":
+                        total = product.product.salePrice * product.quantity
+                        total_quantity = product.quantity * 2
+                        print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {product.quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
+                        total_with_offers += total
+                    elif product.product.offer_type == "BUY 2 GET 1":
+                        free_quantity = product.quantity // 2
+                        total_quantity = product.quantity + free_quantity
+                        total = product.product.salePrice * product.quantity
+                        print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
+                        total_with_offers += total
+
+                # Add total of products without offers to the total_with_offers
+                total_with_offers += sum(p.product.salePrice * p.quantity for p in products_without_offers)
+                print("Total with offers:", total_with_offers)
+
+
+            elif user_selected_option == cart_management_option_2:
+            
+
+                for product in products_with_offers:
+                    if product.product.offer_type == "BUY 1 GET 1":
+                        free_quantity = product.quantity // 2
+                        total = product.product.salePrice * product.quantity
+                        total_free_quantity += free_quantity
+                        total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
+                        print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price: {total}")
+
+                    elif product.product.offer_type == "BUY 2 GET 1":
+                        free_quantity = product.quantity // 2
+                        total = product.product.salePrice * product.quantity
+                        total_free_quantity += free_quantity
+                        total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
+                        print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price (for offer): {total}")
+
+                # Calculate total without offers
+                total_without_offers = sum(p.product.salePrice * p.quantity for p in products_without_offers)
+
+                # Final total calculation
+                final_total = total_with_offers + total_without_offers
+
+                print("Total with offers after adjustment:", total_with_offers)
+                print("Final Cart Total:", final_total)
+                print("Total Free Quantity:", int(total_free_quantity))
+
+                
+
+
+
             serializer = CartSerializers(cart, many=True)
 
             # Calculate total price, discounted price, and total quantity
@@ -1309,8 +1381,18 @@ class CreateOrder(APIView):
                         size=item.size
                     )
 
-                    # item.product.stock -= item.quantity
-                    item.product.save()
+                    check_color = ProducyImage.objects.filter(product = item.product, color=item.color).first()
+                    if check_color is None :
+                        return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size )
+                    for variant in product_variants:
+                        if variant.stock >= item.quantity:
+                            variant.stock -= item.quantity
+                            variant.save()
+                        else:
+                            return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+
 
                 # Apply the coupon if present
                 if coupon:
@@ -1909,11 +1991,12 @@ class CreateProductReview(APIView):
             }
 
             # Validate and save review
-            serializer = ReviewModelSerilizers(data=data)
+            serializer = ReviewAddingModelSerilizers(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
+                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
@@ -1934,6 +2017,20 @@ class CustomerProductReviewView(APIView):
         
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class ProductSizeAndStockGeting(APIView):
+    def get(self, request, color):
+        try:
+            product = Productverient.objects.filter(color=color)
+            if not product:
+                return Response({"status": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            serilizer = ProductImageVarientModelSerilizers(product,many=True)
+            return Response(serilizer.data, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         
 
 

@@ -66,8 +66,8 @@ class Product(models.Model):
     discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0   )
     offer_banner = models.ForeignKey(OfferBanner, on_delete=models.CASCADE, null=True)
     offer_type = models.CharField(max_length=100, null=True)
-    offer_start_date = models.DateTimeField(blank=True, null=True)
-    offer_end_date = models.DateTimeField(blank=True, null=True)
+    offer_start_date = models.DateField(blank=True, null=True)
+    offer_end_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -101,6 +101,7 @@ class ProducyImage(models.Model):
         db_table = 'ProductImage'
 
 class Productverient(models.Model):
+    product= models.ForeignKey(Product, on_delete=models.CASCADE,null=True, blank=False)
     color = models.ForeignKey(ProducyImage, on_delete=models.CASCADE, related_name='verients')
     size = models.CharField(max_length=100,null=True)
     stock = models.PositiveIntegerField(default=0)

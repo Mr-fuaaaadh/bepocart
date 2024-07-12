@@ -67,19 +67,24 @@ class WishlistSerializersView(serializers.ModelSerializer):
 
 
 class CartSerializers(serializers.ModelSerializer):
-    name = serializers.CharField(source ='product.name')
-    salePrice = serializers.CharField(source ='product.salePrice')
-    price = serializers.IntegerField(source ='product.price')
-    image = serializers.ImageField(source ='product.image')
-    mainCategory = serializers.CharField(source ='product.category.category.pk')
+    name = serializers.CharField(source='product.name')
+    salePrice = serializers.CharField(source='product.salePrice')
+    price = serializers.IntegerField(source='product.price')
+    image = serializers.ImageField(source='product.image')
+    mainCategory = serializers.CharField(source='product.category.category.pk')
     offer_type = serializers.CharField(source='product.offer_type')
-    # stock = serializers.IntegerField(source ='product.stock')
+    stock = serializers.SerializerMethodField()
 
-
-    class Meta :
+    class Meta:
         model = Cart
-        fields = ['id','customer','product','name','salePrice','image','mainCategory','quantity','price','color','size','offer_type']
+        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'offer_type', 'stock']
 
+    def get_stock(self, obj):
+        try:
+            variant = Productverient.objects.get(product=obj.product, color__color=obj.color, size=obj.size)
+            return variant.stock
+        except Productverient.DoesNotExist:
+            return 0
 
 
 class CartModelSerializers(serializers.ModelSerializer):
@@ -243,4 +248,12 @@ class ReviewModelSerilizers(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['user','product','rating','review_text','status','created_at','first_name','last_name','image']
+
+
+
+
+class ReviewAddingModelSerilizers(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = "__all__"
         
