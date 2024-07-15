@@ -74,7 +74,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','category','image','slug']
+        fields = "__all__"
 
 
 class ProductSerializerView(serializers.ModelSerializer):
@@ -83,7 +83,7 @@ class ProductSerializerView(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price']
+        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price','discount']
 
 
 class CarousalSerializers(serializers.ModelSerializer):
@@ -112,7 +112,7 @@ class CustomerAllProductSerializers(serializers.ModelSerializer):
     categoryName = serializers.CharField(source="category.name")
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','offer_banner','offer_type','categoryName']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName']
 
 
 class PasswordResetSerializer(serializers.Serializer):

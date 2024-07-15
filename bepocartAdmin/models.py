@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from bepocartBackend.models import Customer, Order, OrderItem
+from bepocartBackend.models import Customer, Order, OrderItem, Coupon
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.hashers import make_password
 
@@ -57,17 +57,12 @@ class Product(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2,null=True)
     salePrice = models.DecimalField(max_digits=10, decimal_places=2,null=True)
-    # stock = models.IntegerField()
     category = models.ForeignKey(Subcategory, on_delete=models.CASCADE, related_name='products')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0   )
-    offer_banner = models.ForeignKey(OfferBanner, on_delete=models.CASCADE, null=True)
-    offer_type = models.CharField(max_length=100, null=True)
-    offer_start_date = models.DateField(blank=True, null=True)
-    offer_end_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -80,11 +75,68 @@ class Product(models.Model):
         ]
 
 
-# class Size(models.Model):
-#     name = models.CharField(max_length=100)
+class Offer(models.Model):
+    # TITLE
+    name = models.CharField(max_length=255)
 
-#     class Meta :
-#         db_table = "Size"
+    buy = models.CharField(max_length=100) # select BUY OR SPEND
+
+    amount = models.IntegerField(null=True) # select BUY OR SPEND
+
+    get = models.CharField(max_length=100) # selectef option is BUY   get option
+
+    get_value = models.IntegerField(null=True) # free quantity
+
+    method = models.CharField(max_length=100) # selecte FREE OR 0 OFF
+
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], null=True, blank=True) # IF METHOD SELECT %OFF    ADD PERSONTAGE 
+
+    
+    offer_products = models.ManyToManyField(Product, related_name='offers', blank=True) # OFFER APPROVED PRODUCTS
+    exclude_products = models.ManyToManyField(Product, related_name='exclude_products', blank=True) # NOT OFFER APPROVED PRODUCTS
+
+    # OR
+
+    offer_category = models.ManyToManyField(Subcategory, related_name='offers', blank=True)  # OFFER APPROVED CATEGORIES
+    excluded_offer_category = models.ManyToManyField(Subcategory, related_name='exclude_categories', blank=True) # OFFER NOT APPROVED CATEGORIES
+
+    # OFFER START DATE AND END DATE
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    # OFFER NOT APPROVED COUPONS
+    not_allowed_coupons = models.ManyToManyField(Coupon,blank=True)
+    messages = models.CharField(max_length=500, null=True)
+    coupon_user_limit = models.IntegerField(null=True)
+    coupon_use_order_limit = models.IntegerField(null=True)
+    shipping_charge = models.IntegerField(default=0)
+    
+
+    #dISCOUNTED APPROVED PRODUCTS AND CATEGORY
+    is_active = models.CharField(max_length=200, default="Allowd",null=True)
+    discount_approved_products = models.ManyToManyField(Product,null=True,blank=True , related_name='discount_approved_products')
+    discount_not_allowd_products = models.ManyToManyField(Product,null=True,blank=True , related_name='discount_not_allowd_products')
+    discount_approved_category = models.ManyToManyField(Category,null=True,blank=True , related_name='discount_approved_category')
+    discount_not_allowd_category = models.ManyToManyField(Category,null=True,blank=True , related_name='discount_not_allowd_category')
+
+
+
+
+
+    def __str__(self):
+        return self.name
+
+    def is_active(self):
+        now = timezone.now()
+        return self.start_date <= now <= self.end_date
+
+
+    def applies_to_product(self, product):
+        return self.products.filter(pk=product.pk).exists()
+
+    def applies_to_category(self, category):
+        return self.categories.filter(pk=category.pk).exists()
+
 
 
 class ProducyImage(models.Model):
@@ -95,7 +147,6 @@ class ProducyImage(models.Model):
     image3 = models.ImageField(max_length=100, upload_to='product/Images')
     image4 = models.ImageField(max_length=100, upload_to='product/Images')
     image5 = models.ImageField(max_length=100, upload_to='product/Images')
-    # size = models.ManyToManyField(Size)
 
     class Meta :
         db_table = 'ProductImage'

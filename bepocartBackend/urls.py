@@ -30,7 +30,7 @@ urlpatterns = [
 
 
     path('offer-banner/<int:pk>/products/', OfferBanerBasedProducts.as_view(), name='offer-banner-products'),
-    path('product/<int:pk>/',ProductBigView.as_view(), name="ProductBigView"),
+    path('product/<slug:slug>/',ProductBigView.as_view(), name="ProductBigView"),
     path('related-products/<int:pk>/',RelatedProduct.as_view(), name="RelatedProduct"),
     path('category/<int:pk>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
 

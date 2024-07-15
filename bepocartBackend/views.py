@@ -387,73 +387,80 @@ class CustomerCartProducts(APIView):
                 print("Cart is empty")
                 return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
 
-            products_with_offers = []
-            products_without_offers = []
+            # products_with_offers = []
+            # products_without_offers = []
 
-            for product in cart:
-                if product.product.offer_type is None:
-                    products_without_offers.append(product)
-                else:
-                    products_with_offers.append(product)
+            # for product in cart:
+            #     if product.product.offer_type is None:
+            #         products_without_offers.append(product)
+            #     else:
+            #         products_with_offers.append(product)
 
-            sum_data = sum(i.product.salePrice * i.quantity for i in cart)
-            print("All Cart Sum:", sum_data)
+            # sum_data = sum(i.product.salePrice * i.quantity for i in cart)
+            # print("All Cart Sum:", sum_data)
 
-            total_with_offers = 0
-            total_without_offers = 0
-            total_free_quantity = 0
+            # total_with_offers = 0
+            # total_without_offers = 0
+            # total_free_quantity = 0
 
-            cart_management_option_1 = "offer_apply"  # Apply offers
-            cart_management_option_2 = "no_offer_apply"  # Do not apply offers
+            # cart_management_option_1 = "offer_apply"  # Apply offers
+            # cart_management_option_2 = "no_offer_apply"  # Do not apply offers
 
-            user_selected_option = cart_management_option_2
+            # user_selected_option = cart_management_option_1
 
-            if user_selected_option == cart_management_option_1:
-                for product in products_with_offers:
-                    if product.product.offer_type == "BUY 1 GET 1":
-                        total = product.product.salePrice * product.quantity
-                        total_quantity = product.quantity * 2
-                        print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {product.quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
-                        total_with_offers += total
-                    elif product.product.offer_type == "BUY 2 GET 1":
-                        free_quantity = product.quantity // 2
-                        total_quantity = product.quantity + free_quantity
-                        total = product.product.salePrice * product.quantity
-                        print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
-                        total_with_offers += total
+            # if user_selected_option == cart_management_option_1:
+            #     for product in products_with_offers:
+            #         if product.product.offer_type == "BUY 1 GET 1":
+            #             total = product.product.salePrice * product.quantity
+            #             total_quantity = product.quantity * 2
+            #             print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {product.quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
+            #             total_with_offers += total
+            #         elif product.product.offer_type == "BUY 2 GET 1":
+            #             free_quantity = product.quantity // 2
+            #             total_quantity = product.quantity + free_quantity
+            #             total = product.product.salePrice * product.quantity
+            #             print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
+            #             total_with_offers += total
 
-                # Add total of products without offers to the total_with_offers
-                total_with_offers += sum(p.product.salePrice * p.quantity for p in products_without_offers)
-                print("Total with offers:", total_with_offers)
+            #     # Add total of products without offers to the total_with_offers
+            #     total_with_offers += sum(p.product.salePrice * p.quantity for p in products_without_offers)
+            #     least_product = min(products_with_offers, key=lambda p: p.quantity)
+            #     if least_product.quantity >= total_free_quantity:
+            #         total_with_offers -= least_product.product.salePrice * total_free_quantity
+            #         least_product.quantity -= total_free_quantity
+            #     else:
+            #         total_with_offers -= least_product.product.salePrice * least_product.quantity
+            #         total_free_quantity -= least_product.quantity
+            #         least_product.quantity = 0
 
 
-            elif user_selected_option == cart_management_option_2:
+            # elif user_selected_option == cart_management_option_2:
             
 
-                for product in products_with_offers:
-                    if product.product.offer_type == "BUY 1 GET 1":
-                        free_quantity = product.quantity // 2
-                        total = product.product.salePrice * product.quantity
-                        total_free_quantity += free_quantity
-                        total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
-                        print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price: {total}")
+            #     for product in products_with_offers:
+            #         if product.product.offer_type == "BUY 1 GET 1":
+            #             free_quantity = product.quantity // 2
+            #             total = product.product.salePrice * product.quantity
+            #             total_free_quantity += free_quantity
+            #             total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
+            #             print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price: {total}")
 
-                    elif product.product.offer_type == "BUY 2 GET 1":
-                        free_quantity = product.quantity // 2
-                        total = product.product.salePrice * product.quantity
-                        total_free_quantity += free_quantity
-                        total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
-                        print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price (for offer): {total}")
+            #         elif product.product.offer_type == "BUY 2 GET 1":
+            #             free_quantity = product.quantity // 2
+            #             total = product.product.salePrice * product.quantity
+            #             total_free_quantity += free_quantity
+            #             total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
+            #             print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price (for offer): {total}")
 
-                # Calculate total without offers
-                total_without_offers = sum(p.product.salePrice * p.quantity for p in products_without_offers)
+            #     # Calculate total without offers
+            #     total_without_offers = sum(p.product.salePrice * p.quantity for p in products_without_offers)
 
-                # Final total calculation
-                final_total = total_with_offers + total_without_offers
+            #     # Final total calculation
+            #     final_total = total_with_offers + total_without_offers
 
-                print("Total with offers after adjustment:", total_with_offers)
-                print("Final Cart Total:", final_total)
-                print("Total Free Quantity:", int(total_free_quantity))
+            #     print("Total with offers after adjustment:", total_with_offers)
+            #     print("Final Cart Total:", final_total)
+            #     print("Total Free Quantity:", int(total_free_quantity))
 
                 
 
@@ -661,9 +668,10 @@ class OfferBanerBasedProducts(APIView):
 
 
 class ProductBigView(APIView):
-    def get(self, request, pk):
+    def get(self, request, slug):
         try:
-            product = Product.objects.filter(pk=pk).first()
+            product = Product.objects.filter(slug=slug).first()
+            print("Andi     :",product)
             if product:
                 # Serialize main product details
                 serializer = CustomerAllProductSerializers(product)
@@ -1642,17 +1650,17 @@ class CustomerAllOrderItems(APIView):
 class CustomerOrderItems(APIView):
     def get(self, request, pk):
         try:
-            # token = request.headers.get('Authorization')
-            # if not token:
-            #     return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # user_id = self._validate_token(token)
-            # if not user_id:
-            #     return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            user_id = self._validate_token(token)
+            if not user_id:
+                return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # user = Customer.objects.filter(pk=user_id).first()
-            # if not user:
-            #     return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             user_orders = OrderItem.objects.filter(order=pk)
             if not user_orders.exists():
@@ -1665,14 +1673,14 @@ class CustomerOrderItems(APIView):
             print("Exceotion  :",str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # def _validate_token(self, token):
-    #     try:
-    #         user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-    #         return user_token.get('id')
-    #     except jwt.ExpiredSignatureError:
-    #         return None
-    #     except (jwt.DecodeError, jwt.InvalidTokenError):
-    #         return None
+    def _validate_token(self, token):
+        try:
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return user_token.get('id')
+        except jwt.ExpiredSignatureError:
+            return None
+        except (jwt.DecodeError, jwt.InvalidTokenError):
+            return None
         
             
 

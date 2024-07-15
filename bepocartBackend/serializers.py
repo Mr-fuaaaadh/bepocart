@@ -37,14 +37,14 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','category','image','created_at','mainCategory']
+        fields = ['id','slug','name','description','short_description','salePrice','category','image','created_at','mainCategory','discount']
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','offer_banner','offer_type','mainCategory']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','mainCategory']
 
 
 class WishlistSerializers(serializers.ModelSerializer):
@@ -72,12 +72,11 @@ class CartSerializers(serializers.ModelSerializer):
     price = serializers.IntegerField(source='product.price')
     image = serializers.ImageField(source='product.image')
     mainCategory = serializers.CharField(source='product.category.category.pk')
-    offer_type = serializers.CharField(source='product.offer_type')
     stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'offer_type', 'stock']
+        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'stock']
 
     def get_stock(self, obj):
         try:
@@ -97,7 +96,7 @@ class ProductViewSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','offer_type','price']
+        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -175,21 +174,23 @@ class CustomerAllOrderSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source ='product.name')
     price_ = serializers.CharField(source ='product.price')
     sale_price = serializers.IntegerField(source ='product.salePrice')
+    status = serializers.CharField(source ='order.status')
+
 
     class Meta:
         model = OrderItem
-        fields = ['customer','order','product','quantity','created_at','color','size','price','image','name','price_','sale_price']
+        fields = ['customer','order','product','quantity','created_at','color','size','price','image','name','price_','sale_price','status']
 
 
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
     productImage = serializers.ImageField(source ='product.image')
     salePrice = serializers.CharField(source ='product.salePrice')
-    offer_type = serializers.CharField(source ='product.offer_type')
+    status = serializers.CharField(source ='order.status')
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','offer_type','created_at','color','size']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','created_at','color','size','status']
 
 
 

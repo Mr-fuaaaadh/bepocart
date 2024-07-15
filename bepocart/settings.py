@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","sr-shaped-exports-toolbar.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://sr-shaped-exports-toolbar.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","fork-winner-abraham-consumption.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://fork-winner-abraham-consumption.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://sr-shaped-exports-toolbar.trycloudflare.com",
+    "https://fork-winner-abraham-consumption.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://sr-shaped-exports-toolbar.trycloudflare.com",
+    "https://fork-winner-abraham-consumption.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
