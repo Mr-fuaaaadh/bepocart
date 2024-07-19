@@ -75,67 +75,7 @@ class Product(models.Model):
         ]
 
 
-class Offer(models.Model):
-    # TITLE
-    name = models.CharField(max_length=255)
 
-    buy = models.CharField(max_length=100) # select BUY OR SPEND
-
-    amount = models.IntegerField(null=True) # select BUY OR SPEND
-
-    get = models.CharField(max_length=100) # selectef option is BUY   get option
-
-    get_value = models.IntegerField(null=True) # free quantity
-
-    method = models.CharField(max_length=100) # selecte FREE OR 0 OFF
-
-    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], null=True, blank=True) # IF METHOD SELECT %OFF    ADD PERSONTAGE 
-
-    
-    offer_products = models.ManyToManyField(Product, related_name='offers', blank=True) # OFFER APPROVED PRODUCTS
-    exclude_products = models.ManyToManyField(Product, related_name='exclude_products', blank=True) # NOT OFFER APPROVED PRODUCTS
-
-    # OR
-
-    offer_category = models.ManyToManyField(Subcategory, related_name='offers', blank=True)  # OFFER APPROVED CATEGORIES
-    excluded_offer_category = models.ManyToManyField(Subcategory, related_name='exclude_categories', blank=True) # OFFER NOT APPROVED CATEGORIES
-
-    # OFFER START DATE AND END DATE
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    # OFFER NOT APPROVED COUPONS
-    not_allowed_coupons = models.ManyToManyField(Coupon,blank=True)
-    messages = models.CharField(max_length=500, null=True)
-    coupon_user_limit = models.IntegerField(null=True)
-    coupon_use_order_limit = models.IntegerField(null=True)
-    shipping_charge = models.IntegerField(default=0)
-    
-
-    #dISCOUNTED APPROVED PRODUCTS AND CATEGORY
-    is_active = models.CharField(max_length=200, default="Allowd",null=True)
-    discount_approved_products = models.ManyToManyField(Product,null=True,blank=True , related_name='discount_approved_products')
-    discount_not_allowd_products = models.ManyToManyField(Product,null=True,blank=True , related_name='discount_not_allowd_products')
-    discount_approved_category = models.ManyToManyField(Category,null=True,blank=True , related_name='discount_approved_category')
-    discount_not_allowd_category = models.ManyToManyField(Category,null=True,blank=True , related_name='discount_not_allowd_category')
-
-
-
-
-
-    def __str__(self):
-        return self.name
-
-    def is_active(self):
-        now = timezone.now()
-        return self.start_date <= now <= self.end_date
-
-
-    def applies_to_product(self, product):
-        return self.products.filter(pk=product.pk).exists()
-
-    def applies_to_category(self, category):
-        return self.categories.filter(pk=category.pk).exists()
 
 
 
@@ -238,3 +178,64 @@ class CoinValue(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+
+
+
+class OfferSchedule(models.Model):
+    # id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    offer_type = models.CharField(max_length=100, help_text="Select BUY or SPEND")
+    amount = models.IntegerField(null=True, blank=True, help_text="Amount for BUY or SPEND")
+    get_option = models.IntegerField(null=True, help_text="Option for GET")
+    get_value = models.IntegerField(null=True, blank=True, help_text="Free quantity")
+    method = models.CharField(max_length=100, help_text="Select FREE or % OFF")
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], null=True, blank=True, help_text="Discount percentage if method is % OFF")
+    offer_products = models.ManyToManyField(Product, related_name='offers', blank=True, help_text="Products eligible for this offer")
+    exclude_products = models.ManyToManyField(Product, related_name='exclude_offers', blank=True, help_text="Products excluded from this offer")
+    offer_category = models.ManyToManyField(Subcategory, related_name='offers', blank=True, help_text="Categories eligible for this offer")
+    excluded_offer_category = models.ManyToManyField(Subcategory, related_name='exclude_offers', blank=True, help_text="Categories excluded from this offer")
+
+    start_date = models.DateField(help_text="Start date of the offer")
+    end_date = models.DateField(help_text="End date of the offer")
+
+    not_allowed_coupons = models.ManyToManyField(Coupon, blank=True, help_text="Coupons not allowed with this offer")
+    messages = models.CharField(max_length=500, null=True, help_text="Additional messages for the offer")
+    coupon_user_limit = models.IntegerField(null=True, blank=True, help_text="Maximum usage per user for coupons")
+    coupon_use_order_limit = models.IntegerField(null=True, blank=True, help_text="Maximum usage per order for coupons")
+    shipping_charge = models.IntegerField(default=0, help_text="Shipping charge applicable with the offer")
+
+    is_active = models.BooleanField(default=True,help_text="Active status of the offer")
+    discount_approved_products = models.ManyToManyField(Product, blank=True, related_name='approved_offers', help_text="Products approved for discount")
+    discount_not_allowed_products = models.ManyToManyField(Product, blank=True, related_name='not_allowed_offers', help_text="Products not allowed for discount")
+    discount_approved_category = models.ManyToManyField(Category, blank=True, related_name='approved_offers', help_text="Categories approved for discount")
+    discount_not_allowed_category = models.ManyToManyField(Category, blank=True, related_name='not_allowed_offers', help_text="Categories not allowed for discount")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Call the parent save method to ensure the instance is saved
+        super(OfferSchedule, self).save(*args, **kwargs)
+
+        # Update offer_products based on exclude_products
+        if self.exclude_products.exists():
+            excluded_product_ids = self.exclude_products.values_list('id', flat=True)
+            all_products = Product.objects.exclude(id__in=excluded_product_ids)
+            self.offer_products.add(*all_products)
+        else:
+            # If exclude_products is empty, set offer_products to all Product instances
+            all_products = Product.objects.all()
+            self.offer_products.add(*all_products)
+
+    def __str__(self):
+        return f"Offer Schedule {self.id}"
+
+    def applies_to_product(self, product):
+        return self.offer_products.filter(pk=product.pk).exists()
+
+    def applies_to_category(self, category):
+        return self.offer_category.filter(pk=category.pk).exists()
+
+    class Meta:
+        db_table = 'Offer'

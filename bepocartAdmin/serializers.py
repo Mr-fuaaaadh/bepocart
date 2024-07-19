@@ -283,3 +283,9 @@ class ProductImageVarientModelSerilizers(serializers.ModelSerializer):
         model = Productverient
         fields = ["id","product","size","stock","productImage"]
 
+
+class OfferProductModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OfferSchedule
+        fields = "__all__"
+        

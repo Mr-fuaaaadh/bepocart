@@ -102,6 +102,7 @@ class CustomerLogin(APIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
+            
             categories = Category.objects.all()
             serializer = CategorySerializer(categories, many=True)
             return Response({
@@ -360,8 +361,6 @@ class CustomerCartProducts(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("Token:", token)
-
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -386,6 +385,185 @@ class CustomerCartProducts(APIView):
             if not cart:
                 print("Cart is empty")
                 return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
+            
+
+            offer_approved_products = []
+            offer_not_approved_products = []
+            offer_approved_category = []
+            offer_not_approved_category = []
+
+            approved_product_didcount = []
+
+            discount_approved_products =[]
+            discount_not_approved_products = []
+            discount_approved_category = []
+            discount_not_approved_category = []
+
+            offer = OfferSchedule.objects.all().first()
+            if offer:
+                # OFFER APPROVED PRODUCTS AND CATEGORYS
+                offer_approved_products = list(offer.offer_products.values_list('pk', flat=True))
+                offer_not_approved_products = list(offer.exclude_products.values_list('pk', flat=True))
+                offer_approved_category = list(offer.offer_category.values_list('pk', flat=True))
+                offer_not_approved_category = list(offer.excluded_offer_category.values_list('pk', flat=True))
+                approved_product_didcount = list(offer.offer_products.values_list('pk', flat=True))
+
+                # DISCOUNT APPROVED PRODUCTS AND CATEGORY
+                discount_approved_products = list(offer.discount_approved_products.values_list('pk', flat=True))
+                discount_not_approved_products = list(offer.discount_not_allowed_products.values_list('pk', flat=True))
+                discount_approved_category = list(offer.discount_approved_category.values_list('pk', flat=True))
+                discount_not_approved_category = list(offer.discount_not_allowed_category.values_list('pk', flat=True))
+                approved_product_didcount = list(offer.discount_approved_products.values_list('pk', flat=True))
+                products_in_cart = [item.product.pk for item in cart]
+                matched_product_pks = [product_pk for product_pk in offer_approved_products if product_pk in products_in_cart]
+                allowed_discount_products  = [product_pk for product_pk in discount_approved_products if product_pk in products_in_cart]
+
+                if offer.is_active:
+                    print("Offer is active")
+                    if matched_product_pks:
+                        print("Matched Products in Cart:", matched_product_pks)
+                        for product_pk in matched_product_pks:
+                            print(f"Product {product_pk} approved by offer is in the cart")
+                    
+                    data = OfferSchedule.objects.all().first()
+                    checking_products_offer_type = OfferSchedule.objects.filter(
+                        offer_type=data.offer_type,
+                        get_option=data.get_option,
+                        get_value=data.get_value,
+                        method=data.method,
+                    ).first()
+
+                    if checking_products_offer_type.get_option == 2:
+                        print("get_option=2")
+                    elif checking_products_offer_type.get_option == 1:
+                        print("get_option=1")
+                    else:
+                        print("No offer found")
+
+
+
+                else:
+                    print("Offer is not active")
+
+                    total_cart_value = 0
+
+                    for data in cart:
+                        print(f"id: {data.product.pk}, quantity: {data.quantity}, price: {data.product.salePrice}")
+
+                        total_product_value = data.quantity * data.product.salePrice
+                        total_cart_value += total_product_value
+                        print(f"Total Product Value: {total_product_value}")
+
+                    print(f"Total Cart Value: {total_cart_value}")
+
+                    if matched_product_pks and allowed_discount_products:
+                        for product_pk in matched_product_pks:
+                            print(f"Product {product_pk} approved by offer is in the cart")
+
+                        for product_pk in allowed_discount_products:
+                            print(f"Product {product_pk} Discount approved by offer is in the cart")
+
+                    offer_schedule = OfferSchedule.objects.all().first()
+                    if offer_schedule:
+                        checking_products_offer_type = OfferSchedule.objects.filter(
+                            offer_type=offer_schedule.offer_type,
+                            get_option=offer_schedule.get_option,
+                            get_value=offer_schedule.get_value,
+                            method=offer_schedule.method,
+                        ).first()
+
+                        if checking_products_offer_type:
+                            if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
+                                buy = 2
+                                get = checking_products_offer_type.get_value
+
+                                # Combine product pks to fetch the cart items
+                                combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
+                                user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
+
+                                offer_products = []
+                                discount_allowed_products = []
+
+                                total_free_quantity = 0
+                                for item in user_cart:
+                                    free_quantity = (item.quantity // buy) * get
+                                    total_free_quantity += free_quantity
+                                    total_quantity = item.quantity + free_quantity
+                                    total_price = item.product.salePrice * item.quantity
+
+                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
+
+                                    if item.product.pk in matched_product_pks:
+                                        offer_products.append(item)
+                                    if item.product.pk in allowed_discount_products:
+                                        discount_allowed_products.append(item)
+
+                                total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
+                                sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
+
+                                print(f"Subtotal Price: {sub_total_sale_price}")
+                                print(f"Total Sale Price: {total_sale_price}")
+
+                                if discount_allowed_products:
+                                    # Sort discount allowed products by price in ascending order
+                                    discount_allowed_products.sort(key=lambda i: i.product.salePrice)
+
+                                    # Track remaining free quantity
+                                    offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
+                                    remaining_free_quantity = sum(i.quantity // buy  for i in offer_products_in_cart) * get
+                                    print(f"Total Free Quantity: {remaining_free_quantity}")
+
+                                    for item in discount_allowed_products:
+                                        product = item.product
+                                        product_price = product.salePrice
+                                        product_quantity = item.quantity
+
+                                        if remaining_free_quantity <= 0:
+                                            break
+
+                                        if remaining_free_quantity >= product_quantity:
+                                            # Apply discount for full product quantity
+                                            discount_amount = product_price * product_quantity
+                                            total_sale_price -= discount_amount
+                                            remaining_free_quantity -= product_quantity
+                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
+                                        else:
+                                            # Apply discount for part of the product quantity
+                                            discount_amount = product_price * remaining_free_quantity
+                                            total_sale_price -= discount_amount
+                                            remaining_free_quantity = 0
+                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
+
+                                        print(f"Adjusted Total Sale Price after discount: {total_sale_price}")
+
+                            elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
+                                print("SPEND")
+                            else:
+                                print("No offer found")
+                        else:
+                            print("No matching offer type found")
+                    else:
+                        print("No offers available")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+
+
+
+            
+
 
             # products_with_offers = []
             # products_without_offers = []
@@ -1435,10 +1613,10 @@ class CreateOrder(APIView):
 
 
 class RelatedProduct(APIView):
-    def get(self, request, pk):
+    def get(self, request, slug):
         try:
-            product = Product.objects.get(pk=pk)
-            related_products = Product.objects.filter(category=product.category).exclude(pk=product.pk)[:8]
+            product = Product.objects.get(slug=slug)
+            related_products = Product.objects.filter(category=product.category).exclude(slug=product.slug)[:8]
             serializer = ProductSerializer(related_products, many=True)
             return Response({"data":serializer.data})
         except Product.DoesNotExist:
@@ -2044,8 +2222,13 @@ class ProductSizeAndStockGeting(APIView):
 
         
 
-        
-
-
+class AllOfferpRODUCTS(APIView):
+    def get(self, request):
+        try:
+            offer = OfferSchedule.objects.all()
+            serializer = OfferModelSerilizers(offer, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

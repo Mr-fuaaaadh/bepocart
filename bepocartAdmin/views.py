@@ -1910,5 +1910,81 @@ class UpdateReviewStatus(APIView):
         except Exception as e:
             print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
 
+
+
+from django.db import transaction
+
+class AdminOfferCreating(APIView):
+    def post(self, request):
+        try:
+            # Retrieve token from request headers
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                # Decode JWT token
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"status": "error", "message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError):
+                return Response({"status": "error", "message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Extract user ID from token payload
+            user_id = payload.get('id')
+            if not user_id:
+                return Response({"status": "error", "message": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user (admin) based on user ID
+            user = User.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"status": "error", "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Log received data
+            print("Received data:", request.data)
+
+            # Serialize and save the offer within a transaction
+            serializer = OfferProductModelSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"status": "success", "message": "Offer created successfully"}, status=status.HTTP_201_CREATED)
+            print(f"{serializer.errors}")
+            return Response({"status": "error", "message": "Invalid data", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"status": "error", "message": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AdminSheduledOfferDeleting(APIView):
+    def delete(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"status": "error", "message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError):
+                return Response({"status": "error", "message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if not user_id:
+                return Response({"status": "error", "message": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"status": "error", "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            offer = OfferSchedule.objects.filter(pk=pk).first()
+            if not offer:
+                return Response({"status": "error", "message": "Offer not found"}, status=status.HTTP_404_NOT_FOUND)
+            offer.delete()
+            return Response({"status": "success", "message": "Offer deleted successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"status": "error", "message": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            

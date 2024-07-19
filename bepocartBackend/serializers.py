@@ -44,7 +44,7 @@ class SubcatecoryBasedProductView(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','mainCategory']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','mainCategory','slug']
 
 
 class WishlistSerializers(serializers.ModelSerializer):
@@ -73,10 +73,13 @@ class CartSerializers(serializers.ModelSerializer):
     image = serializers.ImageField(source='product.image')
     mainCategory = serializers.CharField(source='product.category.category.pk')
     stock = serializers.SerializerMethodField()
+    has_offer = serializers.SerializerMethodField()
+    discount_product = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Cart
-        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'stock']
+        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'stock','has_offer','discount_product']
 
     def get_stock(self, obj):
         try:
@@ -84,6 +87,26 @@ class CartSerializers(serializers.ModelSerializer):
             return variant.stock
         except Productverient.DoesNotExist:
             return 0
+    
+    def get_has_offer(self, obj):
+        product = obj.product
+        if OfferSchedule.objects.filter(offer_products=product).exists():
+            return "Offer Applied"
+
+        if OfferSchedule.objects.filter(exclude_products=product).exists():
+            return "Offer Not Applicable"
+        
+        return "normal"
+    
+    def get_discount_product(self,obj):
+        product = obj.product
+        if OfferSchedule.objects.filter(discount_not_allowed_products=product).exists():
+            return "Discount Not Allowd"
+
+        if OfferSchedule.objects.filter(discount_approved_products=product).exists():
+            return "Discount Allowd"
+
+        return "normal"
 
 
 class CartModelSerializers(serializers.ModelSerializer):
@@ -96,7 +119,7 @@ class ProductViewSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price']
+        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price','slug']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -203,7 +226,7 @@ class RecomendedProductSerializer(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='category.category.pk')
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory'] 
+        fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory','slug'] 
 
 
 
@@ -257,4 +280,11 @@ class ReviewAddingModelSerilizers(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = "__all__"
-        
+
+
+
+class OfferModelSerilizers(serializers.ModelSerializer):
+
+    class Meta:
+        model = OfferSchedule
+        fields = "__all__"
