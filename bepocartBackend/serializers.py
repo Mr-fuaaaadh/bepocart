@@ -59,15 +59,18 @@ class WishlistSerializersView(serializers.ModelSerializer):
     productName = serializers.CharField(source='product.name')
     productImage = serializers.ImageField(source='product.image')
     productPrice = serializers.IntegerField(source ="product.salePrice")
+    slug = serializers.CharField(source ="product.slug")
+
 
 
     class Meta :
         model = Wishlist
-        fields = ['id','user','product','mainCategory','productName','productImage','productPrice','category']
+        fields = ['id','user','product','mainCategory','productName','productImage','productPrice','category','slug']
 
 
 class CartSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source='product.name')
+    slug = serializers.CharField(source='product.slug')
     salePrice = serializers.CharField(source='product.salePrice')
     price = serializers.IntegerField(source='product.price')
     image = serializers.ImageField(source='product.image')
@@ -79,7 +82,7 @@ class CartSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
-        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity', 'price', 'color', 'size', 'stock','has_offer','discount_product']
+        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity','slug', 'price', 'color', 'size', 'stock','has_offer','discount_product']
 
     def get_stock(self, obj):
         try:

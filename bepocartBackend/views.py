@@ -356,11 +356,14 @@ class CustomerProductInCart(APIView):
 
 
 
-
+from datetime import datetime
 class CustomerCartProducts(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
+            print(token)
+            now = datetime.now()
+            print(f"Date and Time   :{now}")
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -418,6 +421,7 @@ class CustomerCartProducts(APIView):
                 matched_product_pks = [product_pk for product_pk in offer_approved_products if product_pk in products_in_cart]
                 allowed_discount_products  = [product_pk for product_pk in discount_approved_products if product_pk in products_in_cart]
 
+                
                 if offer.is_active:
                     print("Offer is active")
                     if matched_product_pks:
@@ -433,12 +437,38 @@ class CustomerCartProducts(APIView):
                         method=data.method,
                     ).first()
 
-                    if checking_products_offer_type.get_option == 2:
-                        print("get_option=2")
-                    elif checking_products_offer_type.get_option == 1:
-                        print("get_option=1")
-                    else:
-                        print("No offer found")
+                    if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
+                        print("Offer Type is Buy and Method is Free")
+                        buy = checking_products_offer_type.get_option
+                        get = checking_products_offer_type.get_value
+
+                        # Combine product pks to fetch the cart items
+                        combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
+                        user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
+
+                        offer_products = []
+                        discount_allowed_products = []
+
+                        total_free_quantity = 0
+                        for item in user_cart:
+                            free_quantity = (item.quantity // buy) * get
+                            total_free_quantity += free_quantity
+                            total_quantity = item.quantity + free_quantity
+                            total_price = item.product.salePrice * item.quantity
+
+                            print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
+
+                            if item.product.pk in matched_product_pks:
+                                offer_products.append(item)
+                            if item.product.pk in allowed_discount_products:
+                                discount_allowed_products.append(item)
+
+                        total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
+                        sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
+
+                        print(f"Subtotal Price: {sub_total_sale_price}")
+                        print(f"Total Sale Price: {total_sale_price}")
+
 
 
 
@@ -474,7 +504,7 @@ class CustomerCartProducts(APIView):
 
                         if checking_products_offer_type:
                             if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                                buy = 2
+                                buy = checking_products_offer_type.get_option
                                 get = checking_products_offer_type.get_value
 
                                 # Combine product pks to fetch the cart items
@@ -510,8 +540,11 @@ class CustomerCartProducts(APIView):
 
                                     # Track remaining free quantity
                                     offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                    remaining_free_quantity = sum(i.quantity // buy  for i in offer_products_in_cart) * get
+                                    remaining_free_quantity = sum(i.quantity // buy for i in offer_products_in_cart) * get
                                     print(f"Total Free Quantity: {remaining_free_quantity}")
+
+                                    total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
+                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
                                     for item in discount_allowed_products:
                                         product = item.product
@@ -524,6 +557,7 @@ class CustomerCartProducts(APIView):
                                         if remaining_free_quantity >= product_quantity:
                                             # Apply discount for full product quantity
                                             discount_amount = product_price * product_quantity
+                                            print(discount_amount)
                                             total_sale_price -= discount_amount
                                             remaining_free_quantity -= product_quantity
                                             print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
@@ -531,10 +565,40 @@ class CustomerCartProducts(APIView):
                                             # Apply discount for part of the product quantity
                                             discount_amount = product_price * remaining_free_quantity
                                             total_sale_price -= discount_amount
-                                            remaining_free_quantity = 0
                                             print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
+                                            remaining_free_quantity = 0
 
                                         print(f"Adjusted Total Sale Price after discount: {total_sale_price}")
+
+                                    serializer = CartSerializers(cart, many=True)
+                                    total_discount_after_adjustment = sub_total_sale_price - total_sale_price
+
+                                    if total_sale_price <= 500:
+                                        shipping_fee = 60
+                                    else:
+                                        shipping_fee = 0
+
+                                    response_data = {
+                                        "status": "User cart products",
+                                        "data": serializer.data,
+                                        "Discount": total_discount_after_adjustment,
+                                        "Shipping": shipping_fee,
+                                        "TotalPrice": sub_total_sale_price,
+                                        "Subtotal": total_sale_price
+                                    }
+
+                                    return Response(response_data, status=status.HTTP_200_OK)
+
+
+
+
+
+
+
+
+
+
+
 
                             elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
                                 print("SPEND")
@@ -546,107 +610,8 @@ class CustomerCartProducts(APIView):
                         print("No offers available")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
-
-            
-
-
-            # products_with_offers = []
-            # products_without_offers = []
-
-            # for product in cart:
-            #     if product.product.offer_type is None:
-            #         products_without_offers.append(product)
-            #     else:
-            #         products_with_offers.append(product)
-
-            # sum_data = sum(i.product.salePrice * i.quantity for i in cart)
-            # print("All Cart Sum:", sum_data)
-
-            # total_with_offers = 0
-            # total_without_offers = 0
-            # total_free_quantity = 0
-
-            # cart_management_option_1 = "offer_apply"  # Apply offers
-            # cart_management_option_2 = "no_offer_apply"  # Do not apply offers
-
-            # user_selected_option = cart_management_option_1
-
-            # if user_selected_option == cart_management_option_1:
-            #     for product in products_with_offers:
-            #         if product.product.offer_type == "BUY 1 GET 1":
-            #             total = product.product.salePrice * product.quantity
-            #             total_quantity = product.quantity * 2
-            #             print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {product.quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
-            #             total_with_offers += total
-            #         elif product.product.offer_type == "BUY 2 GET 1":
-            #             free_quantity = product.quantity // 2
-            #             total_quantity = product.quantity + free_quantity
-            #             total = product.product.salePrice * product.quantity
-            #             print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total given quantity: {total_quantity}, Total Price: {total}")
-            #             total_with_offers += total
-
-            #     # Add total of products without offers to the total_with_offers
-            #     total_with_offers += sum(p.product.salePrice * p.quantity for p in products_without_offers)
-            #     least_product = min(products_with_offers, key=lambda p: p.quantity)
-            #     if least_product.quantity >= total_free_quantity:
-            #         total_with_offers -= least_product.product.salePrice * total_free_quantity
-            #         least_product.quantity -= total_free_quantity
-            #     else:
-            #         total_with_offers -= least_product.product.salePrice * least_product.quantity
-            #         total_free_quantity -= least_product.quantity
-            #         least_product.quantity = 0
-
-
-            # elif user_selected_option == cart_management_option_2:
-            
-
-            #     for product in products_with_offers:
-            #         if product.product.offer_type == "BUY 1 GET 1":
-            #             free_quantity = product.quantity // 2
-            #             total = product.product.salePrice * product.quantity
-            #             total_free_quantity += free_quantity
-            #             total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
-            #             print(f"Product: {product.product.pk}, Offer: BUY 1 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price: {total}")
-
-            #         elif product.product.offer_type == "BUY 2 GET 1":
-            #             free_quantity = product.quantity // 2
-            #             total = product.product.salePrice * product.quantity
-            #             total_free_quantity += free_quantity
-            #             total_with_offers += total - (product.product.salePrice * free_quantity)  # Adjust total by subtracting the price of free items
-            #             print(f"Product: {product.product.pk}, Offer: BUY 2 GET 1, Quantity: {product.quantity}, Calculated Free Quantity: {free_quantity}, Total Price (for offer): {total}")
-
-            #     # Calculate total without offers
-            #     total_without_offers = sum(p.product.salePrice * p.quantity for p in products_without_offers)
-
-            #     # Final total calculation
-            #     final_total = total_with_offers + total_without_offers
-
-            #     print("Total with offers after adjustment:", total_with_offers)
-            #     print("Final Cart Total:", final_total)
-            #     print("Total Free Quantity:", int(total_free_quantity))
-
-                
-
-
-
             serializer = CartSerializers(cart, many=True)
 
-            # Calculate total price, discounted price, and total quantity
             total_price = 0
             total_discounted_price = 0
             for item in cart:

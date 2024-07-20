@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","fountain-compliance-guarantee-fruits.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://fountain-compliance-guarantee-fruits.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","article-looksmart-unsigned-adopt.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://article-looksmart-unsigned-adopt.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://fountain-compliance-guarantee-fruits.trycloudflare.com",
+    "https://article-looksmart-unsigned-adopt.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://fountain-compliance-guarantee-fruits.trycloudflare.com",
+    "https://article-looksmart-unsigned-adopt.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True

@@ -196,8 +196,8 @@ class OfferSchedule(models.Model):
     offer_category = models.ManyToManyField(Subcategory, related_name='offers', blank=True, help_text="Categories eligible for this offer")
     excluded_offer_category = models.ManyToManyField(Subcategory, related_name='exclude_offers', blank=True, help_text="Categories excluded from this offer")
 
-    start_date = models.DateField(help_text="Start date of the offer")
-    end_date = models.DateField(help_text="End date of the offer")
+    start_date = models.DateTimeField(help_text="Start date of the offer")
+    end_date = models.DateTimeField(help_text="End date of the offer")
 
     not_allowed_coupons = models.ManyToManyField(Coupon, blank=True, help_text="Coupons not allowed with this offer")
     messages = models.CharField(max_length=500, null=True, help_text="Additional messages for the offer")
