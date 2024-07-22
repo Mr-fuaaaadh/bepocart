@@ -68,21 +68,25 @@ class WishlistSerializersView(serializers.ModelSerializer):
         fields = ['id','user','product','mainCategory','productName','productImage','productPrice','category','slug']
 
 
+from django.db.models import Q
+
 class CartSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source='product.name')
+    category = serializers.IntegerField(source='product.category.pk')
     slug = serializers.CharField(source='product.slug')
     salePrice = serializers.CharField(source='product.salePrice')
     price = serializers.IntegerField(source='product.price')
+    subcategory_slug = serializers.CharField(source='product.category.slug')
     image = serializers.ImageField(source='product.image')
     mainCategory = serializers.CharField(source='product.category.category.pk')
     stock = serializers.SerializerMethodField()
     has_offer = serializers.SerializerMethodField()
     discount_product = serializers.SerializerMethodField()
-
+    # category_discount = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'mainCategory', 'quantity','slug', 'price', 'color', 'size', 'stock','has_offer','discount_product']
+        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'category', 'mainCategory', 'quantity', 'slug', 'price', 'color', 'size', 'stock', 'has_offer', 'discount_product', 'subcategory_slug']
 
     def get_stock(self, obj):
         try:
@@ -90,26 +94,30 @@ class CartSerializers(serializers.ModelSerializer):
             return variant.stock
         except Productverient.DoesNotExist:
             return 0
-    
+
     def get_has_offer(self, obj):
         product = obj.product
-        if OfferSchedule.objects.filter(offer_products=product).exists():
+        category = product.category
+
+        if OfferSchedule.objects.filter(
+            Q(offer_products=product) | Q(offer_category=category) & ~Q(exclude_products=product)
+        ).exists():
             return "Offer Applied"
-
-        if OfferSchedule.objects.filter(exclude_products=product).exists():
-            return "Offer Not Applicable"
         
-        return "normal"
+        return "Offer Not Applicable" if OfferSchedule.objects.filter(exclude_products=product) | Q(excluded_offer_category=category).exists() else "normal"
     
-    def get_discount_product(self,obj):
+    def get_discount_product(self, obj): 
         product = obj.product
-        if OfferSchedule.objects.filter(discount_not_allowed_products=product).exists():
-            return "Discount Not Allowd"
+        category = product.category
 
-        if OfferSchedule.objects.filter(discount_approved_products=product).exists():
-            return "Discount Allowd"
 
-        return "normal"
+        if OfferSchedule.objects.filter(Q (discount_not_allowed_products=product) |Q(discount_not_allowed_category=category)).exists():
+            return "Discount Not Allowed"
+        
+        return "Discount Allowed" if OfferSchedule.objects.filter(Q(discount_approved_products=product) | Q(discount_approved_category=category)).exists() else "normal"
+    
+    
+
 
 
 class CartModelSerializers(serializers.ModelSerializer):
@@ -213,10 +221,11 @@ class CustomerOrderItems(serializers.ModelSerializer):
     productImage = serializers.ImageField(source ='product.image')
     salePrice = serializers.CharField(source ='product.salePrice')
     status = serializers.CharField(source ='order.status')
+    price = serializers.CharField(source ='product.price')
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','created_at','color','size','status']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','created_at','color','size','status','free_quantity']
 
 
 
@@ -274,7 +283,7 @@ class ReviewModelSerilizers(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['user','product','rating','review_text','status','created_at','first_name','last_name','image']
+        fields = ['id','user','product','rating','review_text','status','created_at','first_name','last_name','image']
 
 
 

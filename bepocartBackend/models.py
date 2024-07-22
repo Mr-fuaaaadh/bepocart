@@ -128,45 +128,43 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20, null=True)
     payment_id = models.CharField(max_length=100, null=True)
     
-    def save(self, *args, **kwargs):
-        if not self.created_time:
-            self.created_time = timezone.now().time()
-        
-        if not self.order_id:
-            self.order_id = self.generate_order_id()
-        
-        super().save(*args, **kwargs)
-        self.calculate_total()
-
     def generate_order_id(self):
         date_str = timezone.now().strftime('%Y%m%d')
         unique_id = uuid.uuid4().hex[:6].upper()  # Generate a random unique identifier
         return f'{date_str}-{unique_id}'
 
-    def calculate_total(self):
-        total = sum(item.price * item.quantity for item in self.order_items.all())
-        discount_value = 0
-        
-        if self.coupon:
-            if self.coupon.coupon_type == 'Percentage':
-                applicable_items = self.order_items.filter(product__category=self.coupon.discount_category)
-                discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (self.coupon.discount / 100)
-            elif self.coupon.coupon_type == 'Fixed Amount':
-                discount_value = self.coupon.discount
-
-            total -= min(discount_value, total)
-            print(f"Discount applied: {discount_value}, Total after discount: {total}")  
-
-        self.total_amount = total
-
-        if self.payment_method == 'COD':
-            self.total_amount += 40
-        
-        super().save(update_fields=['total_amount'])  # Save the order after calculating total
-        print(f"Final total amount saved: {self.total_amount}")
+    def save(self, *args, **kwargs):
+        if not self.order_id:
+            self.order_id = self.generate_order_id()
+        super(Order, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.order_id
+
+    # def calculate_total(self):
+    #     total = sum(item.price * item.quantity for item in self.order_items.all())
+    #     discount_value = 0
+        
+    #     if self.coupon:
+    #     #     if self.coupon.coupon_type == 'Percentage':
+    #     #         applicable_items = self.order_items.filter(product__category=self.coupon.discount_category)
+    #     #         discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (self.coupon.discount / 100)
+    #     #     elif self.coupon.coupon_type == 'Fixed Amount':
+    #     #         discount_value = self.coupon.discount
+
+    #     #     total -= min(discount_value, total)
+    #     #     print(f"Discount applied: {discount_value}, Total after discount: {total}")  
+
+    #     # self.total_amount = total
+
+    #     # if self.payment_method == 'COD':
+    #     #     self.total_amount += 40
+        
+    #     # super().save(update_fields=['total_amount'])  # Save the order after calculating total
+    #     # print(f"Final total amount saved: {self.total_amount}")
+
+    # def __str__(self):
+    #     return self.order_id
 
 
 
@@ -176,6 +174,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
+    free_quantity = models.PositiveIntegerField(default=0, null=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True,blank=False)
     color = models.CharField(max_length=20,null=True)
     size = models.CharField(max_length=100, null=True)

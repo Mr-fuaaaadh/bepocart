@@ -212,16 +212,21 @@ class OrderInvoiceBillSerializer(serializers.ModelSerializer):
     pincode = serializers.CharField(source='address.pincode')
     city = serializers.CharField(source='address.city') 
     state = serializers.CharField(source='address.state')    
-    couponName = serializers.SerializerMethodField()  # Use SerializerMethodField for custom logic
-    couponType = serializers.SerializerMethodField()  # Adding couponType to handle coupon_type attribute
+    couponName = serializers.SerializerMethodField() 
+    couponType = serializers.SerializerMethodField()  
+    coupon_value = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
             'updated_at', 'status', 'address', 'customerImage', 
-            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','lastName','address','email','phone','pincode','city','state'
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','lastName','address','email','phone','pincode','city','state','coupon_value'
         ]
+
+    def get_coupon_value(self, obj):
+        return obj.coupon.discount if obj.coupon else None  # Return the coupon discount value or None
+
 
     def get_couponName(self, obj):
         return obj.coupon.code if obj.coupon else None  # Return the coupon code or None

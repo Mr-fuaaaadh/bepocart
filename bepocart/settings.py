@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","article-looksmart-unsigned-adopt.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://article-looksmart-unsigned-adopt.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","amounts-diagram-vienna-twins.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://amounts-diagram-vienna-twins.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://article-looksmart-unsigned-adopt.trycloudflare.com",
+    "https://amounts-diagram-vienna-twins.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://article-looksmart-unsigned-adopt.trycloudflare.com",
+    "https://amounts-diagram-vienna-twins.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
@@ -186,3 +186,9 @@ EMAIL_HOST_PASSWORD = 'imci azii rmjo ssxv'
 
 RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
 RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
+
+
+# settings.py
+
+TIME_ZONE = 'America/New_York'
+USE_TZ = True

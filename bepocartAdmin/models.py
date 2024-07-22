@@ -3,7 +3,9 @@ from django.utils import timezone
 from bepocartBackend.models import Customer, Order, OrderItem, Coupon
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.hashers import make_password
-
+from django.utils import timezone
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 class Carousal(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="banner", max_length=100)
@@ -198,6 +200,7 @@ class OfferSchedule(models.Model):
 
     start_date = models.DateTimeField(help_text="Start date of the offer")
     end_date = models.DateTimeField(help_text="End date of the offer")
+    offer_active = models.BooleanField(default=False,null=True)
 
     not_allowed_coupons = models.ManyToManyField(Coupon, blank=True, help_text="Coupons not allowed with this offer")
     messages = models.CharField(max_length=500, null=True, help_text="Additional messages for the offer")
@@ -208,11 +211,13 @@ class OfferSchedule(models.Model):
     is_active = models.BooleanField(default=True,help_text="Active status of the offer")
     discount_approved_products = models.ManyToManyField(Product, blank=True, related_name='approved_offers', help_text="Products approved for discount")
     discount_not_allowed_products = models.ManyToManyField(Product, blank=True, related_name='not_allowed_offers', help_text="Products not allowed for discount")
-    discount_approved_category = models.ManyToManyField(Category, blank=True, related_name='approved_offers', help_text="Categories approved for discount")
-    discount_not_allowed_category = models.ManyToManyField(Category, blank=True, related_name='not_allowed_offers', help_text="Categories not allowed for discount")
+    discount_approved_category = models.ManyToManyField(Subcategory, blank=True, related_name='approved_offers', help_text="Categories approved for discount")
+    discount_not_allowed_category = models.ManyToManyField(Subcategory, blank=True, related_name='not_allowed_offers', help_text="Categories not allowed for discount")
 
     def __str__(self):
         return self.name
+
+        
 
     def save(self, *args, **kwargs):
         # Call the parent save method to ensure the instance is saved
@@ -239,3 +244,15 @@ class OfferSchedule(models.Model):
 
     class Meta:
         db_table = 'Offer'
+
+    
+    def update_offer_active(self):
+        now = timezone.now()
+        if self.start_date <= now <= self.end_date:
+            self.offer_active = True
+        else:
+            self.offer_active = False
+
+# @receiver(pre_save, sender=OfferSchedule)
+# def update_offer_active_field(sender, instance, **kwargs):
+#     instance.update_offer_active()

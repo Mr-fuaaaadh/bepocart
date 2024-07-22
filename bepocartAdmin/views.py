@@ -12,7 +12,9 @@ from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 import pandas as pd
+from django.utils import timezone
 import openpyxl
+import pytz
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
 from django.contrib.auth.models import User
 
@@ -1060,9 +1062,13 @@ class AllOrderItems(APIView):
                     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
                 # Fetch orders belonging to the authenticated user
+                order = Order.objects.filter(pk=customer).first()
+                # print(order)
                 order_products = OrderItem.objects.filter(order=customer)
+                print(order_products)
                 serializer = CustomerOrderItems(order_products, many=True)
-                return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+                order_items_serializer = OrderInvoiceBillSerializer(order, many=False)
+                return Response({"message": "Orders fetched successfully", "data": serializer.data,"order":order_items_serializer.data}, status=status.HTTP_200_OK)
 
             except ExpiredSignatureError:
                 return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -1988,3 +1994,44 @@ class AdminSheduledOfferDeleting(APIView):
             print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
+
+
+class OfferScheduling(APIView):
+    def put(self, request):
+        try:
+            now = timezone.now()
+            offer_data = OfferSchedule.objects.filter(offer_active=False).all()
+            offers_updated = False
+
+            # Get the current timezone
+            local_tz = timezone.get_current_timezone()
+            print(local_tz)
+
+            for offer in offer_data:
+                # Convert UTC time to local time
+                local_start_date = offer.start_date.astimezone(local_tz)
+                local_end_date = offer.end_date.astimezone(local_tz)
+
+                if local_start_date <= now <= local_end_date:
+                    offer.offer_active = True
+                    offer.save()
+                    offers_updated = True
+
+            if offers_updated:
+                return Response({"status": "success", "message": "Offers scheduled successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"status": "error", "message": "No offers to schedule"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Exception status: {str(e)}")
+            return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AllOffers(APIView):
+    def get(self, request):
+        try:
+            offer= OfferSchedule.objects.all()
+            serializer = OfferModelSerilizers(offer, many=True)
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e :
+            print(f"Exception status: {str(e)}")
+            return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
