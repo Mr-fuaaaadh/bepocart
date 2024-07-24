@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","amounts-diagram-vienna-twins.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://amounts-diagram-vienna-twins.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","emails-permanent-available-risk.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://emails-permanent-available-risk.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://amounts-diagram-vienna-twins.trycloudflare.com",
+    "https://emails-permanent-available-risk.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://amounts-diagram-vienna-twins.trycloudflare.com",
+    "https://emails-permanent-available-risk.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True

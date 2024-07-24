@@ -2035,3 +2035,15 @@ class AllOffers(APIView):
         except Exception as e :
             print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class  toggle_offer_active(APIView):
+    def put(self,request,pk):
+        try :
+            offer = OfferSchedule.objects.filter(pk=pk).first()
+            offer.offer_active = not offer.offer_active
+            offer.save()
+            return Response({'offer_active': offer.offer_active}, status=status.HTTP_200_OK)
+        except Exception as e :
+            print(f"Exception status: {str(e)}")
+            return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

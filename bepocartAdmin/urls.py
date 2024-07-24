@@ -85,7 +85,9 @@ urlpatterns = [
     path('Bepocart-Product-Review/',AdminViewAllProductReviw.as_view()),
     path('Bepocart-approve-review/<int:pk>/', UpdateReviewStatus.as_view(), name='approve-review'),
     path("offer-scheduling/",OfferScheduling.as_view()),
-    path("offer/",AllOffers.as_view())
+    path("offer/",AllOffers.as_view()),
+
+    path('Bepocart-offer/<int:pk>/toggle-status/', toggle_offer_active.as_view(), name='toggle_offer_active'),
 
 
 

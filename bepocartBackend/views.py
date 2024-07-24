@@ -430,7 +430,7 @@ class CustomerCartProducts(APIView):
                         offer_active = True
                     ).first()
                     
-                    if checking_products_offer_type and checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
+                    if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
                         # print("Offer Type is Buy and Method is Free")
                         
                         # Retrieve the buy and get values
@@ -438,7 +438,8 @@ class CustomerCartProducts(APIView):
                         get = checking_products_offer_type.get_value
 
                         # Combine matched product pks with allowed discount products
-                        if matched_product_pks is None :
+                        if matched_product_pks is not None :
+                            print("product get offer is active true")
                             combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
                             
                             # Get user cart items
@@ -601,7 +602,7 @@ class CustomerCartProducts(APIView):
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
 
-                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
+                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}aaaaaaaaa")
 
                                         if item.product.pk in matched_product_pks:
                                             offer_products.append(item)
@@ -639,7 +640,7 @@ class CustomerCartProducts(APIView):
                                                 discount_amount = product_price * product_quantity
                                                 total_cart_value -= discount_amount
                                                 remaining_free_quantity -= product_quantity
-                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
+                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}aa")
                                             else:
                                                 # Apply discount for part of the product quantity
                                                 discount_amount = product_price * remaining_free_quantity
@@ -1701,7 +1702,17 @@ class CreateOrder(APIView):
 
             # Print matched products
             
-            if offer.is_active:    
+            if offer.is_active: 
+                total_cart_value = 0
+
+                for data in cart_items:
+                    print(f"id: {data.product.pk}, quantity: {data.quantity}, price: {data.product.salePrice}")
+
+                    total_product_value = data.quantity * data.product.salePrice
+                    total_cart_value += total_product_value
+                    print(f"Total Product Value: {total_product_value}")
+
+                print(f"Total Cart Value: {total_cart_value}")   
                 # Fetch the first OfferSchedule object
                 data = OfferSchedule.objects.filter(offer_active=True).first()
                 
@@ -1722,7 +1733,7 @@ class CreateOrder(APIView):
                     get = checking_products_offer_type.get_value
 
                     # Combine matched product pks with allowed discount products
-                    if matched_product_pks is None :
+                    if matched_product_pks is not None :
                         combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
                         
                         # Get user cart items
@@ -1796,15 +1807,15 @@ class CreateOrder(APIView):
                                 )
 
                                 for item in user_cart:
-                                    if item.product.pk in approved_category_product_pks:
+                                    free_quantity = 0
+                                    if item.product.pk in combined_product_pks:
                                         free_quantity = (item.quantity // buy) * get
-                                    else:
-                                        free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
+                                        total_free_quantity += free_quantity
+                                    
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}order")
+                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} kollam ithan work aaye")
 
                                     OrderItem.objects.create(
                                         customer=user,
@@ -1955,15 +1966,15 @@ class CreateOrder(APIView):
                                     )
 
                                     for item in user_cart:
-                                        if item.product.pk in approved_category_product_pks:
+                                        free_quantity = 0
+                                        if item.product.pk in combined_product_pks:
                                             free_quantity = (item.quantity // buy) * get
-                                        else:
-                                            free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
+                                            total_free_quantity += free_quantity
+                                        
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
 
-                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}order")
+                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} kollam ithan ")
 
                                         OrderItem.objects.create(
                                             customer=user,
@@ -2302,7 +2313,7 @@ class CreateOrder(APIView):
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} aa")
+                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} aaaa")
 
                                     if item.product.pk in approved_category_product_pks:
                                         offer_category_products.append(item)
@@ -3191,9 +3202,8 @@ class ProductSizeAndStockGeting(APIView):
 class AllOfferpRODUCTS(APIView):
     def get(self, request):
         try:
-            
-            offer = OfferSchedule.objects.filter(offer_active=True).first()
-            serializer = OfferModelSerilizers(offer, many=True)
+            offer = OfferSchedule.objects.all()
+            serializer = OfferModelSerilizers(offer,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e :
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
