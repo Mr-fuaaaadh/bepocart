@@ -29,19 +29,19 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","emails-permanent-available-risk.trycloudflare.com"]
-CSRF_TRUSTED_ORIGINS = ["https://emails-permanent-available-risk.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","garden-tunnel-tue-episodes.trycloudflare.com"]
+CSRF_TRUSTED_ORIGINS = ["https://garden-tunnel-tue-episodes.trycloudflare.com"]
 
 APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://emails-permanent-available-risk.trycloudflare.com",
+    "https://garden-tunnel-tue-episodes.trycloudflare.com",
     # Add other origins as needed
 ]
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
-    "https://emails-permanent-available-risk.trycloudflare.com",
+    "https://garden-tunnel-tue-episodes.trycloudflare.com",
 
 )
 CORS_ALLOW_ALL_ORIGINS = True
@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'bepocartAdmin',
     'bepocartBackend',
     'corsheaders',
+    'storages'
 
 ]
 
@@ -117,18 +118,27 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
+#         'PORT': '5432'
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'bepocart',
         'USER': 'postgres',
-        'PASSWORD': '252562',
-        'HOST': 'localhost',
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
         'PORT': '5432'
     }
 }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -171,9 +181,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -182,13 +189,15 @@ EMAIL_HOST_USER = 'muhammadfuhad3@gmail.com'
 EMAIL_HOST_PASSWORD = 'imci azii rmjo ssxv'
 
 
-# settings.py
 
 RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
 RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
 
 
-# settings.py
+
+
+
 
 TIME_ZONE = 'America/New_York'
 USE_TZ = True
+

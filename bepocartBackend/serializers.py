@@ -82,11 +82,14 @@ class CartSerializers(serializers.ModelSerializer):
     stock = serializers.SerializerMethodField()
     has_offer = serializers.SerializerMethodField()
     discount_product = serializers.SerializerMethodField()
-    # category_discount = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ['id', 'customer', 'product', 'name', 'salePrice', 'image', 'category', 'mainCategory', 'quantity', 'slug', 'price', 'color', 'size', 'stock', 'has_offer', 'discount_product', 'subcategory_slug']
+        fields = [
+            'id', 'customer', 'product', 'name', 'salePrice', 'image', 'category', 
+            'mainCategory', 'quantity', 'slug', 'price', 'color', 'size', 'stock', 
+            'has_offer', 'discount_product', 'subcategory_slug'
+        ]
 
     def get_stock(self, obj):
         try:
@@ -99,22 +102,41 @@ class CartSerializers(serializers.ModelSerializer):
         product = obj.product
         category = product.category
 
-        if OfferSchedule.objects.filter(
-            Q(offer_products=product) | Q(offer_category=category) & ~Q(exclude_products=product)
-        ).exists():
+        has_offer = OfferSchedule.objects.filter(
+            Q(offer_active=True) & (Q(offer_products=product) | Q(offer_category=category))
+        ).exists()
+
+        if has_offer:
             return "Offer Applied"
         
-        return "Offer Not Applicable" if OfferSchedule.objects.filter(exclude_products=product) | Q(excluded_offer_category=category).exists() else "normal"
+        excluded_offer = OfferSchedule.objects.filter(
+            Q(offer_active=True) & (Q(exclude_products=product) | Q(excluded_offer_category=category))
+        ).exists()
+        
+        if excluded_offer:
+            return "normal"
+        
+        return "normal"
     
-    def get_discount_product(self, obj): 
+    def get_discount_product(self, obj):
         product = obj.product
         category = product.category
 
-
-        if OfferSchedule.objects.filter(Q (discount_not_allowed_products=product) |Q(discount_not_allowed_category=category)).exists():
+        discount_not_allowed = OfferSchedule.objects.filter(
+            Q(offer_active=True) & (Q(discount_not_allowed_products=product) | Q(discount_not_allowed_category=category))
+        ).exists()
+        
+        if discount_not_allowed:
             return "Discount Not Allowed"
         
-        return "Discount Allowed" if OfferSchedule.objects.filter(Q(discount_approved_products=product) | Q(discount_approved_category=category)).exists() else "normal"
+        discount_allowed = OfferSchedule.objects.filter(
+            Q(offer_active=True) & (Q(discount_approved_products=product) | Q(discount_approved_category=category))
+        ).exists()
+
+        if discount_allowed:
+            return "Discount Allowed"
+        
+        return "normal"
     
     
 
