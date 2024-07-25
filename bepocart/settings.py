@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","garden-tunnel-tue-episodes.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","garden-tunnel-tue-episodes.trycloudflare.com","*"]
 CSRF_TRUSTED_ORIGINS = ["https://garden-tunnel-tue-episodes.trycloudflare.com"]
 
 APPEND_SLASH = False
