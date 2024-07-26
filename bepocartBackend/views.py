@@ -184,7 +184,6 @@ class SubcategoryBasedProducts(APIView):
     def get(self, request, slug):
         try:
             subcategory = get_object_or_404(Subcategory,slug=slug)
-            print(subcategory)
         except Subcategory.DoesNotExist:
             return Response({"message": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -201,7 +200,6 @@ class CustomerAddProductInWishlist(APIView):
     def post(self, request, pk):
         try:
             token = request.headers.get('Authorization')
-            print("Authorized Token    :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -258,8 +256,6 @@ class CustomerWishlist(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("Token:", token)  
-
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -327,9 +323,7 @@ class CustomerProductInCart(APIView):
                 return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
             
             product_color = request.data.get('color')
-            print("color    :",product_color)
             product_size = request.data.get('size')
-            print("size    :",product_size)
 
             cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': product_size}
             serializer = CartModelSerializers(data=cart_data)
@@ -337,7 +331,6 @@ class CustomerProductInCart(APIView):
                 serializer.save()
                 return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
             else:
-                print(serializer.errors)
                 return Response({"message": "Unable to add product to cart", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                 
         except IntegrityError:
@@ -415,7 +408,6 @@ class CustomerCartProducts(APIView):
                 approved_discount_category_products = Product.objects.filter(category__pk__in=discount_approved_category)
                 approved_discount_category_product_pks = list(approved_discount_category_products.values_list('pk', flat=True))
 
-                # Print matched products
                 
                 if offer.is_active:    
                     # Fetch the first OfferSchedule object
@@ -431,7 +423,6 @@ class CustomerCartProducts(APIView):
                     ).first()
                     
                     if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                        # print("Offer Type is Buy and Method is Free")
                         
                         # Retrieve the buy and get values
                         buy = checking_products_offer_type.get_option
@@ -439,7 +430,6 @@ class CustomerCartProducts(APIView):
 
                         # Combine matched product pks with allowed discount products
                         if matched_product_pks is not None :
-                            print("product get offer is active true")
                             combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
                             
                             # Get user cart items
@@ -460,7 +450,6 @@ class CustomerCartProducts(APIView):
                                 total_quantity = item.quantity + free_quantity
                                 total_price = item.product.salePrice * item.quantity
 
-                                print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
 
                                 if item.product.pk in matched_product_pks:
                                     offer_products.append(item)
@@ -471,8 +460,6 @@ class CustomerCartProducts(APIView):
                                 sub_total_sale_price += item.product.price * item.quantity
                                 total_sale_price += item.product.salePrice * item.quantity
 
-                            print(f"Subtotal Price: {sub_total_sale_price}")
-                            print(f"Total Sale Price: {total_sale_price}")
                             serializer = CartSerializers(cart, many=True)
                             total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
@@ -493,7 +480,6 @@ class CustomerCartProducts(APIView):
                             return Response(response_data, status=status.HTTP_200_OK)
                         
                         else :
-                            print("Category based discount ")
                             if approved_category_product_pks :
                                 combined_product_pks = set(approved_category_product_pks)
                                 
@@ -515,7 +501,6 @@ class CustomerCartProducts(APIView):
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
 
                                     if item.product.pk in approved_category_product_pks:
                                         offer_category_products.append(item)
@@ -526,8 +511,6 @@ class CustomerCartProducts(APIView):
                                     sub_total_sale_price += item.product.price * item.quantity
                                     total_sale_price += item.product.salePrice * item.quantity
 
-                                print(f"Subtotal Price: {sub_total_sale_price}")
-                                print(f"Total Sale Price: {total_sale_price}")
                                 serializer = CartSerializers(cart, many=True)
                                 total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
@@ -548,27 +531,16 @@ class CustomerCartProducts(APIView):
                                 return Response(response_data, status=status.HTTP_200_OK)
 
                 else:
-                    print("Offer is not active")
 
                     total_cart_value = 0
 
                     for data in cart:
-                        print(f"id: {data.product.pk}, quantity: {data.quantity}, price: {data.product.salePrice}")
 
                         total_product_value = data.quantity * data.product.salePrice
                         total_cart_value += total_product_value
-                        print(f"Total Product Value: {total_product_value}")
 
-                    print(f"Total Cart Value: {total_cart_value}")
 
                     if matched_product_pks and allowed_discount_products is not None :
-                        print("Product baes discount")
-                        for product_pk in matched_product_pks:
-                            print(f"Product {product_pk} approved by offer is in the cart")
-
-                        for product_pk in allowed_discount_products:
-                            print(f"Product {product_pk} Discount approved by offer is in the cart")
-
 
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                         if offer_schedule:
@@ -602,7 +574,6 @@ class CustomerCartProducts(APIView):
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
 
-                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}aaaaaaaaa")
 
                                         if item.product.pk in matched_product_pks:
                                             offer_products.append(item)
@@ -612,8 +583,6 @@ class CustomerCartProducts(APIView):
                                     total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                     sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
-                                    print(f"Subtotal Price: {sub_total_sale_price}")
-                                    print(f"Total Sale Price: {total_sale_price}")
 
                                     if discount_allowed_products:
                                         # Sort discount allowed products by price in ascending order
@@ -622,7 +591,6 @@ class CustomerCartProducts(APIView):
                                         # Track remaining free quantity
                                         offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
                                         remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-                                        print(f"Total Free Quantity: {remaining_free_quantity}")
 
                                         total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                         sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
@@ -640,15 +608,11 @@ class CustomerCartProducts(APIView):
                                                 discount_amount = product_price * product_quantity
                                                 total_cart_value -= discount_amount
                                                 remaining_free_quantity -= product_quantity
-                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}aa")
                                             else:
                                                 # Apply discount for part of the product quantity
                                                 discount_amount = product_price * remaining_free_quantity
                                                 total_cart_value -= discount_amount
-                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
                                                 remaining_free_quantity = 0
-
-                                            print(f"Adjusted Total Sale Price after discount: {total_cart_value}")
 
                                         serializer = CartSerializers(cart, many=True)
                                         total_discount_after_adjustment = sub_total_sale_price - total_cart_value
@@ -667,14 +631,13 @@ class CustomerCartProducts(APIView):
                                         return Response(response_data, status=status.HTTP_200_OK)
 
                             elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                                print("SPEND")
+                                return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                             else:
-                                print("No offer found")
+                                return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         else:
-                            print("No matching offer type found")
+                            return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
 
-                        print("category Baes discount")
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                         if offer_schedule:
                             checking_products_offer_type = OfferSchedule.objects.filter(
@@ -694,14 +657,6 @@ class CustomerCartProducts(APIView):
                                     combined_product_pks = set(approved_category_product_pks).union(set(approved_discount_category_product_pks))
                                     user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
 
-                                    for product_pk in approved_category_product_pks:
-                                        print(f"Product {product_pk} approved by offer is in the cart")
-
-                                    for product_pk in approved_discount_category_product_pks:
-                                        print(f"Product {product_pk} Discount approved by offer is in the cart")
-
-                                    
-
                                     offer_category_products = []
                                     discount_allowed_category_products = []
 
@@ -715,7 +670,6 @@ class CustomerCartProducts(APIView):
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
 
-                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}aaah")
 
                                         if item.product.pk in approved_category_product_pks:
                                             offer_category_products.append(item)
@@ -725,8 +679,6 @@ class CustomerCartProducts(APIView):
                                     total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                     sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
-                                    print(f"Subtotal Price: {sub_total_sale_price}")
-                                    print(f"Total Sale Price: {total_sale_price}")
 
                                     if discount_allowed_category_products:
                                         # Sort discount allowed products by price in ascending order
@@ -735,7 +687,6 @@ class CustomerCartProducts(APIView):
                                         # Track remaining free quantity
                                         offer_products_in_cart = user_cart.filter(product__in=combined_product_pks)
                                         remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-                                        print(f"Total Free Quantity: {remaining_free_quantity}")
 
                                         total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                         sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
@@ -751,18 +702,14 @@ class CustomerCartProducts(APIView):
                                             if remaining_free_quantity >= product_quantity:
                                                 # Apply discount for full product quantity
                                                 discount_amount = product_price * product_quantity
-                                                print(discount_amount)
                                                 total_cart_value -= discount_amount
                                                 remaining_free_quantity -= product_quantity
-                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
                                             else:
                                                 # Apply discount for part of the product quantity
                                                 discount_amount = product_price * remaining_free_quantity
                                                 total_cart_value -= discount_amount
-                                                print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
                                                 remaining_free_quantity = 0
 
-                                            print(f"Adjusted Total Sale Price after discount: {total_cart_value}")
 
                                         serializer = CartSerializers(cart, many=True)
                                         total_discount_after_adjustment = sub_total_sale_price - total_cart_value
@@ -780,12 +727,11 @@ class CustomerCartProducts(APIView):
 
                                         return Response(response_data, status=status.HTTP_200_OK)
 
-                            # elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                                # print("SPEND")
+                           
                             else:
-                                print("No offer found")
+                                return Response({"message":"No offer found"})
                         else:
-                            print("No matching offer type found")
+                            return Response({"message":"No matching offer type found"})
 
 
             serializer = CartSerializers(cart, many=True)
@@ -821,7 +767,6 @@ class CustomerCartProducts(APIView):
             return Response(response_data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -841,7 +786,6 @@ class CartProductDelete(APIView):
     def delete(self,request,pk):
         try :
             product = Cart.objects.filter(pk=pk).first()
-            print("id",product)
             if product is None :
                 return Response({"message": "Product not found in cart"}, status=status.HTTP_404_NOT_FOUND)
             product.delete()
@@ -993,7 +937,6 @@ class ProductBigView(APIView):
     def get(self, request, slug):
         try:
             product = Product.objects.filter(slug=slug).first()
-            print("Andi     :",product)
             if product:
                 # Serialize main product details
                 serializer = CustomerAllProductSerializers(product)
@@ -1038,7 +981,6 @@ class UserPasswordReset(APIView):
     def put(self, request):
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1238,7 +1180,6 @@ class UserSearchProductView(APIView):
     def get(self, request):
         try:
             query = request.query_params.get('q', '').strip()
-            print(f"Search query: {query}")
             
             if not query:
                 return Response({"message": "No search query provided"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1345,8 +1286,6 @@ class VerifyOTPView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             otp = serializer.validated_data['otp']
-            print(email)
-            print(otp)
             if not otp :
                 return Response({"message": "OTP not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1392,7 +1331,6 @@ class UserProfileUpdate(APIView):
     def get(self,request):
         try:
             token = request.headers.get('Authorization')
-            print("Update token      :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1424,7 +1362,6 @@ class UserProfileUpdate(APIView):
     def put(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("token    :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1433,21 +1370,17 @@ class UserProfileUpdate(APIView):
                 return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
             user = Customer.objects.filter(pk=user_id).first()
-            print("User  :",user)
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = UserProfileSErilizers(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                print("User data updated successfully:", serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
-                print("Serializer errors:", serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print("Exception:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):
@@ -1460,188 +1393,6 @@ class UserProfileUpdate(APIView):
             return None
 
 
-# class CreateOrder(APIView):
-#     def post(self, request, pk):
-#         token = request.headers.get('Authorization')
-#         if not token:
-#             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-#         try:
-#             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-#         except jwt.ExpiredSignatureError:
-#             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-#         except (jwt.DecodeError, jwt.InvalidTokenError):
-#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         user_id = user_token.get('id')
-#         if not user_id:
-#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         user = Customer.objects.filter(pk=user_id).first()
-#         if not user:
-#             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         cart_items = Cart.objects.filter(customer=user)
-#         if not cart_items.exists():
-#             return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         address = Address.objects.filter(pk=pk, user=user).first()
-#         if not address:
-#             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         coupon_code = request.data.get('coupon_code')
-#         print("coupon code:", coupon_code)  # Ensure coupon code is correctly received
-
-#         coupon = None
-#         if coupon_code:
-#             try:
-#                 coupon = Coupon.objects.get(code=coupon_code)
-#             except Coupon.DoesNotExist:
-#                 print('Coupon not found')
-#                 return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-#             if coupon.status != 'Active':
-#                 print('Coupon is not active')
-#                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
-
-#             print('Coupon is active')
-
-#         payment_method = request.data.get('payment_method')
-#         print("Payment method:", payment_method)
-#         if not payment_method:
-#             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-#         if payment_method not in ['COD', 'razorpay']:
-#             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             with transaction.atomic():
-#                 order = Order.objects.create(
-#                     customer=user,
-#                     address=address,
-#                     status='pending',
-#                     payment_method=payment_method
-#                 )
-
-#                 for item in cart_items:
-#                     OrderItem.objects.create(
-#                         customer=user,
-#                         order=order,
-#                         product=item.product,
-#                         quantity=item.quantity,
-#                         price=item.product.salePrice
-#                     )
-
-#                     item.product.stock -= item.quantity
-#                     item.product.save()
-
-#                 # Apply the coupon if present
-#                 if coupon:
-#                     order.coupon = coupon
-
-#                 # Calculate and save total amount
-#                 order.calculate_total()
-
-#                 cart_items.delete()
-
-#                 # Serialize order data
-#                 serializer = OrderSerializer(order)
-#                 print(serializer.data) 
-#             return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-#         except Exception as e:
-#             print(f"Error: {str(e)}") 
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# class CreateOrder(APIView):
-#     def post(self, request, pk):
-#         token = request.headers.get('Authorization')
-#         if not token:
-#             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-#         try:
-#             user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-#         except jwt.ExpiredSignatureError:
-#             return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-#         except (jwt.DecodeError, jwt.InvalidTokenError):
-#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         user_id = user_token.get('id')
-#         if not user_id:
-#             return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#         user = Customer.objects.filter(pk=user_id).first()
-#         if not user:
-#             return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         cart_items = Cart.objects.filter(customer=user)
-#         if not cart_items.exists():
-#             return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         address = Address.objects.filter(pk=pk, user=user).first()
-#         if not address:
-#             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         coupon_code = request.data.get('coupon_code')
-#         print("coupen   :",coupon_code)
-#         coupon = None
-#         if coupon_code:
-#             try:
-#                 coupon = Coupon.objects.get(code=coupon_code)
-#             except Coupon.DoesNotExist:
-#                 return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-#             if coupon.status != 'Active':
-#                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         payment_method = request.data.get('payment_method')
-#         print("payment method   :",payment_method)
-
-#         if not payment_method:
-#             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-#         if payment_method not in ['COD', 'razorpay']:
-#             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             with transaction.atomic():
-#                 order = Order.objects.create(
-#                     customer=user,
-#                     address=address,
-#                     status='pending',
-#                     payment_method=payment_method
-#                 )
-
-#                 for item in cart_items:
-#                     OrderItem.objects.create(
-#                         customer=user,
-#                         order=order,
-#                         product=item.product,
-#                         quantity=item.quantity,
-#                         price=item.product.salePrice,
-#                         color = item.color,
-#                         size = item.size
-#                     )
-
-#                     item.product.stock -= item.quantity
-#                     item.product.save()
-
-#                 # Apply the coupon if present
-#                 if coupon:
-#                     order.coupon = coupon
-
-#                 # Calculate and save total amount
-#                 order.calculate_total()
-
-#                 # If payment method is razorpay, create a razorpay order
-#                 if payment_method == 'razorpay':
-#                     order.payment_id = request.data.get('id')
-#                     print("payment id     :",order.payment_id)
-#                     order.save() 
-#                 cart_items.delete()
-
-#                 # Serialize order data
-#                 serializer = OrderSerializer(order)
-#                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-#         except Exception as e:
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -1700,19 +1451,15 @@ class CreateOrder(APIView):
             approved_discount_category_products = Product.objects.filter(category__pk__in=discount_approved_category)
             approved_discount_category_product_pks = list(approved_discount_category_products.values_list('pk', flat=True))
 
-            # Print matched products
             
             if offer.is_active: 
                 total_cart_value = 0
 
                 for data in cart_items:
-                    print(f"id: {data.product.pk}, quantity: {data.quantity}, price: {data.product.salePrice}")
 
                     total_product_value = data.quantity * data.product.salePrice
                     total_cart_value += total_product_value
-                    print(f"Total Product Value: {total_product_value}")
 
-                print(f"Total Cart Value: {total_cart_value}")   
                 # Fetch the first OfferSchedule object
                 data = OfferSchedule.objects.filter(offer_active=True).first()
                 
@@ -1726,7 +1473,6 @@ class CreateOrder(APIView):
                 ).first()
                 
                 if checking_products_offer_type and checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                    # print("Offer Type is Buy and Method is Free")
                     
                     # Retrieve the buy and get values
                     buy = checking_products_offer_type.get_option
@@ -1754,7 +1500,6 @@ class CreateOrder(APIView):
                             total_quantity = item.quantity + free_quantity
                             total_price = item.product.salePrice * item.quantity
 
-                            print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
 
                             if item.product.pk in matched_product_pks:
                                 offer_products.append(item)
@@ -1765,8 +1510,6 @@ class CreateOrder(APIView):
                             sub_total_sale_price += item.product.price * item.quantity
                             total_sale_price += item.product.salePrice * item.quantity
 
-                        print(f"Subtotal Price: {sub_total_sale_price}")
-                        print(f"Total Sale Price: {total_sale_price}")
                         serializer = CartSerializers(cart_items, many=True)
                         total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
@@ -1815,7 +1558,6 @@ class CreateOrder(APIView):
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} kollam ithan work aaye")
 
                                     OrderItem.objects.create(
                                         customer=user,
@@ -1884,11 +1626,9 @@ class CreateOrder(APIView):
                                 serializer = OrderSerializer(order)
                                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                         except Exception as e:
-                            print(e)
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     
                     else :
-                        print("Category based discount ")
                         if approved_category_product_pks :
                             combined_product_pks = set(approved_category_product_pks)
                             
@@ -1910,7 +1650,6 @@ class CreateOrder(APIView):
                                 total_quantity = item.quantity + free_quantity
                                 total_price = item.product.salePrice * item.quantity
 
-                                print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
 
                                 if item.product.pk in approved_category_product_pks:
                                     offer_category_products.append(item)
@@ -1921,8 +1660,6 @@ class CreateOrder(APIView):
                                 sub_total_sale_price += item.product.price * item.quantity
                                 total_sale_price += item.product.salePrice * item.quantity
 
-                            print(f"Subtotal Price: {sub_total_sale_price}")
-                            print(f"Total Sale Price: {total_sale_price}")
                             serializer = CartSerializers(cart_items, many=True)
                             total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
@@ -1974,7 +1711,6 @@ class CreateOrder(APIView):
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
 
-                                        print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} kollam ithan ")
 
                                         OrderItem.objects.create(
                                             customer=user,
@@ -2043,32 +1779,19 @@ class CreateOrder(APIView):
                                     serializer = OrderSerializer(order)
                                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                             except Exception as e:
-                                print(e)
                                 return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
-                print("Offer is not active")
 
                 total_cart_value = 0
 
                 for data in cart_items:
-                    print(f"id: {data.product.pk}, quantity: {data.quantity}, price: {data.product.salePrice}")
 
                     total_product_value = data.quantity * data.product.salePrice
                     total_cart_value += total_product_value
-                    print(f"Total Product Value: {total_product_value}")
 
-                print(f"Total Cart Value: {total_cart_value}")
 
                 if matched_product_pks and allowed_discount_products is not None :
-                    print("Product baes discount")
-                    for product_pk in matched_product_pks:
-                        print(f"Product {product_pk} approved by offer is in the cart")
-
-                    for product_pk in allowed_discount_products:
-                        print(f"Product {product_pk} Discount approved by offer is in the cart")
-
-
                     offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                     if offer_schedule:
                         checking_products_offer_type = OfferSchedule.objects.filter(
@@ -2101,7 +1824,6 @@ class CreateOrder(APIView):
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}")
 
                                     if item.product.pk in matched_product_pks:
                                         offer_products.append(item)
@@ -2111,8 +1833,6 @@ class CreateOrder(APIView):
                                 total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                 sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
-                                print(f"Subtotal Price: {sub_total_sale_price}")
-                                print(f"Total Sale Price: {total_sale_price}")
 
                                 if discount_allowed_products:
                                     # Sort discount allowed products by price in ascending order
@@ -2121,7 +1841,6 @@ class CreateOrder(APIView):
                                     # Track remaining free quantity
                                     offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
                                     remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-                                    print(f"Total Free Quantity: {remaining_free_quantity}")
 
                                     total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                     sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
@@ -2139,15 +1858,12 @@ class CreateOrder(APIView):
                                             discount_amount = product_price * product_quantity
                                             total_cart_value -= discount_amount
                                             remaining_free_quantity -= product_quantity
-                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
                                         else:
                                             # Apply discount for part of the product quantity
                                             discount_amount = product_price * remaining_free_quantity
                                             total_cart_value -= discount_amount
-                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
                                             remaining_free_quantity = 0
 
-                                        print(f"Adjusted Total Sale Price after discount: {total_cart_value}")
 
                                     serializer = CartSerializers(cart_items, many=True)
                                     total_discount_after_adjustment = sub_total_sale_price - total_cart_value
@@ -2194,7 +1910,6 @@ class CreateOrder(APIView):
                                                 total_quantity = item.quantity + free_quantity
                                                 total_price = item.product.salePrice * item.quantity
 
-                                                print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}order")
 
                                                 OrderItem.objects.create(
                                                     customer=user,
@@ -2263,18 +1978,17 @@ class CreateOrder(APIView):
                                             serializer = OrderSerializer(order)
                                             return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                                     except Exception as e:
-                                        print(e)
                                         return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                         elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                            print("SPEND")
+                            return Response({"message":"SPEND"})
                         else:
-                            print("No offer found")
+                            return Response({"message":"No offer found"})
                     else:
-                        print("No matching offer type found")
+                        return Response({"message":"No matching offer type found"})
                 else:
 
-                    print("category Baes discount")
+                    return Response({"message":"category Baes discount"})
                     offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                     if offer_schedule:
                         checking_products_offer_type = OfferSchedule.objects.filter(
@@ -2294,11 +2008,6 @@ class CreateOrder(APIView):
                                 combined_product_pks = set(approved_category_product_pks).union(set(approved_discount_category_product_pks))
                                 user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
 
-                                for product_pk in approved_category_product_pks:
-                                    print(f"Product {product_pk} approved by offer is in the cart")
-
-                                for product_pk in approved_discount_category_product_pks:
-                                    print(f"Product {product_pk} Discount approved by offer is in the cart")
 
                                 offer_category_products = []
                                 discount_allowed_category_products = []
@@ -2313,7 +2022,6 @@ class CreateOrder(APIView):
                                     total_quantity = item.quantity + free_quantity
                                     total_price = item.product.salePrice * item.quantity
 
-                                    print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price} aaaa")
 
                                     if item.product.pk in approved_category_product_pks:
                                         offer_category_products.append(item)
@@ -2323,8 +2031,6 @@ class CreateOrder(APIView):
                                 total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                 sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
-                                print(f"Subtotal Price: {sub_total_sale_price}")
-                                print(f"Total Sale Price: {total_sale_price}")
 
                                 if discount_allowed_category_products:
                                     # Sort discount allowed products by price in ascending order
@@ -2333,7 +2039,6 @@ class CreateOrder(APIView):
                                     # Track remaining free quantity
                                     offer_products_in_cart = user_cart.filter(product__in=combined_product_pks)
                                     remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-                                    print(f"Total Free Quantity: {remaining_free_quantity}")
 
                                     total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                     sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
@@ -2349,18 +2054,14 @@ class CreateOrder(APIView):
                                         if remaining_free_quantity >= product_quantity:
                                             # Apply discount for full product quantity
                                             discount_amount = product_price * product_quantity
-                                            print(discount_amount)
                                             total_cart_value -= discount_amount
                                             remaining_free_quantity -= product_quantity
-                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {product_quantity}, Discount: {discount_amount}")
                                         else:
                                             # Apply discount for part of the product quantity
                                             discount_amount = product_price * remaining_free_quantity
                                             total_cart_value -= discount_amount
-                                            print(f"Applied discount for Product ID: {product.pk}, Quantity: {remaining_free_quantity}, Discount: {discount_amount}")
                                             remaining_free_quantity = 0
 
-                                        print(f"Adjusted Total Sale Price after discount: {total_cart_value}")
 
                                     serializer = CartSerializers(cart_items, many=True)
                                     total_discount_after_adjustment = sub_total_sale_price - total_cart_value
@@ -2407,7 +2108,6 @@ class CreateOrder(APIView):
                                                 total_quantity = item.quantity + free_quantity
                                                 total_price = item.product.salePrice * item.quantity
 
-                                                print(f"Product ID: {item.product.pk}, Quantity: {item.quantity}, Free Quantity: {free_quantity}, Total Quantity: {total_quantity}, Total: {total_price}order")
 
                                                 OrderItem.objects.create(
                                                     customer=user,
@@ -2476,12 +2176,11 @@ class CreateOrder(APIView):
                                             serializer = OrderSerializer(order)
                                             return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                                     except Exception as e:
-                                        print(e)
                                         return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         else:
-                            print("No offer found")
+                            return Response({"message":"No offer found"})
                     else:
-                        print("No matching offer type found")
+                        return Response({"message":"No matching offer type found"})
 
         
         address = Address.objects.filter(pk=pk, user=user).first()
@@ -2682,7 +2381,6 @@ class ProducViewWithMultipleImage(APIView):
             for product_image in product_images:
                 sizes = product_image.size.all()  # Fetch all related sizes
                 size_names = [size.name for size in sizes]  # List comprehension to get the names
-                print(size_names)
 
             if not product_images.exists():
                 return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -2698,7 +2396,6 @@ class UserProfileView(APIView):
     def get(self,request):
         try:
             token = request.headers.get('Authorization')
-            print("token   :",token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -2752,7 +2449,6 @@ class CustomerOrders(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print("Exceotion  :",str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):
@@ -2769,7 +2465,6 @@ class CustomerAllOrderItems(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -2789,7 +2484,6 @@ class CustomerAllOrderItems(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print("Exceotion  :",str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):
@@ -2825,7 +2519,6 @@ class CustomerOrderItems(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print("Exceotion  :",str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _validate_token(self, token):
@@ -2911,8 +2604,6 @@ class RecommendedProductsView(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print
-            (token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -2992,7 +2683,6 @@ class UserProfileImageSetting(APIView):
                 return Response({"message": "Invalid token: user ID not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
             user = Customer.objects.filter(pk=user_id).first()
-            print(user)
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
@@ -3006,7 +2696,6 @@ class UserProfileImageSetting(APIView):
         try:
             # Fetch the token from cookies
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -3024,7 +2713,6 @@ class UserProfileImageSetting(APIView):
 
             # Fetch the user from the database
             user = Customer.objects.filter(pk=user_id).first()
-            print(user)
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -3032,7 +2720,6 @@ class UserProfileImageSetting(APIView):
             serializer = UserProfileSerializers(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                print("success")
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -3159,7 +2846,6 @@ class CreateProductReview(APIView):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:

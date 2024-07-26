@@ -20,16 +20,13 @@ from django.contrib.auth.models import User
 
 class AdminRegister(APIView):
     def post(self, request):
-
         try:
             serializer = AdminSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "User registration is successfully completed", "data": serializer.data}, status=status.HTTP_201_CREATED)
-            print(serializer.errors)
             return Response({"message": "Invalid request", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"message": "An error occurred", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -40,7 +37,6 @@ class AdminLogin(APIView):
             email = serializer.validated_data.get('email')
             password = serializer.validated_data.get('password')
 
-            print(f"Email: {email}, Password: {password}")
 
             user = User.objects.filter(email=email).first()
             if user:
@@ -61,14 +57,12 @@ class AdminLogin(APIView):
                         response.set_cookie('token', token, httponly=True, secure=True)
                         return response
                     except Exception as e:
-                        print(f"Token generation error: {e}")
                         return Response({"error": "Token generation failed", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     return Response({"error": "Invalid or Incorrect Email Or Password"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            print(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -116,23 +110,18 @@ class CarousalView(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("Authorization header:", token)
             if token is None:
-                print("Unauthenticated")
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
             try:
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             except ExpiredSignatureError:
-                print("Token has expired")
                 return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
             except (DecodeError, InvalidTokenError):
-                print("Invalid token")
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
             user_id = payload.get('id')
             if user_id is None:
-                print("Invalid token payload")
                 return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
             user = User.objects.filter(pk=user_id).first()
@@ -184,7 +173,6 @@ class CarousalUpdate(APIView):
             
             try:
                 carousal = Carousal.objects.get(pk=pk)
-                print(carousal.pk)
             except Carousal.DoesNotExist:
                 return Response({"message": "Carousal not found"}, status=status.HTTP_404_NOT_FOUND)
             
@@ -216,7 +204,6 @@ class CarousalDelete(APIView):
     def delete(self, request, pk):
         try:
             token = request.headers.get('Authorization')
-            print("Authorization header:", token)
             if token is None:
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -291,7 +278,6 @@ class OfferBannerView(APIView):
      def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("data",token)
             if token is None:
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -454,7 +440,6 @@ class CategoryAdd(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("headers token   :",token)
             if token is None:
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             try:
@@ -473,7 +458,6 @@ class CategoryAdd(APIView):
             user = User.objects.filter(pk=id).first()
             if user is None:
                 return Response({"error":"user not found"},status=status.HTTP_404_UNAUTHORIZED)
-                # return Response({"error": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
             return Response({"message": "User authenticated", "id": id}, status=status.HTTP_200_OK)
 
@@ -498,7 +482,6 @@ class Categories(APIView):
     def get(self, request):
         try:
             token = request.headers.get('Authorization')
-            print("headers token:", token)
             if token is None:
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             
@@ -541,7 +524,6 @@ class CategoryDelete(APIView):
     def delete(self, request, pk):
         try:
             token = request.headers.get('Authorization')
-            print("headers token:", token)
             if token is None:
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             
@@ -711,7 +693,6 @@ class SubcategoryUpdate(APIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "Sub Category updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-            print(serializer.errors)
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         except Category.DoesNotExist:
             return Response({"message": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -724,7 +705,6 @@ class SubcategoryDelete(APIView):
     def get(self, request,pk):
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             
@@ -754,7 +734,6 @@ class SubcategoryDelete(APIView):
     def delete(self, request, pk):
         try :
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
             
@@ -811,7 +790,6 @@ class ProductAdd(APIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response({"status": "success", "message": "Product successfully created"}, status=status.HTTP_201_CREATED)
-            print(serializer.errors)
             return Response({"status": "error", "message": "Validation failed", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -878,13 +856,11 @@ class ProductUpdate(APIView):
             return Response({"message": "Product details retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
         
         except Exception as e:
-            print(f"Exception: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, pk):
         try:
             token = request.headers.get('Authorization')
-            print("token   :",token)
             if token is None:
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -901,19 +877,15 @@ class ProductUpdate(APIView):
         
             product = Product.objects.filter(pk=pk).first()
             if not product:
-                print("product not found")
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = ProductSerializer(product, data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                print(serializer.data)
                 return Response({"message": "Product updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-            print(serializer.errors)
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
-            print(f"Exception: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -984,7 +956,6 @@ class AllOrders(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
-            print("Exception:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1020,11 +991,9 @@ class OrderStatusUpdation(APIView):
                         user_orders = Order.objects.filter(customer=order.customer, status="Completed").count()
                         if user_orders == 0:
                             coins_to_add = coin_value.first_payment_value
-                            print("first order data saved ")
                         else:
                             order_total_amount = float(order.total_amount)  
                             coins_to_add = (order_total_amount * coin_value.payment_value) / 100
-                            print("second order data saved ")
 
                         coin_record = Coin.objects.create(user=order.customer, amount=coins_to_add, source="Order reward")
                         coin_record.save()
@@ -1040,7 +1009,6 @@ class OrderStatusUpdation(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
-            print("Exception:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
 
@@ -1063,9 +1031,7 @@ class AllOrderItems(APIView):
 
                 # Fetch orders belonging to the authenticated user
                 order = Order.objects.filter(pk=customer).first()
-                # print(order)
                 order_products = OrderItem.objects.filter(order=customer)
-                print(order_products)
                 serializer = CustomerOrderItems(order_products, many=True)
                 order_items_serializer = OrderInvoiceBillSerializer(order, many=False)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data,"order":order_items_serializer.data}, status=status.HTTP_200_OK)
@@ -1086,11 +1052,9 @@ class ProductImageCreateView(APIView):
     def post(self, request, pk):
         try:
             product = Product.objects.get(pk=pk)
-            print("Product ID:", product.pk)
         except Product.DoesNotExist:
             return Response({'status': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         except DatabaseError as db_error:
-            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         data = request.data
@@ -1101,7 +1065,6 @@ class ProductImageCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            print("Serializer Errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1110,7 +1073,6 @@ class ProductBasdMultipleImageView(APIView):
     def get(self, request, pk):
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if token is None:
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1131,7 +1093,6 @@ class ProductBasdMultipleImageView(APIView):
             
 
             product = Product.objects.filter(pk=pk).first()
-            print("Product ID :",product)
             if product is None:
                 return Response({"message": "Product Not Found"}, status=status.HTTP_404_NOT_FOUND)
             
@@ -1263,10 +1224,8 @@ class VarientProductAdding(APIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except DatabaseError as db_error:
-            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1280,7 +1239,6 @@ class VarientProductDataView(APIView):
             serializer = ProductImageVarientModelSerilizers(product_image,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except DatabaseError as db_error:
-            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1293,7 +1251,6 @@ class VarientProductSizeDelete(APIView):
             product_image.delete()
             return Response({"message": "Product deleted successfully"}, status=status.HTTP_200_OK)
         except DatabaseError as db_error:
-            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1309,10 +1266,8 @@ class VarientProductDataupdate(APIView):
             if serilizer.is_valid():
                 serilizer.save()
                 return Response(serilizer.data, status=status.HTTP_200_OK)
-            print(serilizer.errors)
             return Response(serilizer.errors, status=status.HTTP_400_BAD_REQUEST)
         except DatabaseError as db_error:
-            print("Database error:", db_error)
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
             
@@ -1349,12 +1304,10 @@ class AdminCouponCreation(APIView):
             data['discount_category'] = list(map(int, data.get('discount_category', [])))
 
             serializer = AdminCoupenSerializers(data=data)
-            print(serializer)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "Coupon created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
             else:
-                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as ve:
             return Response({"error": "Validation Error", "details": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1363,7 +1316,6 @@ class AdminCouponCreation(APIView):
         except DatabaseError as de:
             return Response({"error": "Database Error", "details": str(de)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Server Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1470,11 +1422,9 @@ class AdminCouponUpdate(APIView):
                 serializer.save()
                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
             else:
-                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1507,10 +1457,8 @@ class AdminBlogCreate(APIView):
                 serializer.save()
                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
             else:
-                print(serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1541,7 +1489,6 @@ class AdminBlogView(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1556,7 +1503,6 @@ class AdminBlogDelete(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
@@ -1588,7 +1534,6 @@ class AdminBlogDelete(APIView):
             return Response({"success": "Blog deleted successfully"}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1603,7 +1548,6 @@ class AdminBlogUpdate(APIView):
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1639,7 +1583,6 @@ class AdminBlogUpdate(APIView):
             return Response({"error": "Invalid data", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1673,7 +1616,6 @@ class AdminCustomerView(APIView):
             return Response({"message": "Customers data fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1733,7 +1675,6 @@ class OrderInvoiceBillCreating(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1797,7 +1738,6 @@ class AdminCustomerCOinDAtaView(APIView):
         try:
             # Retrieve token from request headers
             token = request.headers.get('Authorization')
-            print("TOken    :",token)
             if not token:
                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1821,7 +1761,6 @@ class AdminCustomerCOinDAtaView(APIView):
             
             # Fetch customer based on provided pk
             customer = Customer.objects.filter(pk=pk).first()
-            print("User     :",customer)
             if not customer:
                 return Response({"message": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
             
@@ -1832,7 +1771,6 @@ class AdminCustomerCOinDAtaView(APIView):
             return Response({"message": "Customer data fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1870,7 +1808,6 @@ class AdminViewAllProductReviw(APIView):
             return Response({"data":serializer.data,"message":"Review fetching successfully completed"})
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -1914,7 +1851,6 @@ class UpdateReviewStatus(APIView):
             return Response({"message": "Review status updated to Approved"}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1947,19 +1883,14 @@ class AdminOfferCreating(APIView):
             if not user:
                 return Response({"status": "error", "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            # Log received data
-            print("Received data:", request.data)
-
             # Serialize and save the offer within a transaction
             serializer = OfferProductModelSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"status": "success", "message": "Offer created successfully"}, status=status.HTTP_201_CREATED)
-            print(f"{serializer.errors}")
             return Response({"status": "error", "message": "Invalid data", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1991,7 +1922,6 @@ class AdminSheduledOfferDeleting(APIView):
             offer.delete()
             return Response({"status": "success", "message": "Offer deleted successfully"}, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
 
@@ -2005,7 +1935,6 @@ class OfferScheduling(APIView):
 
             # Get the current timezone
             local_tz = timezone.get_current_timezone()
-            print(local_tz)
 
             for offer in offer_data:
                 # Convert UTC time to local time
@@ -2022,7 +1951,6 @@ class OfferScheduling(APIView):
             else:
                 return Response({"status": "error", "message": "No offers to schedule"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -2033,7 +1961,6 @@ class AllOffers(APIView):
             serializer = OfferModelSerilizers(offer, many=True)
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e :
-            print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -2045,5 +1972,4 @@ class  toggle_offer_active(APIView):
             offer.save()
             return Response({'offer_active': offer.offer_active}, status=status.HTTP_200_OK)
         except Exception as e :
-            print(f"Exception status: {str(e)}")
             return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
