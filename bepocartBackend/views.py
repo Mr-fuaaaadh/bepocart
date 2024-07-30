@@ -2625,7 +2625,7 @@ class RecommendedProductsView(APIView):
             product_ids = list(set(recently_viewed_products) | set(ordered_products))
 
             if not product_ids:
-                return Response({"message": "No recommendations available"}, status=status.HTTP_200_OK)
+                return Response({"message": "No recommendations is  available"}, status=status.HTTP_200_OK)
 
             # Fetch products that are similar to the ones the user interacted with
             similar_products = Product.objects.filter(category__products__id__in=product_ids).exclude(id__in=product_ids).distinct()[:10]
