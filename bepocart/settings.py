@@ -34,19 +34,20 @@ CSRF_TRUSTED_ORIGINS = ["https://arranged-tax-wait-rapid.trycloudflare.com"]
 
 APPEND_SLASH = False
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://arranged-tax-wait-rapid.trycloudflare.com",
-    # Add other origins as needed
-]
-CORS_ORIGIN_WHITELIST = (
-    "http://localhost:3000",
-    "https://arranged-tax-wait-rapid.trycloudflare.com",
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "https://arranged-tax-wait-rapid.trycloudflare.com",
+#     # Add other origins as needed
+# ]
+# CORS_ORIGIN_WHITELIST = (
+#     "http://localhost:3000",
+#     "https://arranged-tax-wait-rapid.trycloudflare.com",
 
-)
+# )
 CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_COOKIE = True
+
 
 
 # Application definition
@@ -118,18 +119,27 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-
-
 DATABASES = {
-    'default': {
+    'default':  {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'bepocart',
         'USER': 'postgres',
-        'PASSWORD': '9645848527',
-        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PASSWORD': '252562',
+        'HOST': 'localhost',
         'PORT': '5432'
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '9645848527',
+#         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+#         'PORT': '5432'
+#     }
+# }
 
 
 # Password validation
