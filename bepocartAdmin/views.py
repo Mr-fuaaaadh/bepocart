@@ -59,8 +59,10 @@ class AdminLogin(APIView):
                     except Exception as e:
                         return Response({"error": "Token generation failed", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
+                    print(f"serilizer error     :{serializer.errors}")
                     return Response({"error": "Invalid or Incorrect Email Or Password"}, status=status.HTTP_400_BAD_REQUEST)
             else:
+                print(f"serilizer errorrrrr     :{serializer.errors}")
                 return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1051,7 +1053,8 @@ class AllOrderItems(APIView):
 class ProductImageCreateView(APIView):
     def post(self, request, pk):
         try:
-            product = Product.objects.get(pk=pk)
+            product = Product.objects.filter(pk=pk).first()
+            print(f"{product.pk}")
         except Product.DoesNotExist:
             return Response({'status': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         except DatabaseError as db_error:
@@ -1060,12 +1063,17 @@ class ProductImageCreateView(APIView):
         data = request.data
         data['product'] = product.pk
 
-        serializer = ProductImageSerializer(data=data)
+        if product.type == "single":
+            serializer = SingleProductSerilizers(data=data)
+        else:
+            serializer = VariantProductColorStock(data=data)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print(f"{serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 
 
 
@@ -1096,8 +1104,12 @@ class ProductBasdMultipleImageView(APIView):
             if product is None:
                 return Response({"message": "Product Not Found"}, status=status.HTTP_404_NOT_FOUND)
             
-            product_images = ProducyImage.objects.filter(product=product)
-            serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+            if product.type == "single" :
+                single_product = ProductColorStock.objects.filter(product=product.pk)
+                serializer = SingleProductSerilizers(single_product, many=True)
+            else :
+                variant_product = ProductVariant.objects.filter(product=product.pk)
+                serializer = VariantProductColorStock(variant_product, many=True)
             
             return Response(serializer.data, status=status.HTTP_200_OK)
         
@@ -1127,15 +1139,107 @@ class ProductMultipleImageDelete(APIView):
             user = User.objects.filter(pk=user_id).first()
             if user is None:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-            product_image = ProducyImage.objects.filter(pk=pk).first()
-            if product_image is None:
-                return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
-            product_image.delete()
+
+            productType = request.data.get('productType')
+            if productType not in ["single", "variant"]:
+                return Response({"error": "Invalid product type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if productType == "single":
+                product_image = ProductColorStock.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                product_image.delete()
+            else:
+                product_image = ProductVariant.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                product_image.delete()
+
             return Response({"message": "Product Image deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class ProductMultipleImageUpdate(APIView):
+    def get(self, request, pk):
+        try:
+            productType = request.query_params.get('productType')
+            print("kunna", productType)
+
+            if productType not in ["single", "variant"]:
+                return Response({"error": "Invalid product type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if productType == "single":
+                product_image = ProductColorStock.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+                serializer = SingleProductSerilizers(product_image)
+                return Response({"message": "Product Image retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+                
+            else:
+                product_image = ProductVariant.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+                serializer = VariantProductColorStock(product_image)
+                return Response({"message": "Product Image retrieved successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request, pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            productType = request.data.get('productType')
+            print(productType)
+            if productType not in ["single", "variant"]:
+                return Response({"error": "Invalid product type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if productType == "single":
+                product_image = ProductColorStock.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+                serializer = SingleProductSerilizers(product_image, data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({"message": "Product Image updated successfully"}, status=status.HTTP_200_OK)
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                
+            else:
+                product_image = ProductVariant.objects.filter(pk=pk).first()
+                if product_image is None:
+                    return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+                serializer = VariantProductColorStock(product_image, data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({"message": "Product Image updated successfully"}, status=status.HTTP_200_OK)
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
 
 
 # class ProductSizeAdd(APIView):
@@ -1213,18 +1317,21 @@ class ProductMultipleImageDelete(APIView):
 class VarientProductAdding(APIView):
     def post(self, request, pk):
         try:
-            product_image = ProducyImage.objects.filter(pk=pk).first()
-            if product_image is None:
-                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-            data = request.data
-            data['color'] = product_image.pk  
+            productType = request.data.get('productType')
+            if productType == "variant":
+                product_image = ProductVariant.objects.filter(pk=pk).first()
+                print(product_image)
+                if product_image is None:
+                    return Response({"error": "Product color not found"}, status=status.HTTP_404_NOT_FOUND)
+                
+                data = request.data
+                data['product_variant'] = product_image.pk  
 
-            serializer = ColorAndSizeSerilizers(data=data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                serializer = ProductVarientSizeStockSerializers(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except DatabaseError as db_error:
             return Response({'status': 'Database error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -1233,7 +1340,7 @@ class VarientProductAdding(APIView):
 class VarientProductDataView(APIView):
     def get(self, request, pk):
         try:
-            product_image = Productverient.objects.filter(color=pk)
+            product_image = ProductVarientSizeStock.objects.filter(product_variant=pk)
             if product_image is None:           
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             serializer = ProductImageVarientModelSerilizers(product_image,many=True)
@@ -1245,7 +1352,7 @@ class VarientProductDataView(APIView):
 class VarientProductSizeDelete(APIView):
     def delete(self,request,pk):
         try:
-            product_image = Productverient.objects.filter(pk=pk).first()
+            product_image = ProductVarientSizeStock.objects.filter(pk=pk).first()
             if product_image is None:
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             product_image.delete()
@@ -1258,11 +1365,11 @@ class VarientProductSizeDelete(APIView):
 class VarientProductDataupdate(APIView):
     def put(self, request, pk):
         try:
-            product_image = Productverient.objects.filter(pk=pk).first()
+            product_image = ProductVarientSizeStock.objects.filter(pk=pk).first()
             if product_image is None:
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            serilizer = ProductVarientModelSerilizers(product_image, request.data, partial=True)
+            serilizer = ProductVarientSizeStockSerializers(product_image, request.data, partial=True)
             if serilizer.is_valid():
                 serilizer.save()
                 return Response(serilizer.data, status=status.HTTP_200_OK)

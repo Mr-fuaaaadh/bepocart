@@ -39,6 +39,8 @@ urlpatterns = [
     path('Bepocart-Product-image-add/<int:pk>/',ProductImageCreateView.as_view()),
     path('Bepocart-Product-images/<int:pk>/',ProductBasdMultipleImageView.as_view()),
     path('Bepocart-Product-images-delete/<int:pk>/',ProductMultipleImageDelete.as_view()),
+    path('Bepocart-Product-images-update/<int:pk>/',ProductMultipleImageUpdate.as_view()),
+
 
 
     path('Bepocart-offer/',AdminOfferCreating.as_view()),

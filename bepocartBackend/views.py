@@ -767,6 +767,7 @@ class CustomerCartProducts(APIView):
             return Response(response_data, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print(e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -910,57 +911,65 @@ class OfferBanerBasedProducts(APIView):
         
 
 
-# class ProductBigView(APIView):
-#     def get(self, request, pk):
-#         try:
-#             product = Product.objects.filter(pk=pk).first()
-#             if product:
-#                 serializer = CustomerAllProductSerializers(product)
-
-
-#                 product_image = ProducyImage.objects.filter(product=product)
-#                 image_serializer = ProductSerializerWithMultipleImage(product_image, many=True) 
-
-
-#                 product_varient = Productverient.objects.filter(color=product_image)
-#                 varient_serializer = ProductVarientModelSerilizers(product_varient, many=True)
-
-#                 return Response({'product':serializer.data,'images':image_serializer.data,"varient":varient_serializer.data}, status=status.HTTP_200_OK)
-#             return Response({'message':"product not found"},status=status.HTTP_404_NOT_FOUND)
-#         except Exception as e:
-#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
 class ProductBigView(APIView):
     def get(self, request, slug):
         try:
             product = Product.objects.filter(slug=slug).first()
             if product:
-                # Serialize main product details
+                # Serialize the product details
                 serializer = CustomerAllProductSerializers(product)
 
-                # Fetch and serialize product images
-                product_images = ProducyImage.objects.filter(product=product)
-                image_serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+                if product.type == "single":
+                    # Filter and serialize product color stocks for single products
+                    product_images = ProductColorStock.objects.filter(product=product)
+                    single_product = SingleProductSerializer(product_images, many=True)
+                    image_serializer = single_product.data
 
-                # Fetch and serialize product variants based on colors from product images
-                product_colors = product_images.values_list('id', flat=True)  # Assuming id is the correct field
-                product_variants = Productverient.objects.filter(color_id__in=product_colors)
-                variant_serializer = ProductVarientModelSerilizers(product_variants, many=True)
+                else:
+                    # Filter and serialize product variants and their stock info for variant products
+                    product_variants = ProductVariant.objects.filter(product=product)
+                    variant_serializer = VariantProductSerializer(product_variants, many=True)
+                    image_serializer = variant_serializer.data
 
-                # Return response with product details, images, and variants
-                return Response({
-                    'product': serializer.data,
-                    'images': image_serializer.data,
-                    'variants': variant_serializer.data
-                }, status=status.HTTP_200_OK)
-            
+                return Response({'product': serializer.data, 'images': image_serializer}, status=status.HTTP_200_OK)
+
             return Response({'message': "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+# class ProductBigView(APIView):
+#     def get(self, request, slug):
+#         try:
+#             product = Product.objects.filter(slug=slug).first()
+#             if product:
+#                 # Serialize main product details
+#                 serializer = CustomerAllProductSerializers(product)
+
+#                 # Fetch and serialize product images
+#                 product_images = ProducyImage.objects.filter(product=product)
+#                 image_serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+
+#                 # Fetch and serialize product variants based on colors from product images
+#                 product_colors = product_images.values_list('id', flat=True)  # Assuming id is the correct field
+#                 product_variants = Productverient.objects.filter(color_id__in=product_colors)
+#                 variant_serializer = ProductVarientModelSerilizers(product_variants, many=True)
+
+#                 # Return response with product details, images, and variants
+#                 return Response({
+#                     'product': serializer.data,
+#                     'images': image_serializer.data,
+#                     'variants': variant_serializer.data
+#                 }, status=status.HTTP_200_OK)
+            
+#             return Response({'message': "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class MianCategoryBasedProducts(APIView):
@@ -1569,19 +1578,33 @@ class CreateOrder(APIView):
                                         color=item.color,
                                         size=item.size
                                     )
+                                    if item.product.type == "single":
+                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                        if check_color is None :
+                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                        for stock in check_color :
+                                            if stock.stock >= item.quantity:
+                                                stock.stock -= item.quantity
+                                                stock.save()
 
-                                    check_color = ProducyImage.objects.filter(product = item.product, color=item.color).first()
-                                    if check_color is None :
-                                        return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                    
-                                    product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size )
-                                    for variant in product_variants:
-                                        if variant.stock >= item.quantity:
-                                            variant.stock -= item.quantity
-                                            variant.save()
-                                        else:
-                                            return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+                                    else :
+                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
 
+                                        if not product_variants.exists():
+                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                        for variant in product_variants:
+                                            # Filter the size stocks related to the current variant
+                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                            
+                                            for stock in size_stocks:
+                                                if stock.stock >= item.quantity:
+                                                    # Update stock
+                                                    stock.stock -= item.quantity
+                                                    stock.save()
+                                                    break  # Break out of the inner loop if stock is updated
+                                                else:
+                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
                                 # Apply the coupon if present
                                 if coupon:
@@ -1723,17 +1746,33 @@ class CreateOrder(APIView):
                                             size=item.size
                                         )
 
-                                        check_color = ProducyImage.objects.filter(product = item.product, color=item.color).first()
-                                        if check_color is None :
-                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                        
-                                        product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size )
-                                        for variant in product_variants:
-                                            if variant.stock >= item.quantity:
-                                                variant.stock -= item.quantity
-                                                variant.save()
-                                            else:
-                                                return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+                                        if item.product.type == "single":
+                                            check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                            if check_color is None :
+                                                return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                            for stock in check_color :
+                                                if stock.stock >= item.quantity:
+                                                    stock.stock -= item.quantity
+                                                    stock.save()
+
+                                        else :
+                                            product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+
+                                            if not product_variants.exists():
+                                                return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                            for variant in product_variants:
+                                                # Filter the size stocks related to the current variant
+                                                size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                                
+                                                for stock in size_stocks:
+                                                    if stock.stock >= item.quantity:
+                                                        # Update stock
+                                                        stock.stock -= item.quantity
+                                                        stock.save()
+                                                        break  # Break out of the inner loop if stock is updated
+                                                    else:
+                                                        return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
                                     # Apply the coupon if present
@@ -1922,17 +1961,33 @@ class CreateOrder(APIView):
                                                     size=item.size
                                                 )
 
-                                                check_color = ProducyImage.objects.filter(product = item.product, color=item.color).first()
-                                                if check_color is None :
-                                                    return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                
-                                                product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size )
-                                                for variant in product_variants:
-                                                    if variant.stock >= item.quantity:
-                                                        variant.stock -= item.quantity
-                                                        variant.save()
-                                                    else:
-                                                        return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+                                                if item.product.type == "single":
+                                                    check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                                    if check_color is None :
+                                                        return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                                    for stock in check_color :
+                                                        if stock.stock >= item.quantity:
+                                                            stock.stock -= item.quantity
+                                                            stock.save()
+
+                                                else :
+                                                    product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+
+                                                    if not product_variants.exists():
+                                                        return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                                    for variant in product_variants:
+                                                        # Filter the size stocks related to the current variant
+                                                        size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                                        
+                                                        for stock in size_stocks:
+                                                            if stock.stock >= item.quantity:
+                                                                # Update stock
+                                                                stock.stock -= item.quantity
+                                                                stock.save()
+                                                                break  # Break out of the inner loop if stock is updated
+                                                            else:
+                                                                return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
                                             # Apply the coupon if present
@@ -1988,7 +2043,6 @@ class CreateOrder(APIView):
                         return Response({"message":"No matching offer type found"})
                 else:
 
-                    return Response({"message":"category Baes discount"})
                     offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                     if offer_schedule:
                         checking_products_offer_type = OfferSchedule.objects.filter(
@@ -2120,17 +2174,33 @@ class CreateOrder(APIView):
                                                     size=item.size
                                                 )
 
-                                                check_color = ProducyImage.objects.filter(product = item.product, color=item.color).first()
-                                                if check_color is None :
-                                                    return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                
-                                                product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size )
-                                                for variant in product_variants:
-                                                    if variant.stock >= item.quantity:
-                                                        variant.stock -= item.quantity
-                                                        variant.save()
-                                                    else:
-                                                        return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+                                                if item.product.type == "single":
+                                                    check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                                    if check_color is None :
+                                                        return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                                    for stock in check_color :
+                                                        if stock.stock >= item.quantity:
+                                                            stock.stock -= item.quantity
+                                                            stock.save()
+
+                                                else :
+                                                    product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+
+                                                    if not product_variants.exists():
+                                                        return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                                    for variant in product_variants:
+                                                        # Filter the size stocks related to the current variant
+                                                        size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                                        
+                                                        for stock in size_stocks:
+                                                            if stock.stock >= item.quantity:
+                                                                # Update stock
+                                                                stock.stock -= item.quantity
+                                                                stock.save()
+                                                                break  # Break out of the inner loop if stock is updated
+                                                            else:
+                                                                return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
                                             # Apply the coupon if present
@@ -2225,17 +2295,33 @@ class CreateOrder(APIView):
                         size=item.size
                     )
 
-                    check_color = ProducyImage.objects.filter(product=item.product, color=item.color).first()
-                    if check_color is None:
-                        return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                    if item.product.type == "single":
+                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                        if check_color is None :
+                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                        for stock in check_color :
+                            if stock.stock >= item.quantity:
+                                stock.stock -= item.quantity
+                                stock.save()
 
-                    product_variants = Productverient.objects.filter(product=item.product, color=check_color.pk, size=item.size)
-                    for variant in product_variants:
-                        if variant.stock >= item.quantity:
-                            variant.stock -= item.quantity
-                            variant.save()
-                        else:
-                            return Response({"message": f"Insufficient stock for {item.product.name} - {item.color}"}, status=status.HTTP_400_BAD_REQUEST)
+                    else :
+                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+
+                        if not product_variants.exists():
+                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                        for variant in product_variants:
+                            # Filter the size stocks related to the current variant
+                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                            
+                            for stock in size_stocks:
+                                if stock.stock >= item.quantity:
+                                    # Update stock
+                                    stock.stock -= item.quantity
+                                    stock.save()
+                                    break  # Break out of the inner loop if stock is updated
+                                else:
+                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
                     total_amount += item.product.salePrice * item.quantity
 
@@ -2373,24 +2459,24 @@ class BuyToGetOne(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-class ProducViewWithMultipleImage(APIView):
-    def get(self, request, pk):
-        try:
-            product_images = ProducyImage.objects.filter(product_id=pk)
+# class ProducViewWithMultipleImage(APIView):
+#     def get(self, request, pk):
+#         try:
+#             product_images = ProducyImage.objects.filter(product_id=pk)
 
-            for product_image in product_images:
-                sizes = product_image.size.all()  # Fetch all related sizes
-                size_names = [size.name for size in sizes]  # List comprehension to get the names
+#             for product_image in product_images:
+#                 sizes = product_image.size.all()  # Fetch all related sizes
+#                 size_names = [size.name for size in sizes]  # List comprehension to get the names
 
-            if not product_images.exists():
-                return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
+#             if not product_images.exists():
+#                 return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
             
-            serializer = ProductSerializerWithMultipleImage(product_images, many=True)
-            return Response({"product": serializer.data}, status=status.HTTP_200_OK)
-        except ProducyImage.DoesNotExist:
-            return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#             serializer = ProductSerializerWithMultipleImage(product_images, many=True)
+#             return Response({"product": serializer.data}, status=status.HTTP_200_OK)
+#         except ProducyImage.DoesNotExist:
+#             return Response({'error': 'Product images not found'}, status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class UserProfileView(APIView):
     def get(self,request):
@@ -2869,16 +2955,16 @@ class CustomerProductReviewView(APIView):
         
 
 
-class ProductSizeAndStockGeting(APIView):
-    def get(self, request, color):
-        try:
-            product = Productverient.objects.filter(color=color)
-            if not product:
-                return Response({"status": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-            serilizer = ProductImageVarientModelSerilizers(product,many=True)
-            return Response(serilizer.data, status=status.HTTP_200_OK)
-        except Exception as e :
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# class ProductSizeAndStockGeting(APIView):
+#     def get(self, request, color):
+#         try:
+#             product = Productverient.objects.filter(color=color)
+#             if not product:
+#                 return Response({"status": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+#             serilizer = ProductImageVarientModelSerilizers(product,many=True)
+#             return Response(serilizer.data, status=status.HTTP_200_OK)
+#         except Exception as e :
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
 

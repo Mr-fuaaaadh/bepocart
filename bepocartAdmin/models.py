@@ -53,6 +53,12 @@ class Subcategory(models.Model):
 
 
 class Product(models.Model):
+    SINGLE = 'single'
+    VARIANT = 'variant'
+    PRODUCT_TYPE_CHOICES = [
+        (SINGLE, 'Single Product'),
+        (VARIANT, 'Variant Product'),
+    ]
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=250,unique=True,null=True)
     short_description = models.CharField(max_length=255, blank=True, null=True)
@@ -65,6 +71,12 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0   )
+    type = models.CharField(
+        max_length=10,
+        choices=PRODUCT_TYPE_CHOICES,
+        default=SINGLE,
+        null=True
+    )
 
     def __str__(self):
         return self.name
@@ -81,26 +93,54 @@ class Product(models.Model):
 
 
 
-class ProducyImage(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    color = models.CharField(max_length=100,null=True)
-    image1 = models.ImageField(max_length=100, upload_to='product/Images')
-    image2 = models.ImageField(max_length=100, upload_to='product/Images')
-    image3 = models.ImageField(max_length=100, upload_to='product/Images')
-    image4 = models.ImageField(max_length=100, upload_to='product/Images')
-    image5 = models.ImageField(max_length=100, upload_to='product/Images')
+class ProductColorStock(models.Model):
+    
+    product = models.ForeignKey(Product, related_name='color_stocks', on_delete=models.CASCADE)
+    color = models.CharField(max_length=100)
+    stock = models.PositiveIntegerField()
+    image1 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image2 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image3 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image4 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image5 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+
+
+
+    def __str__(self):
+        return f"{self.product.name} - {self.color}"
+
+    class Meta:
+        db_table = "ProductColorStock"
+        unique_together = ('product', 'color')
+
+class ProductVariant(models.Model):
+    product = models.ForeignKey(Product, related_name='variants', on_delete=models.CASCADE)
+    color = models.CharField(max_length=100)
+    image1 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image2 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image3 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image4 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+    image5 = models.ImageField(upload_to="products/" ,max_length=200, blank=True)
+
+
+    def __str__(self):
+        return f"{self.product.name} - {self.color}"
+
+    class Meta:
+        db_table = "ProductVariant"
+
+
+class ProductVarientSizeStock(models.Model):
+    product_variant = models.ForeignKey(ProductVariant, related_name='size_stocks', on_delete=models.CASCADE)
+    size = models.CharField(max_length=100)
+    stock = models.PositiveIntegerField()
+
+
+    def __str__(self):
+        return f"{self.product_variant.product.name} - {self.product_variant.color} - {self.size}"
 
     class Meta :
-        db_table = 'ProductImage'
-
-class Productverient(models.Model):
-    product= models.ForeignKey(Product, on_delete=models.CASCADE,null=True, blank=False)
-    color = models.ForeignKey(ProducyImage, on_delete=models.CASCADE, related_name='verients')
-    size = models.CharField(max_length=100,null=True)
-    stock = models.PositiveIntegerField(default=0)
-
-    class Meta :
-        db_table = 'Productverient'
+        db_table = "Size"
 
 
 class Wishlist(models.Model):

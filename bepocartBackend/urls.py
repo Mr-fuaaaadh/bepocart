@@ -66,7 +66,7 @@ urlpatterns = [
     # path('buy-2-get-1/', BuyToGetOne.as_view(), name='BuyToGetOne'),
 
 
-    path('product-images/<int:pk>/', ProducViewWithMultipleImage.as_view(), name='ProductSerializerWithMultipleImage'),
+    # path('product-images/<int:pk>/', ProducViewWithMultipleImage.as_view(), name='ProductSerializerWithMultipleImage'),
 
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
     path('order-items/<int:pk>/', CustomerOrderItems.as_view(), name='CustomerOrderItems'),
