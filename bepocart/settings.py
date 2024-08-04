@@ -34,7 +34,7 @@ CSRF_TRUSTED_ORIGINS = ["https://arranged-tax-wait-rapid.trycloudflare.com"]
 
 APPEND_SLASH = False
 
-CORS_ALLOWED_ORIGINS = [
+'''CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://arranged-tax-wait-rapid.trycloudflare.com",
     # Add other origins as needed
@@ -43,7 +43,7 @@ CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
     "https://arranged-tax-wait-rapid.trycloudflare.com",
 
-)
+)'''
 CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_COOKIE = True
@@ -190,3 +190,22 @@ RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
 TIME_ZONE = 'America/New_York'
 USE_TZ = True
 
+AWS_ACCESS_KEY_ID = 'AKIAQE3ROOKIXKPTB4F4'
+AWS_SECRET_ACCESS_KEY = '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'
+
+AWS_STORAGE_BUCKET_NAME = 'bepocart-bkt-1'
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None  # Ensure public read access if needed
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+
+# Media files (uploaded files)
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+
+# Use S3 for storing static files
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# Use S3 for storing media files
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
