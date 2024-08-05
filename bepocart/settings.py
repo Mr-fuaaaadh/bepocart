@@ -29,24 +29,38 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","arranged-tax-wait-rapid.trycloudflare.com","*"]
-CSRF_TRUSTED_ORIGINS = ["https://arranged-tax-wait-rapid.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","monthly-r-atlas-fisheries.trycloudflare.com","*"]
+CSRF_TRUSTED_ORIGINS = ["https://monthly-r-atlas-fisheries.trycloudflare.com"]
 
 APPEND_SLASH = False
 
-'''CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://arranged-tax-wait-rapid.trycloudflare.com",
+#<<<<<<< HEAD
+#'CORS_ALLOWED_ORIGINS = [
+#    "http://localhost:3000",
+#    "https://arranged-tax-wait-rapid.trycloudflare.com",
     # Add other origins as needed
-]
-CORS_ORIGIN_WHITELIST = (
-    "http://localhost:3000",
-    "https://arranged-tax-wait-rapid.trycloudflare.com",
+#]
+#CORS_ORIGIN_WHITELIST = (
+#    "http://localhost:3000",
+#    "https://arranged-tax-wait-rapid.trycloudflare.com",
 
-)'''
+#)
+#=======
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "https://secondary-rolls-rocket-glance.trycloudflare.com",
+#     # Add other origins as needed
+# ]
+# CORS_ORIGIN_WHITELIST = (
+#     "http://localhost:3000",
+#     "https://secondary-rolls-rocket-glance.trycloudflare.com",
+
+# )
+#>>>>>>> 3bcb419738e68d39ae1acf78eb0a73eeecb36709
 CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_COOKIE = True
+
 
 
 # Application definition
@@ -118,7 +132,16 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-
+# DATABASES = {
+#     'default':  {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
+#         'PORT': '5432'
+#     }
+# }
 
 DATABASES = {
     'default': {

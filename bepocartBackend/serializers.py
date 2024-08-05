@@ -37,7 +37,7 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','slug','name','description','short_description','salePrice','category','image','created_at','mainCategory','discount']
+        fields = ['id','slug','name','description','short_description','price','salePrice','category','image','created_at','mainCategory','discount','type']
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
@@ -92,11 +92,30 @@ class CartSerializers(serializers.ModelSerializer):
         ]
 
     def get_stock(self, obj):
+        product_type = obj.product.type
         try:
-            variant = Productverient.objects.get(product=obj.product, color__color=obj.color, size=obj.size)
-            return variant.stock
-        except Productverient.DoesNotExist:
+            if product_type == "single":
+                try:
+                    variant = ProductColorStock.objects.get(product=obj.product, color=obj.color)
+                    return variant.stock
+                except ProductColorStock.DoesNotExist as e:
+                    return 0
+            else:
+                try:
+                    check_color = ProductVariant.objects.filter(product=obj.product, color=obj.color).first()
+                    if check_color:
+                        try:
+                            variant = ProductVarientSizeStock.objects.get(product_variant=check_color, size=obj.size)
+                            return variant.stock
+                        except ProductVarientSizeStock.DoesNotExist as e:
+                            return 0
+                    else:
+                        return 0
+                except ProductVariant.DoesNotExist as e:
+                    return 0
+        except Exception as e:
             return 0
+
 
     def get_has_offer(self, obj):
         product = obj.product
@@ -205,17 +224,47 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProducyImage
+class SingleProductSerilizers(serializers.ModelSerializer):
+    class Meta :
+        model = ProductColorStock
         fields = "__all__"
 
 
-class ProductSerializerWithMultipleImage(serializers.ModelSerializer):
+class SingleProductSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source='product.type')
+    class Meta:
+        model = ProductColorStock
+        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3','image4','image5','type','stock']
+
+
+
+
+class VariantProductColorStock(serializers.ModelSerializer):
+    class Meta :
+        model = ProductVariant
+        fields = "__all__"
+
+
+
+class VariantProductSerializer(serializers.ModelSerializer):
+    stock_info = serializers.SerializerMethodField()
+    type = serializers.CharField(source='product.type')
 
     class Meta:
-        model = ProducyImage
-        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3', 'image4', 'image5',]
+        model = ProductVariant
+        fields = ['id', 'product', 'color', 'image1', 'image2', 'image3', 'image4', 'image5', 'stock_info', 'type']
+
+    def get_stock_info(self, obj):
+        size_stocks = ProductVarientSizeStock.objects.filter(product_variant_id=obj.id)
+        return [
+            {'size': size_stock.size, 'stock': size_stock.stock}
+            for size_stock in size_stocks
+        ]
+    
+class ProductVarientSizeStockSerializers(serializers.ModelSerializer):
+    class Meta :
+        model = ProductVarientSizeStock
+        fields = "__all__"
 
 
 

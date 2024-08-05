@@ -83,7 +83,7 @@ class ProductSerializerView(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price','discount']
+        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price','discount','type']
 
 
 class CarousalSerializers(serializers.ModelSerializer):
@@ -113,7 +113,7 @@ class CustomerAllProductSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.pk')
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName','mainCategory']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName','mainCategory','type']
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -269,25 +269,31 @@ class AdminProductReviewSerializer(serializers.ModelSerializer):
 
 
 
-class ProductVarientModelSerilizers(serializers.ModelSerializer):
-    color_name = serializers.CharField(source="color.color")
-    class Meta:
-        model = Productverient
-        fields = ["id","color","size","stock","color_name"]
+# class ProductVarientModelSerilizers(serializers.ModelSerializer):
+#     color_name = serializers.CharField(source="color.color")
+#     class Meta:
+#         model = Productverient
+#         fields = ["id","color","size","stock","color_name"]
+
+
+# class ProductVarientColorAddin(serializers.ModelSerializer):
+#     class Meta:
+#         model = Productverient
+#         fields = "__all__"
 
 
 
-class ColorAndSizeSerilizers(serializers.ModelSerializer):
-    class Meta:
-        model = Productverient
-        fields = "__all__"
+# class ColorAndSizeSerilizers(serializers.ModelSerializer):
+#     class Meta:
+#         model = Productverient
+#         fields = "__all__"
 
 
 class ProductImageVarientModelSerilizers(serializers.ModelSerializer):
-    productImage = serializers.ImageField(source="product.image")
+    productImage = serializers.ImageField(source="product_variant.product.image")
     class Meta:
-        model = Productverient
-        fields = ["id","product","size","stock","productImage"]
+        model = ProductVarientSizeStock
+        fields = ["id","product_variant","size","stock","productImage"]
 
 
 class OfferProductModelSerializer(serializers.ModelSerializer):
