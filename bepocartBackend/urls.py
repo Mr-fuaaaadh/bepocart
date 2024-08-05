@@ -32,7 +32,7 @@ urlpatterns = [
     path('offer-banner/<int:pk>/products/', OfferBanerBasedProducts.as_view(), name='offer-banner-products'),
     path('product/<slug:slug>/',ProductBigView.as_view(), name="ProductBigView"),
     path('related-products/<slug:slug>/',RelatedProduct.as_view(), name="RelatedProduct"),
-    path('category/<int:pk>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
+    path('category/<slug:slug>/products/',MianCategoryBasedProducts.as_view(), name="MianCategoryBasedProducts"),
 
 
     path('reset-password/', UserPasswordReset.as_view(), name='reset-password'),

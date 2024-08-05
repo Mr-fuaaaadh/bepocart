@@ -59,10 +59,8 @@ class AdminLogin(APIView):
                     except Exception as e:
                         return Response({"error": "Token generation failed", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
-                    print(f"serilizer error     :{serializer.errors}")
                     return Response({"error": "Invalid or Incorrect Email Or Password"}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                print(f"serilizer errorrrrr     :{serializer.errors}")
                 return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1054,7 +1052,6 @@ class ProductImageCreateView(APIView):
     def post(self, request, pk):
         try:
             product = Product.objects.filter(pk=pk).first()
-            print(f"{product.pk}")
         except Product.DoesNotExist:
             return Response({'status': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         except DatabaseError as db_error:
@@ -1071,7 +1068,6 @@ class ProductImageCreateView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(f"{serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
@@ -1165,7 +1161,6 @@ class ProductMultipleImageUpdate(APIView):
     def get(self, request, pk):
         try:
             productType = request.query_params.get('productType')
-            print("kunna", productType)
 
             if productType not in ["single", "variant"]:
                 return Response({"error": "Invalid product type"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1211,7 +1206,6 @@ class ProductMultipleImageUpdate(APIView):
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             productType = request.data.get('productType')
-            print(productType)
             if productType not in ["single", "variant"]:
                 return Response({"error": "Invalid product type"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1320,7 +1314,6 @@ class VarientProductAdding(APIView):
             productType = request.data.get('productType')
             if productType == "variant":
                 product_image = ProductVariant.objects.filter(pk=pk).first()
-                print(product_image)
                 if product_image is None:
                     return Response({"error": "Product color not found"}, status=status.HTTP_404_NOT_FOUND)
                 
