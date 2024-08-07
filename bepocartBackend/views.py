@@ -767,7 +767,6 @@ class CustomerCartProducts(APIView):
             return Response(response_data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
@@ -973,9 +972,9 @@ class ProductBigView(APIView):
         
 
 class MianCategoryBasedProducts(APIView):
-    def get(self, request, pk):
+    def get(self, request, slug):
         try:
-            main_category = Category.objects.filter(pk=pk).first()
+            main_category = Category.objects.filter(slug=slug).first()
             if main_category:
                 products = Product.objects.filter(category__category=main_category)
                 serializer = ProductViewSerializers(products, many=True)

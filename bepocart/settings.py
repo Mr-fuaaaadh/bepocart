@@ -29,8 +29,8 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","monthly-r-atlas-fisheries.trycloudflare.com","*"]
-CSRF_TRUSTED_ORIGINS = ["https://monthly-r-atlas-fisheries.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","modelling-fate-omega-budgets.trycloudflare.com","*"]
+CSRF_TRUSTED_ORIGINS = ["https://modelling-fate-omega-budgets.trycloudflare.com"]
 
 APPEND_SLASH = False
 
