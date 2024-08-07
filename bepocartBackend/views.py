@@ -322,6 +322,16 @@ class CustomerProductInCart(APIView):
             if Cart.objects.filter(customer=user, product=product).exists():
                 return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
             
+            if product.type == "single":
+                product_color = request.data.get('color')
+                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color}
+                serializer = CartModelSerializers(data=cart_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({"message": "Unable to add product to cart", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            
             product_color = request.data.get('color')
             product_size = request.data.get('size')
 
