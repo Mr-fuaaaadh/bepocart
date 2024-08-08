@@ -230,6 +230,7 @@ class SingleProductSerilizers(serializers.ModelSerializer):
         fields = "__all__"
 
 
+
 class SingleProductSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source='product.type')
     class Meta:

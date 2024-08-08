@@ -1167,6 +1167,8 @@ class ProductMultipleImageUpdate(APIView):
 
             if productType == "single":
                 product_image = ProductColorStock.objects.filter(pk=pk).first()
+                
+
                 if product_image is None:
                     return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -1175,6 +1177,7 @@ class ProductMultipleImageUpdate(APIView):
                 
             else:
                 product_image = ProductVariant.objects.filter(pk=pk).first()
+
                 if product_image is None:
                     return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -1183,6 +1186,7 @@ class ProductMultipleImageUpdate(APIView):
 
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
     def put(self, request, pk):
         try:
@@ -1234,79 +1238,6 @@ class ProductMultipleImageUpdate(APIView):
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-
-
-# class ProductSizeAdd(APIView):
-#     def post(self, request):
-#         try:
-#             token = request.headers.get('Authorization')
-#             if token is None:
-#                 return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#             try:
-#                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-#             except ExpiredSignatureError:
-#                 return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-#             except (DecodeError, InvalidTokenError):
-#                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#             user_id = payload.get('id')
-#             if user_id is None:
-#                 return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
-
-#             user = User.objects.filter(pk=user_id).first()
-#             if user is None:
-#                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-#             serializer = ProductSizeSerializers(data=request.data)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-#             else:
-#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         except Exception as e:
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-
-
-
-# class ProductSizeView(APIView):
-#     def get(self, request):
-#         try:
-#             sizes = Size.objects.all()
-#             serializer = ProductSizeSerializers(sizes, many=True)
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         except Exception as e:
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-
-
-# class ProductSizeDelete(APIView):
-#     def delete(self, request, pk):
-#         try:
-#             size = Size.objects.filter(pk=pk).first()
-#             if size is None:
-#                 return Response({"error": "Size not found"}, status=status.HTTP_404_NOT_FOUND)
-#             size.delete()
-#             return Response({"message": "Size deleted successfully"}, status=status.HTTP_200_OK)
-#         except Exception as e :
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# class ProductSizeUpdate(APIView):
-#     def put(self, request, pk):
-#         try:
-#             size = Size.objects.filter(pk=pk).first()
-#             if size is None:
-#                 return Response({"error": "Size not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-#             serializer = ProductSizeSerializers(size, data=request.data, partial=True)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data, status=status.HTTP_200_OK)
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         except Exception as e:
-#             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class VarientProductAdding(APIView):
     def post(self, request, pk):

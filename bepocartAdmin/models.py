@@ -259,42 +259,6 @@ class OfferSchedule(models.Model):
     def __str__(self):
         return self.name
 
-        
-
-    def save(self, *args, **kwargs):
-        # Call the parent save method to ensure the instance is saved
-        super(OfferSchedule, self).save(*args, **kwargs)
-
-        # Update offer_products based on exclude_products
-        if self.exclude_products.exists():
-            excluded_product_ids = self.exclude_products.values_list('id', flat=True)
-            all_products = Product.objects.exclude(id__in=excluded_product_ids)
-            self.offer_products.add(*all_products)
-        else:
-            # If exclude_products is empty, set offer_products to all Product instances
-            all_products = Product.objects.all()
-            self.offer_products.add(*all_products)
-
-    def __str__(self):
-        return f"Offer Schedule {self.id}"
-
-    def applies_to_product(self, product):
-        return self.offer_products.filter(pk=product.pk).exists()
-
-    def applies_to_category(self, category):
-        return self.offer_category.filter(pk=category.pk).exists()
-
     class Meta:
         db_table = 'Offer'
 
-    
-    def update_offer_active(self):
-        now = timezone.now()
-        if self.start_date <= now <= self.end_date:
-            self.offer_active = True
-        else:
-            self.offer_active = False
-
-# @receiver(pre_save, sender=OfferSchedule)
-# def update_offer_active_field(sender, instance, **kwargs):
-#     instance.update_offer_active()
