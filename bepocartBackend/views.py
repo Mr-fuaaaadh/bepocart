@@ -541,17 +541,12 @@ class CustomerCartProducts(APIView):
                                 return Response(response_data, status=status.HTTP_200_OK)
 
                 else:
-
-                    total_cart_value = 0
-
+                    total = 0
                     for data in cart:
 
                         total_product_value = data.quantity * data.product.salePrice
-                        total_cart_value += total_product_value
-
-
-                    if matched_product_pks and allowed_discount_products is not None :
-
+                        total += total_product_value
+                    if matched_product_pks and allowed_discount_products is not None:
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                         if offer_schedule:
                             checking_products_offer_type = OfferSchedule.objects.filter(
@@ -580,10 +575,8 @@ class CustomerCartProducts(APIView):
                                             free_quantity = (item.quantity // buy) * get
                                         else:
                                             free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
                                         total_quantity = item.quantity + free_quantity
                                         total_price = item.product.salePrice * item.quantity
-
 
                                         if item.product.pk in matched_product_pks:
                                             offer_products.append(item)
@@ -592,7 +585,6 @@ class CustomerCartProducts(APIView):
 
                                     total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
                                     sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
-
 
                                     if discount_allowed_products:
                                         # Sort discount allowed products by price in ascending order
@@ -624,7 +616,7 @@ class CustomerCartProducts(APIView):
                                                 total_cart_value -= discount_amount
                                                 remaining_free_quantity = 0
 
-                                        serializer = CartSerializers(cart, many=True)
+                                        serializer = CartSerializers(user_cart, many=True)
                                         total_discount_after_adjustment = sub_total_sale_price - total_cart_value
 
                                         shipping_fee = 60 if total_cart_value <= 500 else 0
@@ -640,12 +632,15 @@ class CustomerCartProducts(APIView):
 
                                         return Response(response_data, status=status.HTTP_200_OK)
 
-                            elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                                return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
+                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                else:
+                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                             else:
-                                return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         else:
-                            return Response({"message":"offer coming soom"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                            return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
                     else:
 
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
@@ -655,7 +650,7 @@ class CustomerCartProducts(APIView):
                                 get_option=offer_schedule.get_option,
                                 get_value=offer_schedule.get_value,
                                 method=offer_schedule.method,
-                                offer_active = True
+                                offer_active=True
                             ).first()
 
                             if checking_products_offer_type:
@@ -670,55 +665,42 @@ class CustomerCartProducts(APIView):
                                     offer_category_products = []
                                     discount_allowed_category_products = []
 
-                                    total_free_quantity = 0
                                     for item in user_cart:
-                                        if item.product.pk in approved_category_product_pks:
-                                            free_quantity = (item.quantity // buy) * get
-                                        else:
-                                            free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
-                                        total_quantity = item.quantity + free_quantity
-                                        total_price = item.product.salePrice * item.quantity
-
-
                                         if item.product.pk in approved_category_product_pks:
                                             offer_category_products.append(item)
                                         if item.product.pk in approved_discount_category_product_pks:
                                             discount_allowed_category_products.append(item)
 
-                                    total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
+                                    # Calculate the total value of the cart
+                                    total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
+                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
 
+                                    # Calculate the total quantity of offer category products and total free quantity
+                                    total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
+                                    total_free_quantity = int((total_offer_product_quantity / 2) * get)
 
                                     if discount_allowed_category_products:
                                         # Sort discount allowed products by price in ascending order
                                         discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
-
-                                        # Track remaining free quantity
-                                        offer_products_in_cart = user_cart.filter(product__in=combined_product_pks)
-                                        remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-
-                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
 
                                         for item in discount_allowed_category_products:
                                             product = item.product
                                             product_price = product.salePrice
                                             product_quantity = item.quantity
 
-                                            if remaining_free_quantity <= 0:
+                                            if total_free_quantity <= 0:
                                                 break
 
-                                            if remaining_free_quantity >= product_quantity:
+                                            if total_free_quantity >= product_quantity:
                                                 # Apply discount for full product quantity
                                                 discount_amount = product_price * product_quantity
                                                 total_cart_value -= discount_amount
-                                                remaining_free_quantity -= product_quantity
+                                                total_free_quantity -= product_quantity
                                             else:
                                                 # Apply discount for part of the product quantity
-                                                discount_amount = product_price * remaining_free_quantity
+                                                discount_amount = product_price * total_free_quantity
                                                 total_cart_value -= discount_amount
-                                                remaining_free_quantity = 0
+                                                total_free_quantity = 0
 
 
                                         serializer = CartSerializers(cart, many=True)
@@ -737,12 +719,10 @@ class CustomerCartProducts(APIView):
 
                                         return Response(response_data, status=status.HTTP_200_OK)
 
-                           
                             else:
-                                return Response({"message":"No offer found"})
+                                return Response({"message": "No offer found"}, status=status.HTTP_404_NOT_FOUND)
                         else:
-                            return Response({"message":"No matching offer type found"})
-
+                            return Response({"message": "No matching offer type found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = CartSerializers(cart, many=True)
 
@@ -2390,7 +2370,7 @@ class RelatedProduct(APIView):
 class DiscountSaleProducts(APIView):
     def get(self, request):
         try:
-            offer_schedule = OfferSchedule.objects.first()
+            offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
             if offer_schedule:
                 offer_products = offer_schedule.offer_products.all()
                 if not offer_products.exists():
