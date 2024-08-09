@@ -1262,7 +1262,7 @@ class UserSearchProductView(APIView):
             )
 
             if products.exists():
-                serializer = ProductSerializerView(products, many=True)
+                serializer = ProductViewSerializer(products, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "No products found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1288,7 +1288,7 @@ class HighToLowProducts(APIView):
             else:
                 return Response({"message": "Invalid sort order"}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = ProductSerializer(products, many=True)
+            serializer = ProductViewSerializer(products, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1310,7 +1310,7 @@ class LowToHighProducts(APIView):
             else:
                 return Response({"message": "Invalid sort order"}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = ProductSerializer(products, many=True)
+            serializer = ProductViewSerializer(products, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
