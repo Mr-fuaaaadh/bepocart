@@ -79,7 +79,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class ProductSerializerView(serializers.ModelSerializer):
     categoryName = serializers.CharField(source ='category.name')
-    mainCategory = serializers.CharField(source ='category.category.pk')
+    mainCategory = serializers.CharField(source ='category.category.slug')
 
     class Meta :
         model = Product
