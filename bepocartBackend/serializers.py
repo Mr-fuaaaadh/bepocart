@@ -33,7 +33,7 @@ class SubcatecorySerializer(serializers.ModelSerializer):
 
 
 class ProductViewSerializer(serializers.ModelSerializer):
-    mainCategory = serializers.CharField(source ='category.category.pk')
+    mainCategory = serializers.CharField(source ='category.category.slug')
 
     class Meta :
         model = Product
@@ -41,7 +41,7 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):
-    mainCategory = serializers.IntegerField(source ='category.category.pk')
+    mainCategory = serializers.CharField(source ='category.category.slug')
     class Meta :
         model = Product
         fields = ['id','name','short_description','description','price','salePrice','category','image','discount','mainCategory','slug']
@@ -54,7 +54,7 @@ class WishlistSerializers(serializers.ModelSerializer):
 
 
 class WishlistSerializersView(serializers.ModelSerializer):
-    mainCategory = serializers.IntegerField(source ='product.category.category.pk')
+    mainCategory = serializers.CharField(source ='product.category.category.slug')
     category = serializers.CharField(source = "product.category.name")
     productName = serializers.CharField(source='product.name')
     productImage = serializers.ImageField(source='product.image')
@@ -78,7 +78,7 @@ class CartSerializers(serializers.ModelSerializer):
     price = serializers.IntegerField(source='product.price')
     subcategory_slug = serializers.CharField(source='product.category.slug')
     image = serializers.ImageField(source='product.image')
-    mainCategory = serializers.CharField(source='product.category.category.pk')
+    mainCategory = serializers.CharField(source='product.category.category.slug')
     stock = serializers.SerializerMethodField()
     has_offer = serializers.SerializerMethodField()
     discount_product = serializers.SerializerMethodField()
@@ -168,7 +168,7 @@ class CartModelSerializers(serializers.ModelSerializer):
 
 
 class ProductViewSerializers(serializers.ModelSerializer):
-    mainCategory = serializers.CharField(source ='category.category.pk')
+    mainCategory = serializers.CharField(source ='category.category.slug')
     class Meta :
         model = Product
         fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price','slug']
@@ -307,7 +307,7 @@ class RecentlyViewedProductSerializer(serializers.ModelSerializer):
         fields = ['user', 'product', 'viewed_at']
 
 class RecomendedProductSerializer(serializers.ModelSerializer):
-    mainCategory = serializers.IntegerField(source ='category.category.pk')
+    mainCategory = serializers.IntegerField(source ='category.category.slug')
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory','slug'] 
