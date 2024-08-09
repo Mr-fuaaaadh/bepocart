@@ -110,7 +110,7 @@ class OfferProductSerializers(serializers.ModelSerializer):
 
 class CustomerAllProductSerializers(serializers.ModelSerializer):
     categoryName = serializers.CharField(source="category.name")
-    mainCategory = serializers.CharField(source ='category.category.pk')
+    mainCategory = serializers.CharField(source ='category.category.slug')
     class Meta :
         model = Product
         fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName','mainCategory','type']
