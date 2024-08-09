@@ -257,6 +257,10 @@ class OfferSchedule(models.Model):
     discount_not_allowed_category = models.ManyToManyField(Subcategory, blank=True, related_name='not_allowed_offers', help_text="Categories not allowed for discount")
 
     def __str__(self):
-        return self.name
+        return f"Offer {self.pk}"
+
+
+    class Meta :
+        db_table = "Offer Schedule"
 
         

@@ -562,75 +562,143 @@ class CustomerCartProducts(APIView):
                                     buy = checking_products_offer_type.get_option
                                     get = checking_products_offer_type.get_value
 
-                                    # Combine product pks to fetch the cart items
                                     combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
                                     user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
 
                                     offer_products = []
                                     discount_allowed_products = []
 
-                                    total_free_quantity = 0
-                                    for item in user_cart:
-                                        if item.product.pk in matched_product_pks:
-                                            free_quantity = (item.quantity // buy) * get
-                                        else:
-                                            free_quantity = 0  # Ensure free quantity for non-offer products is zero
-                                        total_quantity = item.quantity + free_quantity
-                                        total_price = item.product.salePrice * item.quantity
+                                    offer_products_data = Product.objects.filter(pk__in=offer_approved_products)
+                                    discount_allowed_products_data = Product.objects.filter(pk__in=discount_approved_products)
 
-                                        if item.product.pk in matched_product_pks:
-                                            offer_products.append(item)
-                                        if item.product.pk in allowed_discount_products:
-                                            discount_allowed_products.append(item)
+                                    intersection_products = offer_products_data.filter(pk__in=discount_allowed_products_data.values('pk'))
 
-                                    total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
+                                    if intersection_products.exists():
+                                        for item in user_cart:
+                                            if item.product in matched_product_pks:
+                                                offer_products.append(item.product)
+                                            if item.product in allowed_discount_products:
+                                                discount_allowed_products.append(item.product)
 
-                                    if discount_allowed_products:
-                                        # Sort discount allowed products by price in ascending order
-                                        discount_allowed_products.sort(key=lambda i: i.product.salePrice)
-
-                                        # Track remaining free quantity
-                                        offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                        remaining_free_quantity = int(sum(i.quantity / buy for i in offer_products_in_cart) * get)
-
-                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in user_cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in user_cart)
-
-                                        for item in discount_allowed_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
-
-                                            if remaining_free_quantity <= 0:
-                                                break
-
-                                            if remaining_free_quantity >= product_quantity:
-                                                # Apply discount for full product quantity
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                remaining_free_quantity -= product_quantity
+                                        total_free_quantity = 0
+                                        for item in user_cart:
+                                            if item.product.pk in matched_product_pks:
+                                                free_quantity = (item.quantity) * get
                                             else:
-                                                # Apply discount for part of the product quantity
-                                                discount_amount = product_price * remaining_free_quantity
-                                                total_cart_value -= discount_amount
-                                                remaining_free_quantity = 0
+                                                free_quantity = 0
+                                            total_quantity = item.quantity + free_quantity
+                                            total_price = item.product.salePrice * item.quantity
 
-                                        serializer = CartSerializers(user_cart, many=True)
-                                        total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                            if item.product.pk in matched_product_pks:
+                                                offer_products.append(item)
+                                            if item.product.pk in allowed_discount_products:
+                                                discount_allowed_products.append(item)
 
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
+                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in cart)
+                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
 
-                                        response_data = {
-                                            "status": "User cart products",
-                                            "data": serializer.data,
-                                            "Discount": total_discount_after_adjustment,
-                                            "Shipping": shipping_fee,
-                                            "TotalPrice": sub_total_sale_price,
-                                            "Subtotal": total_cart_value
-                                        }
+                                        if discount_allowed_products:
+                                            discount_allowed_products.sort(key=lambda i: i.product.salePrice)
+                                            offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
+                                            remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart) 
+                                            total_free_quantity = int(remaining_free_quantity / 2) * get
 
-                                        return Response(response_data, status=status.HTTP_200_OK)
+                                            total_cart_value = total_sale_price
+                                            for item in discount_allowed_products:
+                                                product = item.product
+                                                product_price = product.salePrice
+                                                product_quantity = item.quantity
+
+                                                if total_free_quantity <= 0:
+                                                    break
+
+                                                if total_free_quantity >= product_quantity:
+                                                    discount_amount = product_price * product_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity -= product_quantity
+                                                else:
+                                                    discount_amount = product_price * total_free_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity = 0
+
+                                            serializer = CartSerializers(cart, many=True)
+                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                            shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                            response_data = {
+                                                "status": "User cart products",
+                                                "data": serializer.data,
+                                                "Discount": total_discount_after_adjustment,
+                                                "Shipping": shipping_fee,
+                                                "TotalPrice": sub_total_sale_price,
+                                                "Subtotal": total_cart_value
+                                            }
+
+                                            return Response(response_data, status=status.HTTP_200_OK)
+                                        
+                                    else :
+                                        for item in user_cart:
+                                            if item.product in matched_product_pks:
+                                                offer_products.append(item.product)
+                                            if item.product in allowed_discount_products:
+                                                discount_allowed_products.append(item.product)
+
+                                        total_free_quantity = 0
+                                        for item in user_cart:
+                                            if item.product.pk in matched_product_pks:
+                                                free_quantity = (item.quantity) * get
+                                            else:
+                                                free_quantity = 0
+                                            total_quantity = item.quantity + free_quantity
+                                            total_price = item.product.salePrice * item.quantity
+
+                                            if item.product.pk in matched_product_pks:
+                                                offer_products.append(item)
+                                            if item.product.pk in allowed_discount_products:
+                                                discount_allowed_products.append(item)
+
+                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in cart)
+                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
+
+                                        if discount_allowed_products:
+                                            discount_allowed_products.sort(key=lambda i: i.product.salePrice)
+                                            offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
+                                            remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart) 
+                                            total_free_quantity = int(remaining_free_quantity) * get
+
+                                            total_cart_value = total_sale_price
+                                            for item in discount_allowed_products:
+                                                product = item.product
+                                                product_price = product.salePrice
+                                                product_quantity = item.quantity
+
+                                                if total_free_quantity <= 0:
+                                                    break
+
+                                                if total_free_quantity >= product_quantity:
+                                                    discount_amount = product_price * product_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity -= product_quantity
+                                                else:
+                                                    discount_amount = product_price * total_free_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity = 0
+
+                                            serializer = CartSerializers(cart, many=True)
+                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                            shipping_fee = 60 if total_cart_value <= 500 else 0
+
+
+                                            response_data = {
+                                                "status": "User cart products",
+                                                "data": serializer.data,
+                                                "Discount": total_discount_after_adjustment,
+                                                "Shipping": shipping_fee,
+                                                "TotalPrice": sub_total_sale_price,
+                                                "Subtotal": total_cart_value
+                                            }
+
+                                            return Response(response_data, status=status.HTTP_200_OK)
 
                                 elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
                                     return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -638,11 +706,9 @@ class CustomerCartProducts(APIView):
                                     return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                             else:
                                 return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                        else:
-                            return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
                     else:
-
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                         if offer_schedule:
                             checking_products_offer_type = OfferSchedule.objects.filter(
@@ -665,59 +731,122 @@ class CustomerCartProducts(APIView):
                                     offer_category_products = []
                                     discount_allowed_category_products = []
 
-                                    for item in user_cart:
-                                        if item.product.pk in approved_category_product_pks:
-                                            offer_category_products.append(item)
-                                        if item.product.pk in approved_discount_category_product_pks:
-                                            discount_allowed_category_products.append(item)
-
-                                    # Calculate the total value of the cart
-                                    total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
-
-                                    # Calculate the total quantity of offer category products and total free quantity
-                                    total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
-                                    total_free_quantity = int((total_offer_product_quantity / 2) * get)
-
-                                    if discount_allowed_category_products:
-                                        # Sort discount allowed products by price in ascending order
-                                        discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
-
-                                        for item in discount_allowed_category_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
-
-                                            if total_free_quantity <= 0:
-                                                break
-
-                                            if total_free_quantity >= product_quantity:
-                                                # Apply discount for full product quantity
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity -= product_quantity
-                                            else:
-                                                # Apply discount for part of the product quantity
-                                                discount_amount = product_price * total_free_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity = 0
+                                    offer_category_products__data = Product.objects.filter(category__in=offer_approved_category)
+                                    
+                                    discount_allowed_category_products__data = Product.objects.filter(category__in=discount_approved_category)
 
 
-                                        serializer = CartSerializers(cart, many=True)
-                                        total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                    intersection_products = offer_category_products__data.filter(pk__in=discount_allowed_category_products__data.values('pk'))
+                                    
 
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
+                                    if intersection_products.exists():
+                                        for item in user_cart:
+                                            if item.product.pk in approved_category_product_pks:
+                                                offer_category_products.append(item)
+                                            if item.product.pk in approved_discount_category_product_pks:
+                                                discount_allowed_category_products.append(item)
 
-                                        response_data = {
-                                            "status": "User cart products",
-                                            "data": serializer.data,
-                                            "Discount": total_discount_after_adjustment,
-                                            "Shipping": shipping_fee,
-                                            "TotalPrice": sub_total_sale_price,
-                                            "Subtotal": total_cart_value
-                                        }
+                                        # Calculate the total value of the cart
+                                        total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
+                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
 
-                                        return Response(response_data, status=status.HTTP_200_OK)
+                                        # Calculate the total quantity of offer category products and total free quantity
+                                        total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
+                                        total_free_quantity = int((total_offer_product_quantity / 2) * get)
+
+                                        if discount_allowed_category_products:
+                                            # Sort discount allowed products by price in ascending order
+                                            discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
+
+                                            for item in discount_allowed_category_products:
+                                                product = item.product
+                                                product_price = product.salePrice
+                                                product_quantity = item.quantity
+
+                                                if total_free_quantity <= 0:
+                                                    break
+
+                                                if total_free_quantity >= product_quantity:
+                                                    # Apply discount for full product quantity
+                                                    discount_amount = product_price * product_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity -= product_quantity
+                                                else:
+                                                    # Apply discount for part of the product quantity
+                                                    discount_amount = product_price * total_free_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity = 0
+
+
+                                            serializer = CartSerializers(cart, many=True)
+                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+
+                                            shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                            response_data = {
+                                                "status": "User cart products",
+                                                "data": serializer.data,
+                                                "Discount": total_discount_after_adjustment,
+                                                "Shipping": shipping_fee,
+                                                "TotalPrice": sub_total_sale_price,
+                                                "Subtotal": total_cart_value
+                                            }
+
+                                            return Response(response_data, status=status.HTTP_200_OK)
+                                    
+                                    else:
+
+                                        for item in user_cart:
+                                            if item.product.pk in approved_category_product_pks:
+                                                offer_category_products.append(item)
+                                            if item.product.pk in approved_discount_category_product_pks:
+                                                discount_allowed_category_products.append(item)
+
+                                        total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
+                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
+
+                                        total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
+                                        total_free_quantity = (total_offer_product_quantity ) * get
+
+                                        if discount_allowed_category_products:
+                                            # Sort discount allowed products by price in ascending order
+                                            discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
+
+                                            for item in discount_allowed_category_products:
+                                                product = item.product
+                                                product_price = product.salePrice
+                                                product_quantity = item.quantity
+
+                                                if total_free_quantity <= 0:
+                                                    break
+
+                                                if total_free_quantity >= product_quantity:
+                                                    # Apply discount for full product quantity
+                                                    discount_amount = product_price * product_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity -= product_quantity
+                                                else:
+                                                    # Apply discount for part of the product quantity
+                                                    discount_amount = product_price * total_free_quantity
+                                                    total_cart_value -= discount_amount
+                                                    total_free_quantity = 0
+
+
+                                            serializer = CartSerializers(cart, many=True)
+                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+
+                                            shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                            response_data = {
+                                                "status": "User cart products",
+                                                "data": serializer.data,
+                                                "Discount": total_discount_after_adjustment,
+                                                "Shipping": shipping_fee,
+                                                "TotalPrice": sub_total_sale_price,
+                                                "Subtotal": total_cart_value
+                                            }
+
+                                            return Response(response_data, status=status.HTTP_200_OK)
 
                             else:
                                 return Response({"message": "No offer found"}, status=status.HTTP_404_NOT_FOUND)
@@ -2941,24 +3070,7 @@ class CustomerProductReviewView(APIView):
         
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-
-
-# class ProductSizeAndStockGeting(APIView):
-#     def get(self, request, color):
-#         try:
-#             product = Productverient.objects.filter(color=color)
-#             if not product:
-#                 return Response({"status": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-#             serilizer = ProductImageVarientModelSerilizers(product,many=True)
-#             return Response(serilizer.data, status=status.HTTP_200_OK)
-#         except Exception as e :
-#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        
-
-
-        
+                
 
 class AllOfferpRODUCTS(APIView):
     def get(self, request):

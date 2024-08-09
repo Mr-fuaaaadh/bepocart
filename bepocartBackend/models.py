@@ -141,30 +141,6 @@ class Order(models.Model):
     def __str__(self):
         return self.order_id
 
-    # def calculate_total(self):
-    #     total = sum(item.price * item.quantity for item in self.order_items.all())
-    #     discount_value = 0
-        
-    #     if self.coupon:
-    #     #     if self.coupon.coupon_type == 'Percentage':
-    #     #         applicable_items = self.order_items.filter(product__category=self.coupon.discount_category)
-    #     #         discount_value = sum(item.product.salePrice * item.quantity for item in applicable_items) * (self.coupon.discount / 100)
-    #     #     elif self.coupon.coupon_type == 'Fixed Amount':
-    #     #         discount_value = self.coupon.discount
-
-    #     #     total -= min(discount_value, total)
-    #     #     print(f"Discount applied: {discount_value}, Total after discount: {total}")  
-
-    #     # self.total_amount = total
-
-    #     # if self.payment_method == 'COD':
-    #     #     self.total_amount += 40
-        
-    #     # super().save(update_fields=['total_amount'])  # Save the order after calculating total
-    #     # print(f"Final total amount saved: {self.total_amount}")
-
-    # def __str__(self):
-    #     return self.order_id
 
 
 
