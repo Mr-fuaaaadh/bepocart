@@ -142,8 +142,8 @@ class AdminOrderViewsSerializers(serializers.ModelSerializer):
 class AdminOrderViewsSerializers(serializers.ModelSerializer):
     customerImage = serializers.ImageField(source='customer.image')
     customerName = serializers.CharField(source='customer.first_name')
-    couponName = serializers.SerializerMethodField()  # Use SerializerMethodField for custom logic
-    couponType = serializers.SerializerMethodField()  # Adding couponType to handle coupon_type attribute
+    couponName = serializers.SerializerMethodField() 
+    couponType = serializers.SerializerMethodField()  
 
     class Meta:
         model = Order

@@ -259,6 +259,6 @@ class OfferSchedule(models.Model):
     def __str__(self):
         return f"Offer {self.pk}"
 
-
     class Meta :
         db_table = "Offer Schedule"
+
