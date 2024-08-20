@@ -6,6 +6,9 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+
+
+
 class Carousal(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="banner", max_length=100)
