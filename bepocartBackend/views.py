@@ -301,6 +301,7 @@ class CustomerProductDeleteInWishlist(APIView):
 class CustomerProductInCart(APIView):
     def post(self, request, pk):
         try:
+            # Validate Authorization token
             token = request.headers.get('Authorization')
             if not token:
                 return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -309,42 +310,47 @@ class CustomerProductInCart(APIView):
             if not user_id:
                 return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            # Retrieve user and product
             user = get_object_or_404(Customer, pk=user_id)
-
             product = get_object_or_404(Product, pk=pk)
-            
+
+            # Manage Recently Viewed Products
             recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
             if not created:
                 recently_viewed.viewed_at = timezone.now()
                 recently_viewed.save()
-                
-            # Check if the product is already in the user's Cart
-            if Cart.objects.filter(customer=user, product=product).exists():
-                return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if product.type == "single":
-                product_color = request.data.get('color')
-                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color}
-                serializer = CartModelSerializers(data=cart_data)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
-                else:
-                    return Response({"message": "Unable to add product to cart", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            # Retrieve product color and size
             product_color = request.data.get('color')
             product_size = request.data.get('size')
 
-            cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': product_size}
+            # Check if the product is already in the user's Cart
+            # First, check for single product without variants
+            if product.type == "single":
+                if Cart.objects.filter(customer=user, product=product, color=product_color, size=None).exists():
+                    return Response({"message": "Product already exists in the cart as a single item"}, status=status.HTTP_400_BAD_REQUEST)
+                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': None}
+
+            # Then, check for the product with variants (color, size)
+            else:
+                if Cart.objects.filter(customer=user, product=product, color=product_color, size=product_size).exists():
+                    return Response({"message": "Product already exists in the cart with the same variant"}, status=status.HTTP_400_BAD_REQUEST)
+                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': product_size}
+
+            # Serialize and save cart data
             serializer = CartModelSerializers(data=cart_data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
             else:
                 return Response({"message": "Unable to add product to cart", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-                
+
         except IntegrityError:
             return Response({"message": "Product already exists in the cart"}, status=status.HTTP_400_BAD_REQUEST)
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({"message": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
