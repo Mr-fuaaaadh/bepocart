@@ -29,8 +29,8 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","migration-relevance-license-pond.trycloudflare.com","*"]
-CSRF_TRUSTED_ORIGINS = ["https://migration-relevance-license-pond.trycloudflare.com"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","fm-docs-generated-apnic.trycloudflare.com","*"]
+CSRF_TRUSTED_ORIGINS = ["https://fm-docs-generated-apnic.trycloudflare.com"]
 
 APPEND_SLASH = False
 
@@ -232,3 +232,6 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Use S3 for storing media files
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB in bytes
+

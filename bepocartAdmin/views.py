@@ -1217,23 +1217,20 @@ class ProductMultipleImageUpdate(APIView):
                 product_image = ProductColorStock.objects.filter(pk=pk).first()
                 if product_image is None:
                     return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
-                
-                serializer = SingleProductSerilizers(product_image, data=request.data)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response({"message": "Product Image updated successfully"}, status=status.HTTP_200_OK)
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-                
+
+                serializer = SingleProductSerilizers(product_image, data=request.data, partial=True)
             else:
                 product_image = ProductVariant.objects.filter(pk=pk).first()
                 if product_image is None:
                     return Response({"message": "Product Image not found"}, status=status.HTTP_404_NOT_FOUND)
-                
-                serializer = VariantProductColorStock(product_image, data=request.data)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response({"message": "Product Image updated successfully"}, status=status.HTTP_200_OK)
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+                serializer = VariantProductColorStock(product_image, data=request.data, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Product Image updated successfully"}, status=status.HTTP_200_OK)
+
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
