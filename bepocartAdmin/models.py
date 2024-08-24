@@ -12,7 +12,11 @@ from django.dispatch import receiver
 class Carousal(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="banner", max_length=100)
-
+    alt_text = models.CharField(max_length=255, blank=True, null=True, help_text=("Alternative text for the image"))
+    meta_title = models.CharField(max_length=255, blank=True, null=True, help_text=("SEO title for the product page"))
+    meta_description = models.TextField(blank=True, null=True, help_text=("SEO description for the product page"))
+    meta_keywords = models.CharField(max_length=255, blank=True, null=True, help_text=("SEO keywords for the product page"))
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta :
         db_table="banner"
