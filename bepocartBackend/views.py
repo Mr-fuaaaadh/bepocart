@@ -403,36 +403,33 @@ class CustomerCartProducts(APIView):
                 discount_approved_products = list(offer.discount_approved_products.values_list('pk', flat=True))
                 discount_approved_category = list(offer.discount_approved_category.values_list('pk', flat=True))
 
-                products_in_cart = [item.product.pk for item in cart]
-
-                matched_product_pks = [product_pk for product_pk in offer_approved_products if product_pk in products_in_cart]
-                allowed_discount_products = [product_pk for product_pk in discount_approved_products if product_pk in products_in_cart]
-
-                # Fetch all products that belong to offer-approved categories
+                # Fetch all products that belong to offer-approved category products
                 approved_category_products = Product.objects.filter(category__pk__in=offer_approved_category)
                 approved_category_product_pks = list(approved_category_products.values_list('pk', flat=True))
 
+                # Fetch all products that belong to discount-approved category products
                 approved_discount_category_products = Product.objects.filter(category__pk__in=discount_approved_category)
                 approved_discount_category_product_pks = list(approved_discount_category_products.values_list('pk', flat=True))
 
+                products_in_cart = [item.product.pk for item in cart]
+
+
+                # Find products in cart that are either approved by the offer or belong to approved categories
+                matched_product_pks = [product_pk for product_pk in products_in_cart 
+                       if product_pk in offer_approved_products or product_pk in approved_category_product_pks]
+                
+                # Find products in cart that are either approved for discount or  categories
+                allowed_discount_products = [product_pk for product_pk in products_in_cart 
+                                            if product_pk in discount_approved_products or product_pk in approved_discount_category_product_pks]
+                            
                 if offer.is_active:
-                    # Fetch the first OfferSchedule object
-                    offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-
-                    if offer_schedule:
-                        # Check if there are matching OfferSchedule objects with specific criteria
-                        checking_products_offer_type = OfferSchedule.objects.filter(
-                            offer_type=offer_schedule.offer_type,
-                            get_option=offer_schedule.get_option,
-                            get_value=offer_schedule.get_value,
-                            method=offer_schedule.method,
-                            offer_active=True
-                        ).first()
-
-                        if checking_products_offer_type and checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
+                    try:
+                        # Fetch the first active OfferSchedule object
+                        offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
+                        if offer_schedule.offer_type == "BUY" and offer_schedule.method == "FREE":
                             # Retrieve the buy and get values
-                            buy = checking_products_offer_type.get_option
-                            get = checking_products_offer_type.get_value
+                            buy = offer_schedule.get_option
+                            get = offer_schedule.get_value
 
                             # Combine matched product pks with allowed discount products
                             if matched_product_pks:
@@ -442,22 +439,24 @@ class CustomerCartProducts(APIView):
 
                             # Get user cart items
                             user_cart = Cart.objects.filter(customer=user)
+
                             offer_products = []
                             discount_allowed_products = []
-
+                            total_combined_quantity = 0
                             total_free_quantity = 0
                             total_sale_price = 0
                             sub_total_sale_price = 0
 
                             for item in user_cart:
-                                free_quantity = 0
                                 if item.product.pk in combined_product_pks:
+                                    total_combined_quantity += item.quantity
+
+                                    # Calculate the free quantity for the current item
                                     free_quantity = int(item.quantity / buy) * get
                                     total_free_quantity += free_quantity
 
                                 total_quantity = int(item.quantity + free_quantity)
                                 total_price = item.product.salePrice * item.quantity
-
 
                                 if item.product.pk in matched_product_pks:
                                     offer_products.append(item)
@@ -468,28 +467,84 @@ class CustomerCartProducts(APIView):
                                 sub_total_sale_price += item.product.price * item.quantity
                                 total_sale_price += item.product.salePrice * item.quantity
 
+                            # Calculate the total free quantity based on the combined quantity
+                            total_combined_free_quantity = int(total_combined_quantity / buy) * get
 
-                            serializer = CartSerializers(cart, many=True)
+
+                            serializer = CartSerializers(user_cart, many=True)
                             total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
-                            if total_sale_price <= 500:
-                                shipping_fee = 60
-                            else:
-                                shipping_fee = 0
+                            shipping_fee = 60 if total_sale_price <= 500 else 0
 
                             response_data = {
                                 "status": "User cart products",
                                 "data": serializer.data,
+                                "free":total_combined_free_quantity,
                                 "Discount": total_discount_after_adjustment,
                                 "Shipping": shipping_fee,
                                 "TotalPrice": sub_total_sale_price,
                                 "Subtotal": total_sale_price
                             }
+
                             return Response(response_data, status=status.HTTP_200_OK)
-                        else :
-                            return Response({"message":"SPEND OFFER IS COMING SOON"})
-                    else :
-                        return Response({"OFFER IS NOT ACTIVE"})
+
+
+                        else:
+                            try:
+                                spend_amount = offer_schedule.amount
+                                discount_percentage = offer_schedule.discount_percentage
+
+                                # Combine matched product pks with allowed discount products
+                                if matched_product_pks:
+                                    combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
+                                else:
+                                    combined_product_pks = set(approved_category_product_pks)
+
+                                # Get user cart items
+                                user_cart = Cart.objects.filter(customer=user)
+
+                                # Calculate total amounts
+                                user_cart_total_amount = sum(item.product.price * item.quantity for item in user_cart)
+                                total_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart)
+
+
+                                # Calculate total value of items in the cart eligible for the offer
+                                total_spend_offer_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart if item.product.pk in combined_product_pks)
+
+                                # Initialize variables for discount calculations
+                                discount_value = user_cart_total_amount - total_cart_value
+
+                                # Check if total cart value meets the spend amount requirement
+                                if total_spend_offer_cart_value >= spend_amount:
+                                    # Calculate the discount
+                                    discount_value_discount = total_spend_offer_cart_value * (discount_percentage / 100)
+                                    after_discount = discount_value_discount + discount_value
+                                    total_cart_value_after_discount = total_cart_value - discount_value_discount
+
+                                # Serialize cart data
+                                serializer = CartSerializers(user_cart, many=True)
+
+                                # Calculate shipping fee
+                                shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                # Prepare response data
+                                response_data = {
+                                    "status": "User cart products",
+                                    "data": serializer.data,
+                                    "Discount": after_discount,
+                                    "Shipping": shipping_fee,
+                                    "TotalPrice": user_cart_total_amount,
+                                    "Subtotal": total_cart_value_after_discount,
+                                    # "total_value_after_discount": total_value_after_discount,
+                                    "message": "SPEND OFFER APPLIED" if total_spend_offer_cart_value >= spend_amount else "Cart øffer productstotal is less than the spend amount required for the offer"
+                                }
+
+                                return Response(response_data)
+
+                            except Exception as e:
+                                return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    except Exception as e:
+                        return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     total = 0
                     for data in cart:

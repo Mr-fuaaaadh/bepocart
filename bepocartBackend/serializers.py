@@ -82,13 +82,15 @@ class CartSerializers(serializers.ModelSerializer):
     stock = serializers.SerializerMethodField()
     has_offer = serializers.SerializerMethodField()
     discount_product = serializers.SerializerMethodField()
+    offer_type = serializers.SerializerMethodField()
+    free_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
         fields = [
             'id', 'customer', 'product', 'name', 'salePrice', 'image', 'category', 
             'mainCategory', 'quantity', 'slug', 'price', 'color', 'size', 'stock', 
-            'has_offer', 'discount_product', 'subcategory_slug'
+            'has_offer', 'discount_product', 'subcategory_slug','offer_type','free_quantity'
         ]
 
     def get_stock(self, obj):
@@ -115,6 +117,60 @@ class CartSerializers(serializers.ModelSerializer):
                     return 0
         except Exception as e:
             return 0
+        
+
+    def get_free_quantity(self, obj):
+        product = obj.product
+        category = product.category
+        quantity = obj.quantity
+
+        try:
+            # Filter for active offers associated with the specific product or its category
+            offer = OfferSchedule.objects.filter(
+                Q(offer_active=True) &
+                (Q(offer_products=product) | Q(offer_category=category))
+            ).first()
+            
+            # Check if an offer exists and if its type is "BUY" and method is "FREE"
+            if offer and offer.offer_type == "BUY" and offer.method == "FREE" and offer.is_active == True :
+                # Assuming offer.get_option specifies the required quantity to buy and offer.get_value specifies the free quantity
+                required_quantity = offer.get_option
+                free_quantity = offer.get_value
+
+                # Calculate the number of free items based on the quantity the user has bought
+                eligible_free_quantity = (quantity // required_quantity) * free_quantity
+                return eligible_free_quantity
+
+            # Default return value if no matching offer is found
+            return 0
+        
+        except Exception as e:
+            return None
+
+        
+
+    def get_offer_type(self, obj):
+        product = obj.product
+        category = product.category
+        try:
+            # Filter for active offers associated with the specific product or its category
+            offer = OfferSchedule.objects.filter(
+                Q(offer_active=True) &
+                (Q(offer_products=product) | Q(offer_category=category))
+            ).first()
+            
+            # Check if an offer exists and if its type is "BUY"
+            if offer and offer.offer_type == "BUY":
+                return f"BUY {offer.get_option} GET {offer.get_value} {offer.method}"
+            
+            elif  offer and offer.offer_type == "SPEND":
+                discount_percentage = int(offer.discount_percentage) if offer.discount_percentage is not None else 0
+                return f"{offer.offer_type}   {offer.amount}   {discount_percentage}   {offer.method}"
+            # Default return value if no matching offer is found
+            return None
+        
+        except Exception as e:
+            return None
 
 
     def get_has_offer(self, obj):
@@ -156,8 +212,6 @@ class CartSerializers(serializers.ModelSerializer):
             return "Discount Allowed"
         
         return "normal"
-    
-    
 
 
 
