@@ -153,7 +153,7 @@ class CartSerializers(serializers.ModelSerializer):
         product = obj.product
         category = product.category
         try:
-            # Filter for active offers associated with the specific product or its category
+            # Filter for active offers associated with the specific product or its category all
             offer = OfferSchedule.objects.filter(
                 Q(offer_active=True) &
                 (Q(offer_products=product) | Q(offer_category=category))
