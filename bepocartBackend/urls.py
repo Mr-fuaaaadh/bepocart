@@ -59,7 +59,7 @@ urlpatterns = [
     path('order/create/<int:pk>/', CreateOrder.as_view(), name='create_order'),
 
     path('offers/', DiscountSaleProducts.as_view(), name='discount-sale'),
-    # path('flash-sale/', FlashSaleProducts.as_view(), name='flash-sale'),
+    path('best-sale/', BestSellerProductsAPIView.as_view(), name='flash-sale'),
     # path('offers/', FIftypercontageProducts.as_view(), name='offers'),
     # path('buy-1-get-1/', BuyOneGetOneOffer.as_view(), name='BuyOneGetOneOffer'),
     # path('buy-1-get-1-free/', BuyOneGetOneOfferFree.as_view(), name='BuyOneGetOneOffer'),
