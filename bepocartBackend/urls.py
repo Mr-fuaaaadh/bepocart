@@ -14,6 +14,9 @@ urlpatterns = [
     path('offer-banner/',CustomerOfferBannerView.as_view(), name="CustomerOfferBannerView"),
 
 
+    path('categories/', CategoryListView.as_view(), name='category-list'),
+
+
 
 
     path('wishlist/',CustomerWishlist.as_view(), name="CustomerWishlist"),

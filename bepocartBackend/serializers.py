@@ -12,7 +12,7 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
 
 
 class CustomerLoginSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField()
+    email = serializers.CharField()
     password = serializers.CharField(write_only=True)
     class Meta :
         model = Customer
@@ -30,6 +30,13 @@ class SubcatecorySerializer(serializers.ModelSerializer):
     class Meta :
         model = Subcategory
         fields = "__all__"
+
+
+class CategoryModelSerializer(serializers.ModelSerializer):
+    subcategories = SubcatecorySerializer(many=True, read_only=True)
+    class Meta:
+        model = Category
+        fields = ['id','name','image','slug','subcategories']
 
 
 class ProductViewSerializer(serializers.ModelSerializer):

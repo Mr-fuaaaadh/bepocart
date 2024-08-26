@@ -1,7 +1,9 @@
 import razorpay
 import jwt
 from django.shortcuts import get_object_or_404
+from django.db.models import Sum
 import random
+from rest_framework import generics
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -50,9 +52,11 @@ class CustomerLogin(APIView):
     def post(self, request):
         serializer = CustomerLoginSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data.get('email')
+            email_or_phone = serializer.validated_data.get('email')
             password = serializer.validated_data.get('password')
-            customer = Customer.objects.filter(email=email).first()
+
+            customer = Customer.objects.filter(Q(email=email_or_phone) | Q(phone=email_or_phone)).first()
+
 
             if customer and customer.check_password(password):
                 # Generate JWT token
@@ -99,12 +103,18 @@ class CustomerLogin(APIView):
 
 ################################################  HOME    #############################################
 
+
+class CategoryListView(generics.ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategoryModelSerializer
+
+    
 class CategoryView(APIView):
     def get(self, request):
         try :
             
             categories = Category.objects.all()
-            serializer = CategorySerializer(categories, many=True)
+            serializer = CategoryModelSerializer(categories, many=True)
             return Response({
                 "status": "success",
                 "data": serializer.data
