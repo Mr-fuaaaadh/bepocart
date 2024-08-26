@@ -1,4 +1,5 @@
 import razorpay
+from django.db.models import Sum
 import jwt
 from django.shortcuts import get_object_or_404
 import random
@@ -2643,16 +2644,17 @@ class DiscountSaleProducts(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class FlashSaleProducts(APIView):
+class BestSellerProductsAPIView(APIView):
     def get(self, request):
-        try:
-            discount_sale = Product.objects.filter(offer_type="FLASH SALE").order_by('-pk')
-            serializer = SubcatecoryBasedProductView(discount_sale, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Product.DoesNotExist:
-            return Response({'error': 'No products found for flash sale'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Annotate each product with the total quantity sold and order by it
+        best_selling_products = Product.objects.annotate(
+            total_sold=Sum('orderitem__quantity')
+        ).order_by('-total_sold')[:10]  # Limit to top 10
+
+        # Serialize the data
+        serializer = BestSellerProductSerializer(best_selling_products, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
         
 
 class FIftypercontageProducts(APIView):

@@ -301,3 +301,13 @@ class OfferProductModelSerializer(serializers.ModelSerializer):
         model = OfferSchedule
         fields = "__all__"
         
+class BestSellerProductSerializer(serializers.ModelSerializer):
+    total_sold = serializers.IntegerField(read_only=True)
+    sale = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'slug', 'salePrice', 'discount', 'image', 'price', 'total_sold', 'sale']
+
+    def get_sale(self, obj):
+        return "popular"

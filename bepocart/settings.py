@@ -29,11 +29,24 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","fm-docs-generated-apnic.trycloudflare.com","*"]
-CSRF_TRUSTED_ORIGINS = ["https://fm-docs-generated-apnic.trycloudflare.com"]
-
+ALLOWED_HOSTS = ["localhost","127.0.0.1","https://bepocart.in","*"]
+CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
 APPEND_SLASH = False
 
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'accept',
+    'authorization',
+    'x-csrftoken',
+]
+
+# Security settings
+# SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 #<<<<<<< HEAD
 #'CORS_ALLOWED_ORIGINS = [
 #    "http://localhost:3000",
@@ -132,27 +145,17 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-#DATABASES = {
-#    'default':  {
-#        'ENGINE': 'django.db.backends.postgresql',
-#        'NAME': 'bepocart',
-#        'USER': 'postgres',
-#        'PASSWORD': '252562',
-#        'HOST': 'localhost',
-#        'PORT': '5432'
-#    }
-#}
 
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.postgresql',
-         'NAME': 'bepocart',
-         'USER': 'postgres',
-         'PASSWORD': '9645848527',
-         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
-         'PORT': '5432'
-     }
- }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bepocart',
+        'USER': 'postgres',
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432'
+    }
+}
 
 
 # Password validation
