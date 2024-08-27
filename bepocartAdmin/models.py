@@ -6,12 +6,14 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.utils.text import slugify
 
 
 
 class Carousal(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="banner", max_length=100)
+    slug = models.SlugField(unique=True, blank=True,null=True)
     alt_text = models.CharField(max_length=255, blank=True, null=True, help_text=("Alternative text for the image"))
     meta_title = models.CharField(max_length=255, blank=True, null=True, help_text=("SEO title for the product page"))
     meta_description = models.TextField(blank=True, null=True, help_text=("SEO description for the product page"))

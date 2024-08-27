@@ -12,7 +12,7 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
 
 
 class CustomerLoginSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField()
+    email = serializers.CharField()
     password = serializers.CharField(write_only=True)
     class Meta :
         model = Customer
@@ -30,6 +30,13 @@ class SubcatecorySerializer(serializers.ModelSerializer):
     class Meta :
         model = Subcategory
         fields = "__all__"
+
+
+class CategoryModelSerializer(serializers.ModelSerializer):
+    subcategories = SubcatecorySerializer(many=True, read_only=True)
+    class Meta:
+        model = Category
+        fields = ['id','name','image','slug','subcategories']
 
 
 class ProductViewSerializer(serializers.ModelSerializer):
@@ -345,13 +352,11 @@ class CustomerAllOrderSerializers(serializers.ModelSerializer):
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
     productImage = serializers.ImageField(source ='product.image')
-    salePrice = serializers.CharField(source ='product.salePrice')
     status = serializers.CharField(source ='order.status')
-    price = serializers.CharField(source ='product.price')
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','created_at','color','size','status','free_quantity']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','created_at','color','size','status','free_quantity']
 
 
 
