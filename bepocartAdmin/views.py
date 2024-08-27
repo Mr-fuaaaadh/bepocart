@@ -1703,6 +1703,7 @@ class OrderInvoiceBillCreating(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print(e)
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 

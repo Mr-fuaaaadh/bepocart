@@ -127,6 +127,8 @@ class Order(models.Model):
     coupon = models.ForeignKey('Coupon', on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=20, null=True)
     payment_id = models.CharField(max_length=100, null=True)
+    free_quantity = models.PositiveBigIntegerField(default=0, null=True)
+    
     
     def generate_order_id(self):
         date_str = timezone.now().strftime('%Y%m%d')
@@ -150,11 +152,11 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    free_quantity = models.PositiveIntegerField(default=0, null=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True,blank=False)
     color = models.CharField(max_length=20,null=True)
     size = models.CharField(max_length=100, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    offer_type =models.CharField(max_length=100, null=True, default="none")
 
     def total_price(self):
         return self.price * self.quantity

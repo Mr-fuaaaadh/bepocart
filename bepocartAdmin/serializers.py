@@ -219,7 +219,7 @@ class OrderInvoiceBillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id','free_quantity',
             'updated_at', 'status', 'address', 'customerImage', 
             'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','lastName','address','email','phone','pincode','city','state','coupon_value'
         ]

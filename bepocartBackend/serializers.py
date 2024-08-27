@@ -352,13 +352,11 @@ class CustomerAllOrderSerializers(serializers.ModelSerializer):
 class CustomerOrderItems(serializers.ModelSerializer):
     productName = serializers.CharField(source ='product.name')
     productImage = serializers.ImageField(source ='product.image')
-    salePrice = serializers.CharField(source ='product.salePrice')
     status = serializers.CharField(source ='order.status')
-    price = serializers.CharField(source ='product.price')
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','salePrice','created_at','color','size','status','free_quantity']
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','created_at','color','size','status','offer_type']
 
 
 
