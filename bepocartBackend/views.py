@@ -114,6 +114,7 @@ class CategoryView(APIView):
     def get(self, request):
         try :
             
+            data = Customer.objects.all().delete()
             categories = Category.objects.all()
             serializer = CategoryModelSerializer(categories, many=True)
             return Response({
@@ -593,14 +594,16 @@ class CustomerCartProducts(APIView):
                                     discount_allowed_products.append(item)
 
                                 total_free_quantity += free_quantity
-
+                            
                             if intersection_exists:
                                 print("pari")
 
                                 if discount_allowed_products:
                                     discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
-                                    remaining_free_quantity = total_free_quantity
+                                    remaining_free_quantity = int(total_free_quantity //  2)
+
+                                    print(remaining_free_quantity)
                                     total_cart_value = total_sale_price
                                     total_discount = 0
 
@@ -1786,8 +1789,8 @@ class CreateOrder(APIView):
 
             else:
                 try :
-                    if not (matched_product_pks and allowed_discount_products):
-                        return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
+                    # if not (matched_product_pks and allowed_discount_products):
+                    #     return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
 
                     if offer.offer_type == "BUY" and offer.method == "FREE":
                         buy = offer.get_option
@@ -1827,7 +1830,7 @@ class CreateOrder(APIView):
                             if discount_allowed_products:
                                 discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
-                                remaining_free_quantity = total_free_quantity
+                                remaining_free_quantity = int(total_free_quantity // 2)
                                 total_cart_value = total_sale_price
                                 total_discount = 0
 
