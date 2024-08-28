@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eaf8e4; /* Parrot green background */
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #009966; /* Darker parrot green */
+            color: #ffffff;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777777;
+            padding: 10px;
+            border-top: 1px solid #dddddd;
+            margin-top: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #ffffff;
+            background-color: #009966; /* Darker parrot green */
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .button:hover {
+            background-color: #007744; /* Even darker parrot green */
+        }
+        .image {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Order Status Update</h1>
+        </div>
+        <div class="content">
+            <div class="image">
+                <img src="https://example.com/your-image.jpg" alt="Order Update">
+            </div>
+            <p>Dear {{ customer.first_name }} {{ customer.last_name }},</p>
+            <p>We wanted to let you know that the status of your order #{{ order_id }} has been updated to '<strong>{{ status }}</strong>'.</p>
+            <p>We appreciate your business and thank you for shopping with us!</p>
+            <a href="#" class="button">View Order Details</a>
+        </div>
+        <div class="footer">
+            <p>If you have any questions, feel free to contact us at <a href="mailto:support@bepocart.com">support@bepocart.com</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

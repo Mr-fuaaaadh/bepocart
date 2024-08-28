@@ -37,7 +37,6 @@ class Address(models.Model):
     pincode = models.IntegerField()
     city = models.CharField(max_length=250)
     state = models.CharField(max_length=250)
-    note = models.TextField(max_length=250)
 
 
     class Meta :

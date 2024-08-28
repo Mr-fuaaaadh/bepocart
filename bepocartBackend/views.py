@@ -556,306 +556,171 @@ class CustomerCartProducts(APIView):
                     except Exception as e:
                         return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
-                    total = 0
-                    for data in cart:
-                        total_product_value = data.quantity * data.product.salePrice
-                        total += total_product_value
+                    try:
+                        if not (matched_product_pks and allowed_discount_products):
+                            return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
 
-                    if matched_product_pks and allowed_discount_products is not None:
-                        offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-                        if offer_schedule:
-                            checking_products_offer_type = OfferSchedule.objects.filter(
-                                offer_type=offer_schedule.offer_type,
-                                get_option=offer_schedule.get_option,
-                                get_value=offer_schedule.get_value,
-                                method=offer_schedule.method,
-                                offer_active=True
-                            ).first()
+                        if offer.offer_type == "BUY" and offer.method == "FREE":
+                            buy = offer.get_option
+                            get = offer.get_value
 
-                            if checking_products_offer_type:
-                                if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                                    buy = checking_products_offer_type.get_option
-                                    get = checking_products_offer_type.get_value
+                            combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
+                            user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
 
-                                    combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
-                                    user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
+                            # Fetch product data in a single query
+                            offer_products_data = Product.objects.filter(pk__in=matched_product_pks)
+                            discount_allowed_products_data = Product.objects.filter(pk__in=allowed_discount_products)
 
-                                    offer_products = []
-                                    discount_allowed_products = []
+                            # Check if there are intersection products
+                            intersection_exists = offer_products_data.filter(pk__in=discount_allowed_products_data.values('pk')).exists()
 
-                                    offer_products_data = Product.objects.filter(pk__in=offer_approved_products)
-                                    discount_allowed_products_data = Product.objects.filter(pk__in=discount_approved_products)
+                            total_sale_price = sum(item.product.salePrice * item.quantity for item in cart)
+                            sub_total_sale_price = sum(item.product.price * item.quantity for item in cart)
 
-                                    intersection_products = offer_products_data.filter(pk__in=discount_allowed_products_data.values('pk'))
+                            offer_products = []
+                            discount_allowed_products = []
+                            total_free_quantity = 0
 
-                                    if intersection_products.exists():
-                                        for item in user_cart:
-                                            if item.product in matched_product_pks:
-                                                offer_products.append(item.product)
-                                            if item.product in allowed_discount_products:
-                                                discount_allowed_products.append(item.product)
-
-                                        total_free_quantity = 0
-                                        for item in user_cart:
-                                            if item.product.pk in matched_product_pks:
-                                                free_quantity = (item.quantity) * get
-                                            else:
-                                                free_quantity = 0
-                                            total_quantity = item.quantity + free_quantity
-                                            total_price = item.product.salePrice * item.quantity
-
-                                            if item.product.pk in matched_product_pks:
-                                                offer_products.append(item)
-                                            if item.product.pk in allowed_discount_products:
-                                                discount_allowed_products.append(item)
-
-                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
-
-                                        if discount_allowed_products:
-                                            discount_allowed_products.sort(key=lambda i: i.product.salePrice)
-                                            offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                            remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
-                                            total_free_quantity = int(remaining_free_quantity / 2) * get
-
-                                            total_cart_value = total_sale_price
-                                            for item in discount_allowed_products:
-                                                product = item.product
-                                                product_price = product.salePrice
-                                                product_quantity = item.quantity
-
-                                                if total_free_quantity <= 0:
-                                                    break
-
-                                                if total_free_quantity >= product_quantity:
-                                                    discount_amount = product_price * product_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity -= product_quantity
-                                                else:
-                                                    discount_amount = product_price * total_free_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity = 0
-
-                                            serializer = CartSerializers(cart, many=True)
-                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                            shipping_fee = 60 if total_cart_value <= 500 else 0
-
-                                            response_data = {
-                                                "status": "User cart products",
-                                                "data": serializer.data,
-                                                "Discount": total_discount_after_adjustment,
-                                                "Shipping": shipping_fee,
-                                                "TotalPrice": sub_total_sale_price,
-                                                "Subtotal": total_cart_value
-                                            }
-
-                                            return Response(response_data, status=status.HTTP_200_OK)
-
-                                    else:
-
-                                        for item in user_cart:
-                                            if item.product in matched_product_pks:
-                                                offer_products.append(item.product)
-                                            if item.product in allowed_discount_products:
-                                                discount_allowed_products.append(item.product)
-
-                                        total_free_quantity = 0
-                                        for item in user_cart:
-                                            if item.product.pk in matched_product_pks:
-                                                free_quantity = (item.quantity) * get
-                                            else:
-                                                free_quantity = 0
-                                            total_quantity = item.quantity + free_quantity
-                                            total_price = item.product.salePrice * item.quantity
-
-                                            if item.product.pk in matched_product_pks:
-                                                offer_products.append(item)
-                                            if item.product.pk in allowed_discount_products:
-                                                discount_allowed_products.append(item)
-
-                                        total_sale_price = sum(i.product.salePrice * i.quantity for i in cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
-
-                                        if discount_allowed_products:
-                                            discount_allowed_products.sort(key=lambda i: i.product.salePrice)
-                                            offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                            remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
-                                            total_free_quantity = int(remaining_free_quantity) * get
-
-                                            total_cart_value = total_sale_price
-                                            for item in discount_allowed_products:
-                                                product = item.product
-                                                product_price = product.salePrice
-                                                product_quantity = item.quantity
-
-                                                if total_free_quantity <= 0:
-                                                    break
-
-                                                if total_free_quantity >= product_quantity:
-                                                    discount_amount = product_price * product_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity -= product_quantity
-                                                else:
-                                                    discount_amount = product_price * total_free_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity = 0
-
-                                            serializer = CartSerializers(cart, many=True)
-                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                            shipping_fee = 60 if total_cart_value <= 500 else 0
-
-                                            response_data = {
-                                                "status": "User cart products",
-                                                "data": serializer.data,
-                                                "Discount": total_discount_after_adjustment,
-                                                "Shipping": shipping_fee,
-                                                "TotalPrice": sub_total_sale_price,
-                                                "Subtotal": total_cart_value
-                                            }
-
-                                            return Response(response_data, status=status.HTTP_200_OK)
-
-                                elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                            for item in user_cart:
+                                if item.product.pk in matched_product_pks:
+                                    free_quantity = item.quantity * get
+                                    offer_products.append(item)
                                 else:
-                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                    free_quantity = 0
+
+                                if item.product.pk in allowed_discount_products:
+                                    discount_allowed_products.append(item)
+
+                                total_free_quantity += free_quantity
+
+                            if intersection_exists:
+
+                                if discount_allowed_products:
+                                    discount_allowed_products.sort(key=lambda item: item.product.salePrice)
+
+                                    remaining_free_quantity = total_free_quantity
+                                    total_cart_value = total_sale_price
+                                    total_discount = 0
+
+                                    for item in discount_allowed_products:
+                                        product = item.product
+                                        product_price = product.salePrice
+                                        product_quantity = item.quantity
+
+
+                                        if remaining_free_quantity <= 0:
+                                            break
+
+                                        discount_quantity = min(product_quantity, remaining_free_quantity)
+                                        discount_amount = product_price * discount_quantity
+                                        total_cart_value -= discount_amount
+                                        remaining_free_quantity -= discount_quantity
+                                        total_discount += discount_amount
+
+
+                                    total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                    shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                    response_data = {
+                                        "status": "User cart products",
+                                        "data": CartSerializers(cart, many=True).data,
+                                        "Discount": total_discount_after_adjustment,
+                                        "Shipping": shipping_fee,
+                                        "TotalPrice": sub_total_sale_price,
+                                        "Subtotal": total_cart_value,
+                                        "TotalDiscount": total_discount
+                                    }
+
+                                    return Response(response_data, status=status.HTTP_200_OK)
+
                             else:
-                                return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-                    else:
-                        offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-                        if offer_schedule:
-                            checking_products_offer_type = OfferSchedule.objects.filter(
-                                offer_type=offer_schedule.offer_type,
-                                get_option=offer_schedule.get_option,
-                                get_value=offer_schedule.get_value,
-                                method=offer_schedule.method,
-                                offer_active=True
-                            ).first()
-
-                            if checking_products_offer_type:
-                                if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                                    buy = checking_products_offer_type.get_option
-                                    get = checking_products_offer_type.get_value
-
-                                    combined_product_pks = set(approved_category_product_pks).union(set(approved_discount_category_product_pks))
-
-                                    user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
-
-                                    offer_category_products = []
-                                    discount_allowed_category_products = []
-
-                                    offer_category_products__data = Product.objects.filter(category__in=offer_approved_category)
-                                    discount_allowed_category_products__data = Product.objects.filter(category__in=discount_approved_category)
-
-                                    intersection_products = offer_category_products__data.filter(pk__in=discount_allowed_category_products__data.values('pk'))
-
-                                    if intersection_products.exists():
-                                        for item in user_cart:
-                                            if item.product.pk in approved_category_product_pks:
-                                                offer_category_products.append(item)
-                                            if item.product.pk in approved_discount_category_product_pks:
-                                                discount_allowed_category_products.append(item)
-
-                                        total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
-
-                                        total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
-                                        total_free_quantity = int((total_offer_product_quantity / 2) * get)
-
-                                        if discount_allowed_category_products:
-                                            discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
-
-                                            for item in discount_allowed_category_products:
-                                                product = item.product
-                                                product_price = product.salePrice
-                                                product_quantity = item.quantity
-
-                                                if total_free_quantity <= 0:
-                                                    break
-
-                                                if total_free_quantity >= product_quantity:
-                                                    discount_amount = product_price * product_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity -= product_quantity
-                                                else:
-                                                    discount_amount = product_price * total_free_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity = 0
-
-
-                                            serializer = CartSerializers(cart, many=True)
-                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                            shipping_fee = 60 if total_cart_value <= 500 else 0
-
-                                            response_data = {
-                                                "status": "User cart products",
-                                                "data": serializer.data,
-                                                "Discount": total_discount_after_adjustment,
-                                                "Shipping": shipping_fee,
-                                                "TotalPrice": sub_total_sale_price,
-                                                "Subtotal": total_cart_value
-                                            }
-
-                                            return Response(response_data, status=status.HTTP_200_OK)
-
-
+                                total_free_quantity = 0
+                                for item in user_cart:
+                                    if item.product.pk in matched_product_pks:
+                                        free_quantity = item.quantity * get
                                     else:
-                                        for item in user_cart:
-                                            if item.product.pk in approved_category_product_pks:
-                                                offer_category_products.append(item)
-                                            if item.product.pk in approved_discount_category_product_pks:
-                                                discount_allowed_category_products.append(item)
+                                        free_quantity = 0
 
-                                        total_cart_value = sum(i.product.salePrice * i.quantity for i in cart)
-                                        sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
+                                    total_quantity = item.quantity + free_quantity
+                                    total_price = item.product.salePrice * item.quantity
 
-                                        total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
-                                        total_free_quantity = int((total_offer_product_quantity) * get)
+                                    if item.product.pk in matched_product_pks:
+                                        offer_products.append(item)
+                                    if item.product.pk in allowed_discount_products:
+                                        discount_allowed_products.append(item)
 
-                                        if discount_allowed_category_products:
-                                            discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
 
-                                            for item in discount_allowed_category_products:
-                                                product = item.product
-                                                product_price = product.salePrice
-                                                product_quantity = item.quantity
+                                total_sale_price = sum(i.product.salePrice * i.quantity for i in cart)
+                                sub_total_sale_price = sum(i.product.price * i.quantity for i in cart)
 
-                                                if total_free_quantity <= 0:
-                                                    break
 
-                                                if total_free_quantity >= product_quantity:
-                                                    discount_amount = product_price * product_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity -= product_quantity
-                                                else:
-                                                    discount_amount = product_price * total_free_quantity
-                                                    total_cart_value -= discount_amount
-                                                    total_free_quantity = 0
+                                if discount_allowed_products:
+                                    discount_allowed_products.sort(key=lambda i: i.product.salePrice)
 
-                                            serializer = CartSerializers(cart, many=True)
-                                            total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                            shipping_fee = 60 if total_cart_value <= 500 else 0
+                                    offer_products_in_cart = cart.filter(product__in=matched_product_pks)
+                                    remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
+                                    total_free_quantity = remaining_free_quantity * get
 
-                                            response_data = {
-                                                "status": "User cart products",
-                                                "data": serializer.data,
-                                                "Discount": total_discount_after_adjustment,
-                                                "Shipping": shipping_fee,
-                                                "TotalPrice": sub_total_sale_price,
-                                                "Subtotal": total_cart_value
-                                            }
 
-                                            return Response(response_data, status=status.HTTP_200_OK)
+                                    total_cart_value = total_sale_price
+                                    total_discount = 0
+                                    processed_products = set()  # Track processed products
 
-                                elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                else:
-                                    return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                            else:
-                                return Response({"message": "offer coming soon"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                    for item in discount_allowed_products:
+                                        product = item.product
+                                        product_price = product.salePrice
+                                        product_quantity = item.quantity
 
+                                        if product.pk in processed_products:
+                                            continue  # Skip if product is already processed
+
+
+                                        if total_free_quantity <= 0:
+                                            break  # Exit the loop once the free quantity is exhausted
+
+                                        # Calculate the quantity that can be discounted
+                                        discount_quantity = min(product_quantity, total_free_quantity)
+                                        
+                                        # Calculate the discount amount
+                                        discount_amount = product_price * discount_quantity
+
+                                        # Subtract the discount amount from the total cart value
+                                        total_cart_value -= discount_amount
+                                        
+                                        # Subtract the discounted quantity from the total free quantity
+                                        total_free_quantity -= discount_quantity
+                                        
+                                        # Accumulate the total discount
+                                        total_discount += discount_amount
+
+                                        processed_products.add(product.pk)  # Mark product as processed
+
+
+                                    # Calculate the total discount after adjustment
+                                    total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                    shipping_fee = 60 if total_cart_value <= 500 else 0
+
+                                    response_data = {
+                                        "status": "User cart products",
+                                        "data": CartSerializers(cart, many=True).data,
+                                        "Discount": total_discount_after_adjustment,
+                                        "Shipping": shipping_fee,
+                                        "TotalPrice": sub_total_sale_price,
+                                        "Subtotal": total_cart_value,
+                                        "TotalDiscount": total_discount
+                                    }
+
+                                    return Response(response_data, status=status.HTTP_200_OK)
+
+
+                        elif offer.offer_type == "SPEND" and offer.method == "% OFF":
+                            return Response({"message": "Offer coming soon"}, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+                        else:
+                            return Response({"message": "Offer type or method not recognized"}, status=status.HTTP_400_BAD_REQUEST)
+
+                    except Exception as e:
+                        return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
             serializer = CartSerializers(cart, many=True)
@@ -1385,32 +1250,37 @@ class ForgotPasswordView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             user = Customer.objects.filter(email=email).first()
+            
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             otp_instance = OTP.objects.filter(user=user).first()
+            otp = random.randint(100000, 999999)
             if otp_instance:
-                otp = random.randint(100000, 999999)
                 otp_instance.otp = otp
                 otp_instance.save()
             else:
-                otp = random.randint(100000, 999999)
                 OTP.objects.create(user=user, otp=otp)
             
             # Render email template with OTP value
-            email_body = render_to_string('otp.html', {'otp': otp})
-
-            # Send email
-            send_mail(
-                'Your OTP Code',
-                '',
-                settings.EMAIL_HOST_USER,  
-                [email],  
-                fail_silently=False,
-                html_message=email_body
-            )
-            return Response({"message": "OTP sent to email"}, status=status.HTTP_200_OK)
+            try:
+                email_body = render_to_string('otp.html', {'otp': otp})
+                
+                # Send email
+                send_mail(
+                    'Bepocart Reset Password OTP',
+                    '',  # Email body (plain text)
+                    settings.EMAIL_HOST_USER,  
+                    [email],  
+                    fail_silently=False,
+                    html_message=email_body
+                )
+                return Response({"message": "OTP sent to email"}, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({"message": f"Error sending email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class VerifyOTPView(APIView):
     def post(self, request):
@@ -1567,17 +1437,25 @@ class CreateOrder(APIView):
             discount_approved_products = list(offer.discount_approved_products.values_list('pk', flat=True))
             discount_approved_category = list(offer.discount_approved_category.values_list('pk', flat=True))
 
-            products_in_cart = [item.product.pk for item in cart_items]
-
-            matched_product_pks = [product_pk for product_pk in offer_approved_products if product_pk in products_in_cart]
-            allowed_discount_products = [product_pk for product_pk in discount_approved_products if product_pk in products_in_cart]
-
-            # Fetch all products that belong to offer-approved categories
+            # Fetch all products that belong to offer-approved category products
             approved_category_products = Product.objects.filter(category__pk__in=offer_approved_category)
             approved_category_product_pks = list(approved_category_products.values_list('pk', flat=True))
 
+            # Fetch all products that belong to discount-approved category products
             approved_discount_category_products = Product.objects.filter(category__pk__in=discount_approved_category)
             approved_discount_category_product_pks = list(approved_discount_category_products.values_list('pk', flat=True))
+
+            products_in_cart = [item.product.pk for item in cart_items]
+
+
+            # Find products in cart that are either approved by the offer or belong to approved categories
+            matched_product_pks = [product_pk for product_pk in products_in_cart 
+                    if product_pk in offer_approved_products or product_pk in approved_category_product_pks]
+            
+            # Find products in cart that are either approved for discount or  categories
+            allowed_discount_products = [product_pk for product_pk in products_in_cart 
+                                        if product_pk in discount_approved_products or product_pk in approved_discount_category_product_pks]
+                        
 
             
             if offer.is_active: 
@@ -1904,760 +1782,402 @@ class CreateOrder(APIView):
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
-                total_cart_value = 0
-                for data in cart_items:
-                    total_product_value = data.quantity * data.product.salePrice
-                    total_cart_value += total_product_value
+                try :
+                    if not (matched_product_pks and allowed_discount_products):
+                        return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
 
-                if matched_product_pks and allowed_discount_products is not None :
-                    offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-                    if offer_schedule:
-                        checking_products_offer_type = OfferSchedule.objects.filter(
-                            offer_type=offer_schedule.offer_type,
-                            get_option=offer_schedule.get_option,
-                            get_value=offer_schedule.get_value,
-                            method=offer_schedule.method,
-                            offer_active=True
-                        ).first()
+                    if offer.offer_type == "BUY" and offer.method == "FREE":
+                        buy = offer.get_option
+                        get = offer.get_value
 
-                        if checking_products_offer_type:
-                            if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                                buy = checking_products_offer_type.get_option
-                                get = checking_products_offer_type.get_value
+                        combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
+                        user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
 
-                                combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
-                                user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
+                        # Fetch product data in a single query
+                        offer_products_data = Product.objects.filter(pk__in=matched_product_pks)
+                        discount_allowed_products_data = Product.objects.filter(pk__in=allowed_discount_products)
 
-                                offer_products = []
-                                discount_allowed_products = []
+                        # Check if there are intersection products
+                        intersection_exists = offer_products_data.filter(pk__in=discount_allowed_products_data.values('pk')).exists()
 
-                                offer_products_data = Product.objects.filter(pk__in=offer_approved_products)
-                                discount_allowed_products_data = Product.objects.filter(pk__in=discount_approved_products)
+                        total_sale_price = sum(item.product.salePrice * item.quantity for item in cart_items)
+                        sub_total_sale_price = sum(item.product.price * item.quantity for item in cart_items)
 
-                                intersection_products = offer_products_data.filter(pk__in=discount_allowed_products_data.values('pk'))
+                        offer_products = []
+                        discount_allowed_products = []
+                        total_free_quantity = 0
 
-                                if intersection_products.exists():
+                        for item in user_cart:
+                            if item.product.pk in matched_product_pks:
+                                free_quantity = item.quantity * get
+                                offer_products.append(item)
+                            else:
+                                free_quantity = 0
 
-                                    for item in user_cart:
-                                        if item.product in matched_product_pks:
-                                            offer_products.append(item.product)
-                                        if item.product in allowed_discount_products:
-                                            discount_allowed_products.append(item.product)
+                            if item.product.pk in allowed_discount_products:
+                                discount_allowed_products.append(item)
 
-                                    total_free_quantity = 0
-                                    for item in user_cart:
-                                        if item.product.pk in matched_product_pks:
-                                            free_quantity = (item.quantity) * get
-                                        else:
-                                            free_quantity = 0
-                                        total_quantity = item.quantity + free_quantity
-                                        total_price = item.product.salePrice * item.quantity
+                            total_free_quantity += free_quantity
 
+                        if intersection_exists:
 
-                                        if item.product.pk in matched_product_pks:
-                                            offer_products.append(item)
-                                        if item.product.pk in allowed_discount_products:
-                                            discount_allowed_products.append(item)
+                            if discount_allowed_products:
+                                discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
-                                    total_sale_price = sum(i.product.salePrice * i.quantity for i in cart_items)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart_items)
+                                remaining_free_quantity = total_free_quantity
+                                total_cart_value = total_sale_price
+                                total_discount = 0
 
+                                for item in discount_allowed_products:
+                                    product = item.product
+                                    product_price = product.salePrice
+                                    product_quantity = item.quantity
 
-                                    if discount_allowed_products:
-                                        discount_allowed_products.sort(key=lambda i: i.product.salePrice)
-                                        offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                        remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
-                                        total_free_quantity = int(remaining_free_quantity / 2) * get
+                                    if remaining_free_quantity <= 0:
+                                        break
+
+                                    discount_quantity = min(product_quantity, remaining_free_quantity)
+                                    discount_amount = product_price * discount_quantity
+                                    total_cart_value -= discount_amount
+                                    remaining_free_quantity -= discount_quantity
+                                    total_discount += discount_amount
 
 
-                                        total_cart_value = total_sale_price
+                                total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                shipping_fee = 60 if total_cart_value <= 500 else 0
 
-                                        for item in discount_allowed_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
 
-                                            if total_free_quantity <= 0:
-                                                break
 
-                                            if total_free_quantity >= product_quantity:
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity -= product_quantity
+                                address = Address.objects.filter(pk=pk, user=user).first()
+                                if not address:
+                                    return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+                                coupon_code = request.data.get('coupon_code')
+                                coupon = None
+                                if coupon_code:
+                                    try:
+                                        coupon = Coupon.objects.get(code=coupon_code)
+                                    except Coupon.DoesNotExist:
+                                        return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                    if coupon.status != 'Active':
+                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                payment_method = request.data.get('payment_method')
+                                if not payment_method:
+                                    return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
+                                if payment_method not in ['COD', 'razorpay']:
+                                    return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                try:
+                                    with transaction.atomic():
+                                        order = Order.objects.create(
+                                            customer=user,
+                                            address=address,
+                                            status='pending',
+                                            payment_method=payment_method,
+
+                                        )
+
+                                        for item in cart_items:
+                                            # Fetch active offers related to the product or its category
+                                            offers = OfferSchedule.objects.filter(
+                                                Q(offer_active=True) &
+                                                (Q(offer_products=item.product.pk) | Q(offer_category=item.product.category.pk))
+                                            )
+                                            
+                                            # Fetch discount-approved products or categories
+                                            discount_products = OfferSchedule.objects.filter(
+                                                Q(offer_active=True) & Q(is_active=False) &
+                                                (Q(discount_approved_products=item.product.pk) | Q(discount_approved_category=item.product.category.pk))
+                                            )
+
+                                            # Collect offer details
+                                            offer_details = []
+                                            for offer in offers:
+                                                offer_detail = f"{offer.offer_type} {offer.get_option} GET {offer.get_value} {offer.method}"
+                                                offer_details.append(offer_detail)
+
+                                            # Collect discount details
+                                            discount_details = []
+                                            if discount_products.exists():
+                                                discount_details.append("Discount Allowed")
+
+                                            # Combine offer and discount details into a single string
+                                            offer_type_string = ", ".join(offer_details + discount_details) if offer_details or discount_details else "No offer"
+
+                                            # Create the order item with offer details
+                                            OrderItem.objects.create(
+                                                customer=user,
+                                                order=order,
+                                                product=item.product,
+                                                quantity=item.quantity,
+                                                price=item.product.salePrice,
+                                                color=item.color,
+                                                size=item.size,
+                                                offer_type=offer_type_string  # Include the offer details in the order item
+                                            )
+
+                                            if item.product.type == "single":
+                                                check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                                if check_color is None:
+                                                    return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                                for stock in check_color:
+                                                    if stock.stock >= item.quantity:
+                                                        stock.stock -= item.quantity
+                                                        stock.save()
                                             else:
-                                                discount_amount = product_price * total_free_quantity
+                                                product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+                                                if not product_variants.exists():
+                                                    return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                                for variant in product_variants:
+                                                    size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                                    for stock in size_stocks:
+                                                        if stock.stock >= item.quantity:
+                                                            stock.stock -= item.quantity
+                                                            stock.save()
+                                                            break
+                                                        else:
+                                                            return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                        # Apply the coupon if present
+                                        if coupon:
+                                            if coupon.coupon_type == 'Percentage':
+
+                                                discount_amount = (coupon.discount / 100) * total_cart_value
                                                 total_cart_value -= discount_amount
-                                                total_free_quantity = 0
+                                                order.coupon = coupon
+                                            else :
+                                                total_cart_value -= coupon.discount
+                                                order.coupon = coupon
+
+
+                                        
+                                        if payment_method == 'COD':
+                                            cod_charge = Decimal('40.00')
+                                            total_cart_value += cod_charge
+
+                                        # Calculate shipping fee based on total sale price
+                                        shipping_fee = Decimal('60.00') if total_cart_value <= 500 else Decimal('0.00')
+                                        total_cart_value += shipping_fee
+
+                                        # Update the total amount in the order
+                                        order.total_amount = total_cart_value
+                                        order.save()
+
+                                        # If payment method is razorpay, create a razorpay order
+                                        if payment_method == 'razorpay':
+                                            razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                            razorpay_order = razorpay_client.order.create({
+                                                'amount': int(order.total_amount * 100),
+                                                'currency': 'INR',
+                                                'payment_capture': 1
+                                            })
+
+                                            order.payment_id = razorpay_order['id']
+                                            order.save()
+                                    
+                                        cart_items.delete()
+
+                                        serializer = OrderSerializer(order)
+                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                except Exception as e:
+                                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        
+                        try:
+                            total_free_quantity = 0
+                            for item in user_cart:
+                                if item.product.pk in matched_product_pks:
+                                    free_quantity = item.quantity * get
+                                else:
+                                    free_quantity = 0
+
+                                total_quantity = item.quantity + free_quantity
+                                total_price = item.product.salePrice * item.quantity
+
+                                if item.product.pk in matched_product_pks:
+                                    offer_products.append(item)
+                                if item.product.pk in allowed_discount_products:
+                                    discount_allowed_products.append(item)
+
+
+                            total_sale_price = sum(i.product.salePrice * i.quantity for i in cart_items)
+                            sub_total_sale_price = sum(i.product.price * i.quantity for i in cart_items)
+
+
+                            if discount_allowed_products:
+                                discount_allowed_products.sort(key=lambda i: i.product.salePrice)
+
+                                offer_products_in_cart = cart_items.filter(product__in=matched_product_pks)
+                                remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
+                                total_free_quantity = remaining_free_quantity * get
+
+
+                                total_cart_value = total_sale_price
+                                total_discount = 0
+                                processed_products = set()  # Track processed products
+
+                                for item in discount_allowed_products:
+                                    product = item.product
+                                    product_price = product.salePrice
+                                    product_quantity = item.quantity
+
+                                    if product.pk in processed_products:
+                                        continue  # Skip if product is already processed
+
+
+                                    if total_free_quantity <= 0:
+                                        break  # Exit the loop once the free quantity is exhausted
+
+                                    # Calculate the quantity that can be discounted
+                                    discount_quantity = min(product_quantity, total_free_quantity)
+                                    
+                                    # Calculate the discount amount
+                                    discount_amount = product_price * discount_quantity
+
+                                    # Subtract the discount amount from the total cart value
+                                    total_cart_value -= discount_amount
+                                    
+                                    # Subtract the discounted quantity from the total free quantity
+                                    total_free_quantity -= discount_quantity
+                                    
+                                    # Accumulate the total discount
+                                    total_discount += discount_amount
+
+                                    processed_products.add(product.pk)  # Mark product as processed
+
+
+                                address = Address.objects.filter(pk=pk, user=user).first()
+                                if not address:
+                                    return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+                                coupon_code = request.data.get('coupon_code')
+                                coupon = None
+                                if coupon_code:
+                                    try:
+                                        coupon = Coupon.objects.get(code=coupon_code)
+                                    except Coupon.DoesNotExist:
+                                        return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                    if coupon.status != 'Active':
+                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                payment_method = request.data.get('payment_method')
+                                if not payment_method:
+                                    return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
+                                if payment_method not in ['COD', 'razorpay']:
+                                    return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                try:
+                                    with transaction.atomic():
+                                        order = Order.objects.create(
+                                            customer=user,
+                                            address=address,
+                                            status='pending',
+                                            payment_method=payment_method,
+                                        )
+
+                                        for item in cart_items:
+                                            # Fetch active offers related to the product or its category
+                                            offers = OfferSchedule.objects.filter(
+                                                Q(offer_active=True) &
+                                                (Q(offer_products=item.product.pk) | Q(offer_category=item.product.category.pk))
+                                            )
                                             
+                                            # Fetch discount-approved products or categories
+                                            discount_products = OfferSchedule.objects.filter(
+                                                Q(offer_active=True) & Q(is_active=False) &
+                                                (Q(discount_approved_products=item.product.pk) | Q(discount_approved_category=item.product.category.pk))
+                                            )
 
-                                        serializer = CartSerializers(cart_items, many=True)
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
-                                        total_discount_after_adjustment = sub_total_sale_price - total_cart_value
+                                            # Collect offer details
+                                            offer_details = []
+                                            for offer in offers:
+                                                offer_detail = f"{offer.offer_type} {offer.get_option} GET {offer.get_value} {offer.method}"
+                                                offer_details.append(offer_detail)
 
+                                            # Collect discount details
+                                            discount_details = []
+                                            if discount_products.exists():
+                                                discount_details.append("Discount Allowed")
 
-                                        address = Address.objects.filter(pk=pk, user=user).first()
-                                        if not address:
-                                            return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+                                            # Combine offer and discount details into a single string
+                                            offer_type_string = ", ".join(offer_details + discount_details) if offer_details or discount_details else "No offer"
 
-                                        coupon_code = request.data.get('coupon_code')
-                                        coupon = None
-                                        if coupon_code:
-                                            try:
-                                                coupon = Coupon.objects.get(code=coupon_code)
-                                            except Coupon.DoesNotExist:
-                                                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+                                            # Create the order item with offer details
+                                            OrderItem.objects.create(
+                                                customer=user,
+                                                order=order,
+                                                product=item.product,
+                                                quantity=item.quantity,
+                                                price=item.product.salePrice,
+                                                color=item.color,
+                                                size=item.size,
+                                                offer_type=offer_type_string  # Include the offer details in the order item
+                                            )
 
-                                            if coupon.status != 'Active':
-                                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        payment_method = request.data.get('payment_method')
-                                        if not payment_method:
-                                            return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-                                        if payment_method not in ['COD', 'razorpay']:
-                                            return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        try:
-                                            with transaction.atomic():
-                                                order = Order.objects.create(
-                                                    customer=user,
-                                                    address=address,
-                                                    status='pending',
-                                                    payment_method=payment_method,
-
-                                                )
-
-                                                for item in cart_items:
-                                                    if item.product.pk in approved_category_product_pks:
-                                                        free_quantity = (item.quantity / buy) * get
-                                                    else:
-                                                        free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
-
-
-                                                    OrderItem.objects.create(
-                                                        customer=user,
-                                                        order=order,
-                                                        product=item.product,
-                                                        quantity=item.quantity,
-                                                        free_quantity = 0,
-                                                        price=item.product.salePrice,
-                                                        color=item.color,
-                                                        size=item.size
-                                                    )
-
-                                                    if item.product.type == "single":
-                                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                                                        if check_color is None :
-                                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                        for stock in check_color :
-                                                            if stock.stock >= item.quantity:
-                                                                stock.stock -= item.quantity
-                                                                stock.save()
-
-                                                    else :
-                                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
-
-                                                        if not product_variants.exists():
-                                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
-
-                                                        for variant in product_variants:
-                                                            # Filter the size stocks related to the current variant
-                                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
-                                                            
-                                                            for stock in size_stocks:
-                                                                if stock.stock >= item.quantity:
-                                                                    # Update stock
-                                                                    stock.stock -= item.quantity
-                                                                    stock.save()
-                                                                    break  # Break out of the inner loop if stock is updated
-                                                                else:
-                                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-                                                # Apply the coupon if present
-                                                if coupon:
-                                                    if coupon.coupon_type == 'Percentage':
-
-                                                        discount_amount = (coupon.discount / 100) * total_cart_value
-                                                        total_cart_value -= discount_amount
-                                                        order.coupon = coupon
-                                                    else :
-                                                        total_cart_value -= coupon.discount
-                                                        order.coupon = coupon
-
-
-                                                
-                                                if payment_method == 'COD':
-                                                    cod_charge = Decimal('40.00')  # Example COD charge
-                                                    total_cart_value += cod_charge
-
-                                                order.total_amount = total_cart_value
-                                                order.save()
-
-                                                # If payment method is razorpay, create a razorpay order
-                                                if payment_method == 'razorpay':
-                                                    # Initialize Razorpay client with API credentials
-                                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                                    
-                                                    # Create Razorpay order
-                                                    razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
-                                                        'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
-                                                    })
-
-                                                    # Update order with Razorpay order ID
-                                                    order.payment_id = razorpay_order['id']
-                                                    order.save()
-                                            
-
-
-                                                cart_items.delete()
-
-                                                serializer = OrderSerializer(order)
-                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-                                        except Exception as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                else :
-                                    for item in user_cart:
-                                        if item.product in matched_product_pks:
-                                            offer_products.append(item.product)
-                                        if item.product in allowed_discount_products:
-                                            discount_allowed_products.append(item.product)
-
-                                    total_free_quantity = 0
-                                    for item in user_cart:
-                                        if item.product.pk in matched_product_pks:
-                                            free_quantity = (item.quantity) * get
-                                        else:
-                                            free_quantity = 0
-                                        total_quantity = item.quantity + free_quantity
-                                        total_price = item.product.salePrice * item.quantity
-
-                                        if item.product.pk in matched_product_pks:
-                                            offer_products.append(item)
-                                        if item.product.pk in allowed_discount_products:
-                                            discount_allowed_products.append(item)
-
-                                    total_sale_price = sum(i.product.salePrice * i.quantity for i in cart_items)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart_items)
-
-                                    if discount_allowed_products:
-                                        discount_allowed_products.sort(key=lambda i: i.product.salePrice)
-                                        offer_products_in_cart = user_cart.filter(product__in=matched_product_pks)
-                                        remaining_free_quantity = sum(i.quantity for i in offer_products_in_cart)
-                                        total_free_quantity = int(remaining_free_quantity) * get
-
-                                        total_cart_value = total_sale_price
-                                        for item in discount_allowed_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
-
-                                            if total_free_quantity <= 0:
-                                                break
-
-                                            if total_free_quantity >= product_quantity:
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity -= product_quantity
+                                            if item.product.type == "single":
+                                                check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                                if check_color is None:
+                                                    return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                                for stock in check_color:
+                                                    if stock.stock >= item.quantity:
+                                                        stock.stock -= item.quantity
+                                                        stock.save()
                                             else:
-                                                discount_amount = product_price * total_free_quantity
+                                                product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+                                                if not product_variants.exists():
+                                                    return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                                for variant in product_variants:
+                                                    size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                                    for stock in size_stocks:
+                                                        if stock.stock >= item.quantity:
+                                                            stock.stock -= item.quantity
+                                                            stock.save()
+                                                            break
+                                                        else:
+                                                            return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                        if coupon:
+                                            if coupon.coupon_type == 'Percentage':
+                                                discount_amount = (coupon.discount / 100) * total_cart_value
                                                 total_cart_value -= discount_amount
-                                                total_free_quantity = 0
+                                                order.coupon = coupon
+                                            else:
+                                                total_cart_value -= coupon.discount
+                                                order.coupon = coupon
 
-                                        serializer = CartSerializers(cart_items, many=True)
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
+                                        if payment_method == 'COD':
+                                            cod_charge = Decimal('40.00')  # Example COD charge
+                                            total_cart_value += cod_charge
 
-                                        address = Address.objects.filter(pk=pk, user=user).first()
-                                        if not address:
-                                            return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+                                        order.total_amount = total_cart_value
+                                        order.save()
 
-                                        coupon_code = request.data.get('coupon_code')
-                                        coupon = None
-                                        if coupon_code:
-                                            try:
-                                                coupon = Coupon.objects.get(code=coupon_code)
-                                            except Coupon.DoesNotExist:
-                                                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+                                        if payment_method == 'razorpay':
+                                            razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                            razorpay_order = razorpay_client.order.create({
+                                                'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
+                                                'currency': 'INR',
+                                                'payment_capture': 1  # Auto capture payment
+                                            })
+                                            order.payment_id = razorpay_order['id']
+                                            order.save()
 
-                                            if coupon.status != 'Active':
-                                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                                        cart_items.delete()
 
-                                        payment_method = request.data.get('payment_method')
-                                        if not payment_method:
-                                            return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-                                        if payment_method not in ['COD', 'razorpay']:
-                                            return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        try:
-                                            with transaction.atomic():
-                                                order = Order.objects.create(
-                                                    customer=user,
-                                                    address=address,
-                                                    status='pending',
-                                                    payment_method=payment_method,
-
-                                                )
-
-                                                for item in cart_items:
-                                                    if item.product.pk in approved_category_product_pks:
-                                                        free_quantity = (item.quantity / buy) * get
-                                                    else:
-                                                        free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
-
-
-                                                    OrderItem.objects.create(
-                                                        customer=user,
-                                                        order=order,
-                                                        product=item.product,
-                                                        quantity=item.quantity,
-                                                        free_quantity = 0,
-                                                        price=item.product.salePrice,
-                                                        color=item.color,
-                                                        size=item.size
-                                                    )
-
-                                                    if item.product.type == "single":
-                                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                                                        if check_color is None :
-                                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                        for stock in check_color :
-                                                            if stock.stock >= item.quantity:
-                                                                stock.stock -= item.quantity
-                                                                stock.save()
-
-                                                    else :
-                                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
-
-                                                        if not product_variants.exists():
-                                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
-
-                                                        for variant in product_variants:
-                                                            # Filter the size stocks related to the current variant
-                                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
-                                                            
-                                                            for stock in size_stocks:
-                                                                if stock.stock >= item.quantity:
-                                                                    # Update stock
-                                                                    stock.stock -= item.quantity
-                                                                    stock.save()
-                                                                    break  # Break out of the inner loop if stock is updated
-                                                                else:
-                                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-                                                # Apply the coupon if present
-                                                if coupon:
-                                                    if coupon.coupon_type == 'Percentage':
-
-                                                        discount_amount = (coupon.discount / 100) * total_cart_value
-                                                        total_cart_value -= discount_amount
-                                                        order.coupon = coupon
-                                                    else :
-                                                        total_cart_value -= coupon.discount
-                                                        order.coupon = coupon
-
-
-                                                
-                                                if payment_method == 'COD':
-                                                    cod_charge = Decimal('40.00')  # Example COD charge
-                                                    total_cart_value += cod_charge
-
-                                                order.total_amount = total_cart_value
-                                                order.save()
-
-                                                # If payment method is razorpay, create a razorpay order
-                                                if payment_method == 'razorpay':
-                                                    # Initialize Razorpay client with API credentials
-                                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                                    
-                                                    # Create Razorpay order
-                                                    razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
-                                                        'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
-                                                    })
-
-                                                    # Update order with Razorpay order ID
-                                                    order.payment_id = razorpay_order['id']
-                                                    order.save()
-                                            
-
-
-                                                cart_items.delete()
-
-                                                serializer = OrderSerializer(order)
-                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-                                        except Exception as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                        elif checking_products_offer_type.offer_type == "SPEND" and checking_products_offer_type.method == "% OFF":
-                            return Response({"message":"SPEND"})
-                        else:
-                            return Response({"message":"No offer found"})
+                                        serializer = OrderSerializer(order)
+                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                except Exception as e:
+                                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        except Exception as e:
+                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
                         return Response({"message":"No matching offer type found"})
-                else:
-
-                    offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-                    if offer_schedule:
-                        checking_products_offer_type = OfferSchedule.objects.filter(
-                            offer_type=offer_schedule.offer_type,
-                            get_option=offer_schedule.get_option,
-                            get_value=offer_schedule.get_value,
-                            method=offer_schedule.method,
-                            offer_active=True
-                        ).first()
-
-                        if checking_products_offer_type:
-                            if checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
-                                buy = checking_products_offer_type.get_option
-                                get = checking_products_offer_type.get_value
-
-                                # Combine product pks to fetch the cart items
-                                combined_product_pks = set(approved_category_product_pks).union(set(approved_discount_category_product_pks))
-
-                                user_cart = Cart.objects.filter(customer=user, product__in=combined_product_pks)
-
-                                offer_category_products = []
-                                discount_allowed_category_products = []
-
-                                offer_category_products__data = Product.objects.filter(category__in=offer_approved_category)
-                                discount_allowed_category_products__data = Product.objects.filter(category__in=discount_approved_category)
-
-                                intersection_products = offer_category_products__data.filter(pk__in=discount_allowed_category_products__data.values('pk'))
-
-                                if intersection_products.exists():
-                                    for item in user_cart:
-                                        if item.product.pk in approved_category_product_pks:
-                                            offer_category_products.append(item)
-                                        if item.product.pk in approved_discount_category_product_pks:
-                                            discount_allowed_category_products.append(item)
-
-                                    total_cart_value = sum(i.product.salePrice * i.quantity for i in cart_items)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart_items)
-
-                                    total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
-                                    total_free_quantity = int((total_offer_product_quantity / 2) * get)
-
-                                    if discount_allowed_category_products:
-                                        discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
-
-                                        for item in discount_allowed_category_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
-
-                                            if total_free_quantity <= 0:
-                                                break
-
-                                            if total_free_quantity >= product_quantity:
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity -= product_quantity
-                                            else:
-                                                discount_amount = product_price * total_free_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity = 0
-
-
-                                        serializer = CartSerializers(cart_items, many=True)
-                                        total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
-
-                                        address = Address.objects.filter(pk=pk, user=user).first()
-                                        if not address:
-                                            return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
-
-                                        coupon_code = request.data.get('coupon_code')
-                                        coupon = None
-                                        if coupon_code:
-                                            try:
-                                                coupon = Coupon.objects.get(code=coupon_code)
-                                            except Coupon.DoesNotExist:
-                                                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                            if coupon.status != 'Active':
-                                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        payment_method = request.data.get('payment_method')
-                                        if not payment_method:
-                                            return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-                                        if payment_method not in ['COD', 'razorpay']:
-                                            return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        try:
-                                            with transaction.atomic():
-                                                order = Order.objects.create(
-                                                    customer=user,
-                                                    address=address,
-                                                    status='pending',
-                                                    payment_method=payment_method,
-
-                                                )
-
-                                                for item in cart_items:
-                                                    if item.product.pk in approved_category_product_pks:
-                                                        free_quantity = (item.quantity / buy) * get
-                                                    else:
-                                                        free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
-                                                    total_quantity = item.quantity + free_quantity
-                                                    total_price = item.product.salePrice * item.quantity
-
-
-                                                    OrderItem.objects.create(
-                                                        customer=user,
-                                                        order=order,
-                                                        product=item.product,
-                                                        quantity=item.quantity,
-                                                        free_quantity = 0,
-                                                        price=item.product.salePrice,
-                                                        color=item.color,
-                                                        size=item.size
-                                                    )
-
-                                                    if item.product.type == "single":
-                                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                                                        if check_color is None :
-                                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                        for stock in check_color :
-                                                            if stock.stock >= item.quantity:
-                                                                stock.stock -= item.quantity
-                                                                stock.save()
-
-                                                    else :
-                                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
-
-                                                        if not product_variants.exists():
-                                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
-
-                                                        for variant in product_variants:
-                                                            # Filter the size stocks related to the current variant
-                                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
-                                                            
-                                                            for stock in size_stocks:
-                                                                if stock.stock >= item.quantity:
-                                                                    # Update stock
-                                                                    stock.stock -= item.quantity
-                                                                    stock.save()
-                                                                    break  # Break out of the inner loop if stock is updated
-                                                                else:
-                                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-                                                # Apply the coupon if present
-                                                if coupon:
-                                                    if coupon.coupon_type == 'Percentage':
-
-                                                        discount_amount = (coupon.discount / 100) * total_cart_value
-                                                        total_cart_value -= discount_amount
-                                                        order.coupon = coupon
-                                                    else :
-                                                        total_cart_value -= coupon.discount
-                                                        order.coupon = coupon
-
-
-                                                
-                                                if payment_method == 'COD':
-                                                    cod_charge = Decimal('40.00')  # Example COD charge
-                                                    total_cart_value += cod_charge
-
-                                                order.total_amount = total_cart_value
-                                                order.save()
-
-                                                # If payment method is razorpay, create a razorpay order
-                                                if payment_method == 'razorpay':
-                                                    # Initialize Razorpay client with API credentials
-                                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                                    
-                                                    # Create Razorpay order
-                                                    razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
-                                                        'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
-                                                    })
-
-                                                    # Update order with Razorpay order ID
-                                                    order.payment_id = razorpay_order['id']
-                                                    order.save()
-                                            
-
-
-                                                cart_items.delete()
-
-                                                serializer = OrderSerializer(order)
-                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-                                        except Exception as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                else :
-                                    for item in user_cart:
-                                        if item.product.pk in approved_category_product_pks:
-                                            offer_category_products.append(item)
-                                        if item.product.pk in approved_discount_category_product_pks:
-                                            discount_allowed_category_products.append(item)
-
-                                    total_cart_value = sum(i.product.salePrice * i.quantity for i in cart_items)
-                                    sub_total_sale_price = sum(i.product.price * i.quantity for i in cart_items)
-
-                                    total_offer_product_quantity = sum(i.quantity for i in offer_category_products)
-                                    total_free_quantity = int((total_offer_product_quantity) * get)
-
-                                    if discount_allowed_category_products:
-                                        discount_allowed_category_products.sort(key=lambda i: i.product.salePrice)
-
-                                        for item in discount_allowed_category_products:
-                                            product = item.product
-                                            product_price = product.salePrice
-                                            product_quantity = item.quantity
-
-                                            if total_free_quantity <= 0:
-                                                break
-
-                                            if total_free_quantity >= product_quantity:
-                                                discount_amount = product_price * product_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity -= product_quantity
-                                            else:
-                                                discount_amount = product_price * total_free_quantity
-                                                total_cart_value -= discount_amount
-                                                total_free_quantity = 0
-
-                                        serializer = CartSerializers(cart_items, many=True)
-                                        total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                        shipping_fee = 60 if total_cart_value <= 500 else 0
-
-                                        address = Address.objects.filter(pk=pk, user=user).first()
-                                        if not address:
-                                            return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
-
-                                        coupon_code = request.data.get('coupon_code')
-                                        coupon = None
-                                        if coupon_code:
-                                            try:
-                                                coupon = Coupon.objects.get(code=coupon_code)
-                                            except Coupon.DoesNotExist:
-                                                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                            if coupon.status != 'Active':
-                                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        payment_method = request.data.get('payment_method')
-                                        if not payment_method:
-                                            return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
-                                        if payment_method not in ['COD', 'razorpay']:
-                                            return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        try:
-                                            with transaction.atomic():
-                                                order = Order.objects.create(
-                                                    customer=user,
-                                                    address=address,
-                                                    status='pending',
-                                                    payment_method=payment_method,
-
-                                                )
-
-                                                for item in cart_items:
-                                                    if item.product.pk in approved_category_product_pks:
-                                                        free_quantity = (item.quantity / buy) * get
-                                                    else:
-                                                        free_quantity = 0  # Ensure free quantity for non-offer products is zero
-
-                                                    total_quantity = item.quantity + free_quantity
-                                                    total_price = item.product.salePrice * item.quantity
-
-
-                                                    OrderItem.objects.create(
-                                                        customer=user,
-                                                        order=order,
-                                                        product=item.product,
-                                                        quantity=item.quantity,
-                                                        free_quantity = 0,
-                                                        price=item.product.salePrice,
-                                                        color=item.color,
-                                                        size=item.size
-                                                    )
-
-                                                    if item.product.type == "single":
-                                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                                                        if check_color is None :
-                                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                                        for stock in check_color :
-                                                            if stock.stock >= item.quantity:
-                                                                stock.stock -= item.quantity
-                                                                stock.save()
-
-                                                    else :
-                                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
-
-                                                        if not product_variants.exists():
-                                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
-
-                                                        for variant in product_variants:
-                                                            # Filter the size stocks related to the current variant
-                                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
-                                                            
-                                                            for stock in size_stocks:
-                                                                if stock.stock >= item.quantity:
-                                                                    # Update stock
-                                                                    stock.stock -= item.quantity
-                                                                    stock.save()
-                                                                    break  # Break out of the inner loop if stock is updated
-                                                                else:
-                                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-                                                # Apply the coupon if present
-                                                if coupon:
-                                                    if coupon.coupon_type == 'Percentage':
-
-                                                        discount_amount = (coupon.discount / 100) * total_cart_value
-                                                        total_cart_value -= discount_amount
-                                                        order.coupon = coupon
-                                                    else :
-                                                        total_cart_value -= coupon.discount
-                                                        order.coupon = coupon
-
-
-                                                
-                                                if payment_method == 'COD':
-                                                    cod_charge = Decimal('40.00')  # Example COD charge
-                                                    total_cart_value += cod_charge
-
-                                                order.total_amount = total_cart_value
-                                                order.save()
-
-                                                # If payment method is razorpay, create a razorpay order
-                                                if payment_method == 'razorpay':
-                                                    # Initialize Razorpay client with API credentials
-                                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                                    
-                                                    # Create Razorpay order
-                                                    razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
-                                                        'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
-                                                    })
-
-                                                    # Update order with Razorpay order ID
-                                                    order.payment_id = razorpay_order['id']
-                                                    order.save()
-                                            
-
-
-                                                cart_items.delete()
-
-                                                serializer = OrderSerializer(order)
-                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-                                        except Exception as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                        else:
-                            return Response({"message":"No offer found"})
-                    else:
-                        return Response({"message":"No matching offer type found"})
+                except Exception as e :
+                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         
         address = Address.objects.filter(pk=pk, user=user).first()

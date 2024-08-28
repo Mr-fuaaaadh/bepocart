@@ -15,6 +15,9 @@ import pandas as pd
 from django.utils import timezone
 import openpyxl
 import pytz
+
+from .utils import send_order_status_email
+from .sms_utils import send_order_status_sms
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
 from django.contrib.auth.models import User
 
@@ -987,19 +990,22 @@ class OrderStatusUpdation(APIView):
                 if new_status == "Completed":
                     coin_value = CoinValue.objects.first()  
                     if coin_value:
-                        # Check if this is the user's first completed order
-                        user_orders = Order.objects.filter(customer=order.customer, status="Completed").count()
+                        user_orders = Order.objects.filter(customer=order.customer.pk, status="Completed").count()
                         if user_orders == 0:
                             coins_to_add = coin_value.first_payment_value
                         else:
-                            order_total_amount = float(order.total_amount)  
+                            order_total_amount = float(order.total_amount)
                             coins_to_add = (order_total_amount * coin_value.payment_value) / 100
 
-                        coin_record = Coin.objects.create(user=order.customer, amount=coins_to_add, source="Order reward")
-                        coin_record.save()
+                        Coin.objects.create(user=order.customer, amount=coins_to_add, source="Order reward")
 
                 order.status = new_status
                 order.save()
+
+                # Send notifications
+                send_order_status_email(order)
+                # if not send_order_status_sms(order.customer.phone, order.order_id, new_status):
+                #     return Response({"error": "Failed to send SMS notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 return Response({"status": "Order status updated successfully"}, status=status.HTTP_200_OK)
 
@@ -1009,6 +1015,7 @@ class OrderStatusUpdation(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
+            print(e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
 
