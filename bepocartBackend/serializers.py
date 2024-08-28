@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from bepocartBackend.models import *
-from bepocartAdmin.models import *
+from bepocartAdmin.models import *  # Import relevant models if needed
+from .utils import send_order_email
 
 
 
@@ -282,6 +283,15 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id"]
+
+    def create(self, validated_data):
+        # Create the order
+        order = super().create(validated_data)
+        
+        # Send the order email
+        send_order_email(order)
+        
+        return order
 
 
 

@@ -165,6 +165,16 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
+# DATABASES = {
+#     'default':  {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
+#         'PORT': '5432'    
+#     }
+# }
 
 DATABASES = {
      'default': {
@@ -221,20 +231,18 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'muhammadfuhad3@gmail.com'
-EMAIL_HOST_PASSWORD = 'imci azii rmjo ssxv'
-
+EMAIL_HOST = 'bepocart.com'
+EMAIL_PORT = 465  # Port for SMTP with SSL
+EMAIL_USE_SSL = True  # Use SSL for SMTP
+EMAIL_HOST_USER = 'contact@bepocart.com'
+EMAIL_HOST_PASSWORD = 'haripriyaks@.com'
 
 
 RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
 RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
 
 
-TIME_ZONE = 'America/New_York'
-USE_TZ = True
+SMSALERT_API_KEY = '5e0741771f08e'
 
 AWS_ACCESS_KEY_ID = 'AKIAQE3ROOKIXKPTB4F4'
 AWS_SECRET_ACCESS_KEY = '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'
@@ -258,3 +266,5 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB in bytes
 
+
+SMSALERT_SENDER_ID = 1707162624534280862
