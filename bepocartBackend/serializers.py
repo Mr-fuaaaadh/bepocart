@@ -356,8 +356,8 @@ class CustomerOrderItems(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','created_at','color','size','status','free_quantity']
 
+        fields = ['id', 'product', 'quantity', 'price','productImage','productName','order','created_at','color','size','status','offer_type']
 
 
 class RecentlyViewedProductSerializer(serializers.ModelSerializer):

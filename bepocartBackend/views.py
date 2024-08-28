@@ -438,6 +438,7 @@ class CustomerCartProducts(APIView):
                         # Fetch the first active OfferSchedule object
                         offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
                         if offer_schedule.offer_type == "BUY" and offer_schedule.method == "FREE":
+
                             # Retrieve the buy and get values
                             buy = offer_schedule.get_option
                             get = offer_schedule.get_value
@@ -453,6 +454,7 @@ class CustomerCartProducts(APIView):
 
                             offer_products = []
                             discount_allowed_products = []
+                            
                             total_combined_quantity = 0
                             total_free_quantity = 0
                             total_sale_price = 0
@@ -466,7 +468,6 @@ class CustomerCartProducts(APIView):
                                     free_quantity = int(item.quantity / buy) * get
                                     total_free_quantity += free_quantity
 
-                                total_quantity = int(item.quantity + free_quantity)
                                 total_price = item.product.salePrice * item.quantity
 
                                 if item.product.pk in matched_product_pks:
@@ -498,39 +499,38 @@ class CustomerCartProducts(APIView):
                             }
 
                             return Response(response_data, status=status.HTTP_200_OK)
-
-
                         else:
                             try:
                                 spend_amount = offer_schedule.amount
                                 discount_percentage = offer_schedule.discount_percentage
 
                                 # Combine matched product pks with allowed discount products
-                                if matched_product_pks:
-                                    combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products))
-                                else:
-                                    combined_product_pks = set(approved_category_product_pks)
+                                combined_product_pks = set(matched_product_pks).union(set(allowed_discount_products)) if matched_product_pks else set(approved_category_product_pks)
 
                                 # Get user cart items
                                 user_cart = Cart.objects.filter(customer=user)
 
+                                if not user_cart.exists():
+                                    return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+
                                 # Calculate total amounts
                                 user_cart_total_amount = sum(item.product.price * item.quantity for item in user_cart)
                                 total_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart)
-
 
                                 # Calculate total value of items in the cart eligible for the offer
                                 total_spend_offer_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart if item.product.pk in combined_product_pks)
 
                                 # Initialize variables for discount calculations
                                 discount_value = user_cart_total_amount - total_cart_value
+                                after_discount = discount_value
+                                total_cart_value_after_discount = total_cart_value
 
                                 # Check if total cart value meets the spend amount requirement
                                 if total_spend_offer_cart_value >= spend_amount:
                                     # Calculate the discount
                                     discount_value_discount = total_spend_offer_cart_value * (discount_percentage / 100)
-                                    after_discount = discount_value_discount + discount_value
-                                    total_cart_value_after_discount = total_cart_value - discount_value_discount
+                                    after_discount += discount_value_discount
+                                    total_cart_value_after_discount -= discount_value_discount
 
                                 # Serialize cart data
                                 serializer = CartSerializers(user_cart, many=True)
@@ -546,14 +546,14 @@ class CustomerCartProducts(APIView):
                                     "Shipping": shipping_fee,
                                     "TotalPrice": user_cart_total_amount,
                                     "Subtotal": total_cart_value_after_discount,
-                                    # "total_value_after_discount": total_value_after_discount,
-                                    "message": "SPEND OFFER APPLIED" if total_spend_offer_cart_value >= spend_amount else "Cart øffer productstotal is less than the spend amount required for the offer"
+                                    "message": "SPEND OFFER APPLIED" if total_spend_offer_cart_value >= spend_amount else "Cart offer products total is less than the spend amount required for the offer"
                                 }
 
                                 return Response(response_data)
 
                             except Exception as e:
                                 return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
                     except Exception as e:
                         return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
@@ -1582,22 +1582,11 @@ class CreateOrder(APIView):
 
             
             if offer.is_active: 
-                offer_schedule = OfferSchedule.objects.filter(offer_active=True).first()
-
-                if offer_schedule:
-                    # Check if there are matching OfferSchedule objects with specific criteria
-                    checking_products_offer_type = OfferSchedule.objects.filter(
-                        offer_type=offer_schedule.offer_type,
-                        get_option=offer_schedule.get_option,
-                        get_value=offer_schedule.get_value,
-                        method=offer_schedule.method,
-                        offer_active=True
-                    ).first()
-
-                    if checking_products_offer_type and checking_products_offer_type.offer_type == "BUY" and checking_products_offer_type.method == "FREE":
+                try :
+                    if offer and offer.offer_type == "BUY" and offer.method == "FREE":
                         # Retrieve the buy and get values
-                        buy = checking_products_offer_type.get_option
-                        get = checking_products_offer_type.get_value
+                        buy = offer.get_option
+                        get = offer.get_value
 
                         # Combine matched product pks with allowed discount products
                         if matched_product_pks:
@@ -1613,15 +1602,17 @@ class CreateOrder(APIView):
                         total_free_quantity = 0
                         total_sale_price = 0
                         sub_total_sale_price = 0
+                        total_combined_quantity = 0
+
 
                         for item in user_cart:
                             free_quantity = 0
                             if item.product.pk in combined_product_pks:
+                                total_combined_quantity += item.quantity
+
+                                # Calculate the free quantity for the current item
                                 free_quantity = int(item.quantity / buy) * get
                                 total_free_quantity += free_quantity
-
-                            total_quantity = int(item.quantity + free_quantity)
-                            total_price = item.product.salePrice * item.quantity
 
 
                             if item.product.pk in matched_product_pks:
@@ -1633,14 +1624,10 @@ class CreateOrder(APIView):
                             sub_total_sale_price += item.product.price * item.quantity
                             total_sale_price += item.product.salePrice * item.quantity
 
-
+                        # Calculate the total free quantity based on the combined quantity
+                        total_combined_free_quantity = int(total_combined_quantity / buy) * get
                         serializer = CartSerializers(cart_items, many=True)
-                        total_discount_after_adjustment = sub_total_sale_price - total_sale_price
 
-                        if total_sale_price <= 500:
-                            shipping_fee = 60
-                        else:
-                            shipping_fee = 0
 
                         address = Address.objects.filter(pk=pk, user=user).first()
                         if not address:
@@ -1670,27 +1657,35 @@ class CreateOrder(APIView):
                                     address=address,
                                     status='pending',
                                     payment_method=payment_method,
+                                    free_quantity=total_combined_free_quantity
                                 )
 
                                 for item in user_cart:
-                                    free_quantity = 0
-                                    if item.product.pk in combined_product_pks:
-                                        free_quantity = int(item.quantity / buy) * get
-                                        total_free_quantity += free_quantity
+                                    # Fetch active offers related to the product or its category
+                                    offers = OfferSchedule.objects.filter(
+                                        Q(offer_active=True) &
+                                        (Q(offer_products=item.product.pk) | Q(offer_category=item.product.category.pk))
+                                    )
 
-                                    total_quantity = int(item.quantity + free_quantity)
-                                    total_price = item.product.salePrice * item.quantity
+                                    # Collect offer details (assuming you want to use the first offer if multiple are found)
+                                    offer_details = []
+                                    for offer in offers:
+                                        offer_detail = f"{offer.offer_type} {offer.get_option} GET {offer.get_value} {offer.method}"
+                                        offer_details.append(offer_detail)
 
+                                    # Use the first offer detail or a combined string if there are multiple offers
+                                    offer_type_string = ", ".join(offer_details) if offer_details else "No offer"
 
+                                    # Create the order item with offer details
                                     OrderItem.objects.create(
                                         customer=user,
                                         order=order,
                                         product=item.product,
                                         quantity=item.quantity,
-                                        free_quantity=free_quantity,
                                         price=item.product.salePrice,
                                         color=item.color,
-                                        size=item.size
+                                        size=item.size,
+                                        offer_type=offer_type_string  # Include the offer details in the order item
                                     )
 
                                     if item.product.type == "single":
@@ -1730,6 +1725,16 @@ class CreateOrder(APIView):
                                     cod_charge = Decimal('40.00')
                                     total_sale_price += cod_charge
 
+
+                                # Calculate shipping fee based on total sale price
+                                if total_sale_price <= 500:
+                                    shipping_fee = Decimal('60.00')
+                                else:
+                                    shipping_fee = Decimal('0.00')
+
+                                total_sale_price += shipping_fee
+
+                                # Update the total amount in the order
                                 order.total_amount = total_sale_price
                                 order.save()
 
@@ -1750,6 +1755,154 @@ class CreateOrder(APIView):
                                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                         except Exception as e:
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    else:
+                        try:
+                            spend_amount = offer.amount
+                            discount_percentage = offer.discount_percentage
+
+                            # Combine matched product pks with allowed discount products
+                            combined_product_pks = set(matched_product_pks or set()).union(set(allowed_discount_products) or set(approved_category_product_pks))
+
+                            # Get user cart items
+                            user_cart = Cart.objects.filter(customer=user)
+
+                            if not user_cart.exists():
+                                    return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+                            # Calculate total amounts
+                            user_cart_total_amount = sum(item.product.price * item.quantity for item in user_cart)
+                            total_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart)
+
+                            # Calculate total value of items in the cart eligible for the offer
+                            total_spend_offer_cart_value = sum(item.product.salePrice * item.quantity for item in user_cart if item.product.pk in combined_product_pks)
+
+                            # Initialize variables for discount calculations
+                            discount_value = user_cart_total_amount - total_cart_value
+
+                            if total_spend_offer_cart_value >= spend_amount:
+                                # Calculate the discount
+                                discount_value_discount = total_spend_offer_cart_value * (discount_percentage / 100)
+                                after_discount = discount_value_discount + discount_value
+                                total_cart_value_after_discount = total_cart_value - discount_value_discount
+                            else:
+                                after_discount = discount_value
+                                total_cart_value_after_discount = total_cart_value
+
+                            # Serialize cart data
+                            serializer = CartSerializers(user_cart, many=True)
+
+                            address = Address.objects.filter(pk=pk, user=user).first()
+                            if not address:
+                                return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+
+                            coupon_code = request.data.get('coupon_code')
+                            coupon = None
+                            if coupon_code:
+                                try:
+                                    coupon = Coupon.objects.get(code=coupon_code)
+                                    if coupon.status != 'Active':
+                                        raise Coupon.DoesNotExist
+                                except Coupon.DoesNotExist:
+                                    return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                            payment_method = request.data.get('payment_method')
+                            if not payment_method or payment_method not in ['COD', 'razorpay']:
+                                return Response({"message": "Invalid or missing payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
+                            with transaction.atomic():
+                                order = Order.objects.create(
+                                    customer=user,
+                                    address=address,
+                                    status='pending',
+                                    payment_method=payment_method,
+                                )
+
+                                for item in user_cart:
+                                    # Fetch active offers related to the product or its category (including subcategories)
+                                    offers = OfferSchedule.objects.filter(
+                                                Q(offer_products=item.product.pk) | Q(offer_category=item.product.category.pk),
+                                                offer_active=True  
+                                            )
+                                    # Collect offer details (assuming you want to use the first offer if multiple are found)
+                                    offer_details = [f"{offer.offer_type} {offer.amount} {offer.discount_percentage} {offer.method}" for offer in offers]
+                                    offer_type_string = ", ".join(offer_details) if offer_details else "No offer"
+
+                                    # Create the order item with offer details
+                                    OrderItem.objects.create(
+                                        customer=user,
+                                        order=order,
+                                        product=item.product,
+                                        quantity=item.quantity,
+                                        price=item.product.salePrice,
+                                        color=item.color,
+                                        size=item.size,
+                                        offer_type=offer_type_string  
+                                    )
+
+                                    # Update stock based on the product type
+                                    if item.product.type == "single":
+                                        check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                                        if not check_color.exists():
+                                            return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                        for stock in check_color:
+                                            if stock.stock >= item.quantity:
+                                                stock.stock -= item.quantity
+                                                stock.save()
+                                    else:
+                                        product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+                                        if not product_variants.exists():
+                                            return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
+
+                                        for variant in product_variants:
+                                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                            for stock in size_stocks:
+                                                if stock.stock >= item.quantity:
+                                                    stock.stock -= item.quantity
+                                                    stock.save()
+                                                    break
+                                                else:
+                                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                # Apply the coupon if present
+                                if coupon:
+                                    discount_amount = (coupon.discount / 100) * total_cart_value_after_discount if coupon.coupon_type == 'Percentage' else coupon.discount
+                                    total_cart_value_after_discount -= discount_amount
+                                    order.coupon = coupon
+
+                                if payment_method == 'COD':
+                                    cod_charge = Decimal('40.00')
+                                    total_cart_value_after_discount += cod_charge
+
+                                # Calculate shipping fee based on total sale price
+                                shipping_fee = Decimal('60.00') if total_cart_value_after_discount <= 500 else Decimal('0.00')
+                                total_cart_value_after_discount += shipping_fee
+
+                                # Update the total amount in the order
+                                order.total_amount = total_cart_value_after_discount
+                                order.save()
+
+                                # If payment method is razorpay, create a razorpay order
+                                if payment_method == 'razorpay':
+                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                    razorpay_order = razorpay_client.order.create({
+                                        'amount': int(order.total_amount * 100),
+                                        'currency': 'INR',
+                                        'payment_capture': 1
+                                    })
+
+                                    order.payment_id = razorpay_order['id']
+                                    order.save()
+
+                                cart_items.delete()
+                                serializer = OrderSerializer(order)
+                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                        except Exception as e:
+                            return Response({"message": f"An error occurred during order processing: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                except Exception as e:
+                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
                 total_cart_value = 0

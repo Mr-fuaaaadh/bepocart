@@ -165,6 +165,7 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
+
 DATABASES = {
      'default': {
          'ENGINE': 'django.db.backends.postgresql',
