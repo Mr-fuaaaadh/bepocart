@@ -558,8 +558,8 @@ class CustomerCartProducts(APIView):
                         return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     try:
-                        if not (matched_product_pks and allowed_discount_products):
-                            return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
+                        # if not (matched_product_pks and allowed_discount_products):
+                        #     return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
 
                         if offer.offer_type == "BUY" and offer.method == "FREE":
                             buy = offer.get_option
@@ -595,6 +595,7 @@ class CustomerCartProducts(APIView):
                                 total_free_quantity += free_quantity
 
                             if intersection_exists:
+                                print("pari")
 
                                 if discount_allowed_products:
                                     discount_allowed_products.sort(key=lambda item: item.product.salePrice)
@@ -635,6 +636,7 @@ class CustomerCartProducts(APIView):
                                     return Response(response_data, status=status.HTTP_200_OK)
 
                             else:
+                                print("kunna")
                                 total_free_quantity = 0
                                 for item in user_cart:
                                     if item.product.pk in matched_product_pks:
