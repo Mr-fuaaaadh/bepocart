@@ -74,6 +74,7 @@ urlpatterns = [
 
 
     path('Bepocart-customers/',AdminCustomerView.as_view()),
+    path('Bepocart-customer-delete/<int:pk>/',CustomersDelete.as_view()),
     path('export-orders/', ExportOrderDataView.as_view(), name='export_orders'),
 
     path('Bepocart-Bcoin/',AdminCoinCreating.as_view()),

@@ -1656,6 +1656,17 @@ class AdminCustomerView(APIView):
 
 
 
+class CustomersDelete(APIView):
+    def delete(self, request, pk):
+        try:
+            customer = Customer.objects.filter(pk=pk).first()
+            if customer is None:
+                return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+            customer.delete()
+            return Response({"message": "Customer deleted successfully"}, status=status.HTTP_200_OK)
+        except Exception as e :
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
 
 class ExportOrderDataView(APIView):
