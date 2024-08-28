@@ -112,8 +112,7 @@ class CategoryListView(generics.ListAPIView):
 class CategoryView(APIView):
     def get(self, request):
         try :
-            
-            data = Customer.objects.all().delete()
+
             categories = Category.objects.all()
             serializer = CategoryModelSerializer(categories, many=True)
             return Response({
