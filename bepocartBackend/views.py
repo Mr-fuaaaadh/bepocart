@@ -1,12 +1,17 @@
 import razorpay
 import jwt
+import requests
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 import random
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.http import JsonResponse
 from rest_framework import generics
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.core.mail import send_mail, EmailMessage
+from django.template.loader import render_to_string
 from rest_framework import status
 from django.conf import settings
 from bepocartBackend.serializers import *
@@ -21,6 +26,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.template.loader import render_to_string
 from django.db import transaction
 from decimal import Decimal
+from requests.exceptions import RequestException
 
 class CustomerRegistration(APIView):
     def post(self, request):
@@ -44,7 +50,57 @@ class CustomerRegistration(APIView):
                 "status": "error",
                 "message": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
+
+class GoogleLoginAPIView(APIView):
+    def post(self, request):
+        token = request.data.get('token')
+        
+        if not token:
+            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verify the token with Google's OAuth 2.0 API
+            response = requests.get(f'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={token}')
+            id_info = response.json()
+
+            if 'error' in id_info:
+                return Response({'error': id_info.get('error_description', 'Invalid token')}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Extract user information from the token
+            user_email = id_info.get('email')
+            user_first_name = id_info.get('given_name')
+            user_image = id_info.get('picture')
+
+            # Check if the user exists in the database, and update or create the customer
+            customer, created = Customer.objects.update_or_create(
+                defaults={
+                    'first_name': user_first_name,
+                    'image': user_image,
+                    'email': user_email
+                }
+            )
+
+            message = 'Customer created successfully' if created else 'Customer updated successfully'
+
+            # Create JWT token
+            jwt_payload = {
+                'customer_id': customer.pk,
+                'email': customer.email,
+            }
+            jwt_token = jwt.encode(jwt_payload, settings.SECRET_KEY, algorithm='HS256')
+
+            return Response({
+                'message': message,
+                'customer_id': customer.pk,
+                'token': jwt_token
+            }, status=status.HTTP_200_OK)
+
+        except requests.exceptions.RequestException as req_err:
+            return Response({'error': 'Failed to connect to Google for token verification', 'details': str(req_err)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'error': 'An error occurred', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -104,9 +160,11 @@ class CustomerLogin(APIView):
 ################################################  HOME    #############################################
 
 
-class CategoryListView(generics.ListAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategoryModelSerializer
+class CategoryListView(APIView):
+    def get(self, request):
+        queryset = Category.objects.all().order_by('id')
+        serializer = CategoryModelSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     
 class CategoryView(APIView):
@@ -333,19 +391,21 @@ class CustomerProductInCart(APIView):
             # Retrieve product color and size
             product_color = request.data.get('color')
             product_size = request.data.get('size')
+            product_qty =  request.data.get('quantity',1)
+
 
             # Check if the product is already in the user's Cart
             # First, check for single product without variants
             if product.type == "single":
                 if Cart.objects.filter(customer=user, product=product, color=product_color, size=None).exists():
                     return Response({"message": "Product already exists in the cart as a single item"}, status=status.HTTP_400_BAD_REQUEST)
-                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': None}
+                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'quantity':product_qty, 'size': None}
 
             # Then, check for the product with variants (color, size)
             else:
                 if Cart.objects.filter(customer=user, product=product, color=product_color, size=product_size).exists():
                     return Response({"message": "Product already exists in the cart with the same variant"}, status=status.HTTP_400_BAD_REQUEST)
-                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color, 'size': product_size}
+                cart_data = {'customer': user.pk, 'product': product.pk, 'color': product_color,'quantity':product_qty, 'size': product_size}
 
             # Serialize and save cart data
             serializer = CartModelSerializers(data=cart_data)
@@ -594,14 +654,12 @@ class CustomerCartProducts(APIView):
                                 total_free_quantity += free_quantity
                             
                             if intersection_exists:
-                                print("pari")
 
                                 if discount_allowed_products:
                                     discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
                                     remaining_free_quantity = int(total_free_quantity //  2)
 
-                                    print(remaining_free_quantity)
                                     total_cart_value = total_sale_price
                                     total_discount = 0
 
@@ -637,7 +695,6 @@ class CustomerCartProducts(APIView):
                                     return Response(response_data, status=status.HTTP_200_OK)
 
                             else:
-                                print("kunna")
                                 total_free_quantity = 0
                                 for item in user_cart:
                                     if item.product.pk in matched_product_pks:
@@ -1633,6 +1690,12 @@ class CreateOrder(APIView):
 
                                 cart_items.delete()
                                 serializer = OrderSerializer(order)
+                                email_subject = 'New Order Created'
+                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                email.content_subtype = 'html'  # Set the content type to HTML
+                                email.send()
+
                                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                         except Exception as e:
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1778,6 +1841,13 @@ class CreateOrder(APIView):
 
                                 cart_items.delete()
                                 serializer = OrderSerializer(order)
+
+                                email_subject = 'New Order Created'
+                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                email.content_subtype = 'html'  # Set the content type to HTML
+                                email.send()
+
                                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                         except Exception as e:
                             return Response({"message": f"An error occurred during order processing: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1985,6 +2055,11 @@ class CreateOrder(APIView):
                                         cart_items.delete()
 
                                         serializer = OrderSerializer(order)
+                                        email_subject = 'New Order Created'
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                        email.content_subtype = 'html'  # Set the content type to HTML
+                                        email.send()
                                         return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                                 except Exception as e:
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2173,6 +2248,11 @@ class CreateOrder(APIView):
                                         cart_items.delete()
 
                                         serializer = OrderSerializer(order)
+                                        email_subject = 'New Order Created'
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                        email.content_subtype = 'html'  # Set the content type to HTML
+                                        email.send()
                                         return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                                 except Exception as e:
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2298,6 +2378,12 @@ class CreateOrder(APIView):
 
                 # Serialize the order and return success response
                 serializer = OrderSerializer(order)
+
+                email_subject = 'New Order Created'
+                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                email.content_subtype = 'html'  # Set the content type to HTML
+                email.send()
                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
         except Exception as e:

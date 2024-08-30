@@ -33,6 +33,9 @@ class AdminRegister(APIView):
             return Response({"message": "An error occurred", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
+
+
+
 class AdminLogin(APIView):
     def post(self, request):
         serializer = AdminLoginSerializer(data=request.data)
@@ -1002,10 +1005,7 @@ class OrderStatusUpdation(APIView):
                 order.status = new_status
                 order.save()
 
-                # Send notifications
                 send_order_status_email(order)
-                # if not send_order_status_sms(order.customer.phone, order.order_id, new_status):
-                #     return Response({"error": "Failed to send SMS notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 return Response({"status": "Order status updated successfully"}, status=status.HTTP_200_OK)
 
@@ -1015,7 +1015,6 @@ class OrderStatusUpdation(APIView):
                 return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
-            print(e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
 
@@ -1721,7 +1720,6 @@ class OrderInvoiceBillCreating(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(e)
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 

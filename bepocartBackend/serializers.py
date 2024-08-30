@@ -379,7 +379,7 @@ class RecomendedProductSerializer(serializers.ModelSerializer):
     mainCategory = serializers.IntegerField(source ='category.category.slug')
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory','slug'] 
+        fields = ['id', 'name', 'description', 'salePrice', 'image','mainCategory','slug','discount'] 
 
 
 

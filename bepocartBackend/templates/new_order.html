@@ -3,52 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Confirmation</title>
+    <title>New Order Notification</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            color: #333;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
         }
         .container {
-            width: 80%;
-            margin: auto;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            background-color: #ffffff;
             padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         .header {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
             text-align: center;
-            border-radius: 5px 5px 0 0;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4CAF50;
+            background-color: #4CAF50;
+            color: #ffffff;
         }
-        .details {
-            margin: 20px 0;
+        .header img {
+            max-width: 150px;
+            height: auto;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin: 10px 0;
+        }
+        .order-details {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            border: 1px solid #dddddd;
+        }
+        .order-details h2 {
+            color: #4CAF50;
+            font-size: 20px;
+            margin-top: 0;
+        }
+        .order-summary {
+            margin-top: 20px;
+            width: 100%;
+        }
+        .order-summary table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .order-summary th, .order-summary td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 10px;
+            font-size: 14px;
+        }
+        .order-summary th {
+            background-color: #4CAF50;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .order-summary tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .order-summary td img {
+            max-width: 80px;
+            height: auto;
+            display: block;
+            border-radius: 4px;
         }
         .footer {
+            margin-top: 20px;
             text-align: center;
-            padding: 10px;
-            background-color: #f1f1f1;
-            border-radius: 0 0 5px 5px;
+            font-size: 12px;
+            color: #999999;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .order-details h2 {
+                font-size: 18px;
+            }
+            .order-summary th, .order-summary td {
+                font-size: 12px;
+                padding: 8px;
+            }
+            .order-summary table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            .order-summary th, .order-summary td {
+                display: inline-block;
+                min-width: 100px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2>New Order Received</h2>
+            <!-- Add your logo or header image here -->
+            <img src="https://drive.google.com/file/d/1ls6mBCSuZxm1yLDGnBk0odrG1tAcNrC4/view" alt="Company Logo">
+            <h1>Bepocart New Order Created</h1>
         </div>
-        <div class="details">
+        <div class="order-details">
+            <h2>Order Details</h2>
             <p><strong>Order ID:</strong> {{ order.order_id }}</p>
-            <p><strong>Customer:</strong> {{ order.customer }}</p>
-            <p><strong>Total Amount:</strong> {{ order.total_amount }}</p>
-            <p><strong>Address:</strong> {{ order.address }}</p>
-            <p><strong>Payment Method:</strong> {{ order.payment_method }}</p>
+            <p><strong>Customer Name:</strong> {{ order.customer.first_name }} {{ order.customer.last_name }}</p>
+            <p><strong>Total Amount:</strong> ₹{{ order.total_amount }}</p>
+        </div>
+        <div class="order-summary">
+            <h2>Order Summary</h2>
+            <table>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Image</th>
+                </tr>
+                {% for item in user_cart %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>₹{{ item.product.salePrice }}</td>
+                    <td><img src="{{ item.product.image }}" alt="{{ item.product.name }}"></td>
+                </tr>
+                {% endfor %}
+            </table>
         </div>
         <div class="footer">
-            <p>Thank you for your order!</p>
+            <p>This is an automated notification. Please do not reply to this email.</p>
         </div>
     </div>
 </body>

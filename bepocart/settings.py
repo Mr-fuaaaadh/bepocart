@@ -197,12 +197,13 @@ EMAIL_USE_SSL = True  # Use SSL for SMTP
 EMAIL_HOST_USER = 'contact@bepocart.com'
 EMAIL_HOST_PASSWORD = 'haripriyaks@.com'
 
+ADMIN_EMAIL = 'contact@bepocart.com'
 
 RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
 RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
 
 
 SMSALERT_API_KEY = '5e0741771f08e'
-
+GOOGLE_CLIENT_ID = '517405395635-4tvq7b82kqpd97ba4ju6lk6gctdac1tk.apps.googleusercontent.com'
 
 SMSALERT_SENDER_ID = 1707162624534280862
