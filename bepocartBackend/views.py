@@ -594,14 +594,11 @@ class CustomerCartProducts(APIView):
                                 total_free_quantity += free_quantity
                             
                             if intersection_exists:
-                                print("pari")
-
                                 if discount_allowed_products:
                                     discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
                                     remaining_free_quantity = int(total_free_quantity //  2)
 
-                                    print(remaining_free_quantity)
                                     total_cart_value = total_sale_price
                                     total_discount = 0
 
@@ -637,7 +634,6 @@ class CustomerCartProducts(APIView):
                                     return Response(response_data, status=status.HTTP_200_OK)
 
                             else:
-                                print("kunna")
                                 total_free_quantity = 0
                                 for item in user_cart:
                                     if item.product.pk in matched_product_pks:
@@ -2270,9 +2266,15 @@ class CreateOrder(APIView):
 
                 # Add COD charge if payment method is COD
                 if payment_method == 'COD':
-                    cod_charge = Decimal('50.00')  # Example COD charge
+                    cod_charge = Decimal('40.00')  # Example COD charge
                     total_amount += cod_charge
 
+                # Apply shipping charge if total amount is less than or equal to 500
+                if total_amount <= Decimal('500.00'):
+                    shipping_charge = Decimal('60.00')
+                    total_amount += shipping_charge
+
+                # Update order total amount and save
                 order.total_amount = total_amount
                 order.save()
 
@@ -2287,11 +2289,15 @@ class CreateOrder(APIView):
                     order.payment_id = razorpay_order['id']
                     order.save()
 
+                # Delete cart items
                 cart_items.delete()
 
+                # Serialize the order and return success response
                 serializer = OrderSerializer(order)
                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+
         except Exception as e:
+            # Return error response if an exception occurs
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
