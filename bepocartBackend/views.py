@@ -1,10 +1,12 @@
 import razorpay
 from django.db.models import Sum
+import logging
 import jwt
 import requests
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 import random
+from datetime import datetime
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.http import JsonResponse
 from rest_framework import generics
@@ -52,7 +54,53 @@ class CustomerRegistration(APIView):
                 "message": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+def generate_otp(length=6):
+    """Generate a random OTP of specified length."""
+    digits = "0123456789"
+    otp = "".join(random.choice(digits) for i in range(length))
+    return otp
 
+class SendOTPAPIView(APIView):
+
+    def post(self, request):
+        phone_number = request.data.get('phone')
+
+        if not phone_number:
+            return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the user with the given phone number exists
+        try:
+            user = Customer.objects.filter(phone=phone_number).first()
+            if not user:
+                return Response({'error': 'User with this phone number does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': 'An error occurred while checking the user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Generate a random OTP
+        otp = generate_otp()
+
+        # API request to SMSAlert
+        url = "https://www.smsalert.co.in/api/user.json?apikey=5e0741771f08e"
+        payload = {
+            'apikey': '5e0741771f08e',  # Replace with your actual API key
+            'sender': '1707162747900008958',  # Replace with your sender ID
+            'mobileno': phone_number,
+            'text': f'Your OTP is {otp}'
+        }
+        try:
+            response = requests.post(url, data=payload)
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP due to an exception'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if response.status_code == 200:
+            return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': f'Failed to send OTP. Status code: {response.status_code}', 'details': response.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+logger = logging.getLogger(__name__)
 
 class GoogleLoginAPIView(APIView):
     def post(self, request):
@@ -64,28 +112,31 @@ class GoogleLoginAPIView(APIView):
         try:
             # Verify the token with Google's OAuth 2.0 API
             response = requests.get(f'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={token}')
+            
+            if response.status_code != 200:
+                return Response({'error': 'Failed to verify token with Google', 'details': response.json()}, status=status.HTTP_400_BAD_REQUEST)
+            
             id_info = response.json()
-
             if 'error' in id_info:
                 return Response({'error': id_info.get('error_description', 'Invalid token')}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Extract user information from the token
             user_email = id_info.get('email')
             user_first_name = id_info.get('given_name')
             user_image = id_info.get('picture')
 
-            # Check if the user exists in the database, and update or create the customer
+            if not user_email:
+                return Response({'error': 'Email is missing from token data'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update or create customer
             customer, created = Customer.objects.update_or_create(
+                email=user_email,
                 defaults={
                     'first_name': user_first_name,
-                    'image': user_image,
-                    'email': user_email
+                    'image': user_image
                 }
             )
 
             message = 'Customer created successfully' if created else 'Customer updated successfully'
-
-            # Create JWT token
             jwt_payload = {
                 'customer_id': customer.pk,
                 'email': customer.email,
@@ -108,54 +159,59 @@ class GoogleLoginAPIView(APIView):
 class CustomerLogin(APIView):
     def post(self, request):
         serializer = CustomerLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            email_or_phone = serializer.validated_data.get('email')
-            password = serializer.validated_data.get('password')
-
-            customer = Customer.objects.filter(Q(email=email_or_phone) | Q(phone=email_or_phone)).first()
-
-
-            if customer and customer.check_password(password):
-                # Generate JWT token
-                expiration_time = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-                user_token = {
-                    'id': customer.pk,
-                    'email': customer.email,
-                    'exp': expiration_time,
-                    'iat': datetime.utcnow()
-                }
-                token = jwt.encode(user_token, settings.SECRET_KEY, algorithm='HS256')
-
-                # Set JWT token in cookies
-                response = Response({
-                    "status": "success",
-                    "message": "Login successful",
-                    "token": token
-                }, status=status.HTTP_200_OK)
-                response.set_cookie(
-                    key='token',
-                    value=token,
-                    httponly=True,
-                    samesite='Lax',
-                    secure=settings.SECURE_COOKIE  # Ensure this matches your settings
-                )
-                coin_value = CoinValue.objects.first()  
-                if coin_value:
-                    coins_to_add = coin_value.login_value
-                    coin_record = Coin.objects.create(user=customer, amount=coins_to_add, source="Login")
-                    coin_record.save()
-                return response
-            else:
-                return Response({
-                    "status": "error",
-                    "message": "Invalid email or password"
-                }, status=status.HTTP_401_UNAUTHORIZED)
-        else:
+        
+        if not serializer.is_valid():
             return Response({
                 "status": "error",
                 "message": "Invalid data",
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        email_or_phone = serializer.validated_data.get('email')
+        password = serializer.validated_data.get('password')
+        
+        # Retrieve customer based on email or phone
+        customer = Customer.objects.filter(
+            Q(email=email_or_phone) | Q(phone=email_or_phone)
+        ).first()
+        
+        if not customer or not customer.check_password(password):
+            return Response({
+                "status": "error",
+                "message": "Invalid email or password"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Generate JWT token
+        expiration_time = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+        user_token = {
+            'id': customer.pk,
+            'email': customer.email,
+            'exp': expiration_time,
+            'iat': datetime.utcnow()
+        }
+        token = jwt.encode(user_token, settings.SECRET_KEY, algorithm='HS256')
+        
+        # Set JWT token in cookies
+        response = Response({
+            "status": "success",
+            "message": "Login successful",
+            "token": token
+        }, status=status.HTTP_200_OK)
+        response.set_cookie(
+            key='token',
+            value=token,
+            httponly=True,
+            samesite='Lax',
+            secure=settings.SECURE_COOKIE
+        )
+        
+        # Add coins to user account
+        coin_value = CoinValue.objects.first()
+        if coin_value:
+            coins_to_add = coin_value.login_value
+            Coin.objects.create(user=customer, amount=coins_to_add, source="Login")
+        
+        return response
 
 
 ################################################  HOME    #############################################
@@ -163,20 +219,24 @@ class CustomerLogin(APIView):
 
 class CategoryListView(APIView):
     def get(self, request):
-        queryset = Category.objects.all().order_by('id')
-        serializer = CategoryModelSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            queryset = Category.objects.all().order_by('id')
+            serializer = CategoryModelSerializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     
 class CategoryView(APIView):
     def get(self, request):
-        try :
-            categories = Category.objects.all()
-            serializer = CategoryModelSerializer(categories, many=True)
+
+        try:
+            categories = Category.objects.all()  
+            serializer = CategoryModelSerializer(categories, many=True) 
             return Response({
                 "status": "success",
                 "data": serializer.data
-            },status=status.HTTP_200_OK)
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({
@@ -266,18 +326,12 @@ from django.db import IntegrityError
 
 class CustomerAddProductInWishlist(APIView):
     def post(self, request, pk):
+        token = request.headers.get('Authorization')
+        if not token:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         try:
-            token = request.headers.get('Authorization')
-            if not token:
-                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            try:
-                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except jwt.ExpiredSignatureError:
-                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
-                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
-
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             user_id = user_token.get('id')
             if not user_id:
                 return Response({"message": "Invalid token userToken"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -292,16 +346,16 @@ class CustomerAddProductInWishlist(APIView):
             if not product:
                 return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
-           
             # Check if the product is already in the user's wishlist
             if Wishlist.objects.filter(user=user, product=product).exists():
                 return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
             
-             # Update or create the recently viewed product entry
-            recently_viewed, created = RecentlyViewedProduct.objects.get_or_create(user=user, product=product)
-            if not created:
-                recently_viewed.viewed_at = timezone.now()
-                recently_viewed.save()
+            # Update or create the recently viewed product entry
+            RecentlyViewedProduct.objects.update_or_create(
+                user=user,
+                product=product,
+                defaults={'viewed_at': timezone.now()}
+            )
 
             # Add the product to the wishlist
             wishlist_data = {'user': user.pk, 'product': product.pk}
@@ -309,9 +363,12 @@ class CustomerAddProductInWishlist(APIView):
             if wishlist_serializer.is_valid():
                 wishlist_serializer.save()
                 return Response({"message": "Product added to wishlist successfully"}, status=status.HTTP_201_CREATED)
-            else:
-                return Response({"message": "Unable to add product to wishlist", "errors": wishlist_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Unable to add product to wishlist", "errors": wishlist_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+            return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
         except IntegrityError:
             return Response({"message": "Product already exists in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -322,31 +379,35 @@ class CustomerAddProductInWishlist(APIView):
 
 class CustomerWishlist(APIView):
     def get(self, request):
+        token = request.headers.get('Authorization')
+        if not token:
+            return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         try:
-            token = request.headers.get('Authorization')
-            if not token:
-                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            try:
-                userToken = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except jwt.ExpiredSignatureError:
-                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
-                return Response({"message": "Invalid token: " + str(e)}, status=status.HTTP_401_UNAUTHORIZED)
-
-            user_id = userToken.get('id')
-
+            user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            user_id = user_token.get('id')
             if not user_id:
                 return Response({"message": "Invalid token userToken"}, status=status.HTTP_401_UNAUTHORIZED)
 
+            # Check if the user exists
             user = Customer.objects.filter(pk=user_id).first()
             if not user:
                 return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-                
-            wishlist = Wishlist.objects.filter(user=user.pk)
+
+            # Retrieve the user's wishlist
+            wishlist = Wishlist.objects.filter(user=user)
             serializer = WishlistSerializersView(wishlist, many=True)
-            return Response({"status":"User wishlist products","data":serializer.data},status=status.HTTP_200_OK)
-                
+
+            return Response({
+                "status": "success",
+                "message": "User wishlist products",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except jwt.ExpiredSignatureError:
+            return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+            return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -434,8 +495,6 @@ class CustomerProductInCart(APIView):
             return None
 
 
-
-from datetime import datetime
 class CustomerCartProducts(APIView):
     def get(self, request):
         try:
@@ -803,6 +862,8 @@ class CustomerCartProducts(APIView):
                 
             subtotal = total_discounted_price + shipping_fee
             discount_offer = total_price - total_discounted_price
+
+            
 
             response_data = {
                 "status": "User cart products",
@@ -1684,13 +1745,21 @@ class CreateOrder(APIView):
                                         'payment_capture': 1
                                     })
 
-                                    order.payment_id = razorpay_order['id']
+                                    razorpay_order_id = razorpay_order['id']
+
+                                    # Retrieve the payment ID from the request (if necessary)
+                                    razorpay_payment_id = request.data.get('payment_id')
+
+
+                                    order.payment_id = razorpay_payment_id  
+                                    order.order_id = razorpay_order_id  
                                     order.save()
+
 
                                 cart_items.delete()
                                 serializer = OrderSerializer(order)
                                 email_subject = 'New Order Created'
-                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
                                 email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                 email.content_subtype = 'html'  # Set the content type to HTML
                                 email.send()
@@ -1835,14 +1904,22 @@ class CreateOrder(APIView):
                                         'payment_capture': 1
                                     })
 
-                                    order.payment_id = razorpay_order['id']
+                                    razorpay_order_id = razorpay_order['id']
+
+                                    # Retrieve the payment ID from the request (if necessary)
+                                    razorpay_payment_id = request.data.get('payment_id')
+
+
+                                    order.payment_id = razorpay_payment_id  
+                                    order.order_id = razorpay_order_id  
                                     order.save()
+
 
                                 cart_items.delete()
                                 serializer = OrderSerializer(order)
 
                                 email_subject = 'New Order Created'
-                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
                                 email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                 email.content_subtype = 'html'  # Set the content type to HTML
                                 email.send()
@@ -1856,9 +1933,7 @@ class CreateOrder(APIView):
 
             else:
                 try :
-                    # if not (matched_product_pks and allowed_discount_products):
-                    #     return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
-
+                   
                     if offer.offer_type == "BUY" and offer.method == "FREE":
                         buy = offer.get_option
                         get = offer.get_value
@@ -2048,14 +2123,22 @@ class CreateOrder(APIView):
                                                 'payment_capture': 1
                                             })
 
-                                            order.payment_id = razorpay_order['id']
+                                            razorpay_order_id = razorpay_order['id']
+
+                                            # Retrieve the payment ID from the request (if necessary)
+                                            razorpay_payment_id = request.data.get('payment_id')
+
+
+                                            order.payment_id = razorpay_payment_id  
+                                            order.order_id = razorpay_order_id  
                                             order.save()
+
                                     
                                         cart_items.delete()
 
                                         serializer = OrderSerializer(order)
                                         email_subject = 'New Order Created'
-                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
                                         email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                         email.content_subtype = 'html'  # Set the content type to HTML
                                         email.send()
@@ -2241,14 +2324,21 @@ class CreateOrder(APIView):
                                                 'currency': 'INR',
                                                 'payment_capture': 1  # Auto capture payment
                                             })
-                                            order.payment_id = razorpay_order['id']
+                                            razorpay_order_id = razorpay_order['id']
+
+                                            # Retrieve the payment ID from the request (if necessary)
+                                            razorpay_payment_id = request.data.get('payment_id')
+
+
+                                            order.payment_id = razorpay_payment_id  
+                                            order.order_id = razorpay_order_id  
                                             order.save()
 
                                         cart_items.delete()
 
                                         serializer = OrderSerializer(order)
                                         email_subject = 'New Order Created'
-                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':user_cart})
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
                                         email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                         email.content_subtype = 'html'  # Set the content type to HTML
                                         email.send()
@@ -2346,7 +2436,15 @@ class CreateOrder(APIView):
                         total_amount -= coupon.discount
 
 
+                cart_items_list = [
+                {
+                    'product_name': item.product.name,
+                    'quantity': item.quantity,
+                    'price': item.product.salePrice
+                }
+                for item in cart_items
 
+            ]
                 # Add COD charge if payment method is COD
                 if payment_method == 'COD':
                     cod_charge = Decimal('40.00')  # Example COD charge
@@ -2369,9 +2467,17 @@ class CreateOrder(APIView):
                         'currency': 'INR',
                         'payment_capture': 1  # Auto capture payment
                     })
-                    order.payment_id = razorpay_order['id']
-                    order.save()
+                    
+                    razorpay_order_id = razorpay_order['id']
 
+                    # Retrieve the payment ID from the request (if necessary)
+                    razorpay_payment_id = request.data.get('payment_id')
+
+
+                    order.payment_id = razorpay_payment_id  
+                    order.order_id = razorpay_order_id  
+
+                order.save()
                 # Delete cart items
                 cart_items.delete()
 
@@ -2379,7 +2485,11 @@ class CreateOrder(APIView):
                 serializer = OrderSerializer(order)
 
                 email_subject = 'New Order Created'
+
                 email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
+
+                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items_list})
+
                 email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                 email.content_subtype = 'html'  # Set the content type to HTML
                 email.send()

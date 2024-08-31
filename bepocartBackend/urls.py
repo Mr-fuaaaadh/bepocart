@@ -61,13 +61,8 @@ urlpatterns = [
 
     path('offers/', DiscountSaleProducts.as_view(), name='discount-sale'),
     path('best-sale/', BestSellerProductsAPIView.as_view(), name='flash-sale'),
-    # path('offers/', FIftypercontageProducts.as_view(), name='offers'),
-    # path('buy-1-get-1/', BuyOneGetOneOffer.as_view(), name='BuyOneGetOneOffer'),
-    # path('buy-1-get-1-free/', BuyOneGetOneOfferFree.as_view(), name='BuyOneGetOneOffer'),
-    # path('buy-2-get-1/', BuyToGetOne.as_view(), name='BuyToGetOne'),
-
-
-    # path('product-images/<int:pk>/', ProducViewWithMultipleImage.as_view(), name='ProductSerializerWithMultipleImage'),
+    
+    path('send-otp/', SendOTPAPIView.as_view(), name='send-otp'),
 
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
     path('order-items/<int:pk>/', CustomerOrderItems.as_view(), name='CustomerOrderItems'),
