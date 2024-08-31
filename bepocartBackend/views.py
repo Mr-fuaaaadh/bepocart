@@ -2455,19 +2455,11 @@ class CreateOrder(APIView):
                         total_amount -= coupon.discount
 
 
-
-
-                # Add COD charge if payment method is COD
                 if payment_method == 'COD':
                     cod_charge = Decimal('40.00')  # Example COD charge
                     total_amount += cod_charge
-
-
-                # Update order total amount and save
-                order.total_amount = total_amount
-
-                # If payment method is razorpay, create a razorpay order
-                if payment_method == 'razorpay':
+                
+                elif payment_method == 'razorpay':
                     razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                     razorpay_order = razorpay_client.order.create({
                         'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
@@ -2489,6 +2481,7 @@ class CreateOrder(APIView):
                             payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
                             
                             if payment_capture_response['status'] == 'captured':
+				order.total_amount = total_amount
                                 order.save()
                             else:
                                 return Response({"Payment capture failed": payment_capture_response})
@@ -2496,7 +2489,9 @@ class CreateOrder(APIView):
                             return Response({"Error capturing payment": e})
                     else:
                         return  Response("Payment ID is missing. Cannot capture payment.")
-
+                # Save the order with updated total amount
+                order.total_amount = total_amount
+                order.save()
                 cart_items.delete()
                 serializer = OrderSerializer(order)
                 email_subject = 'New Order Created'
