@@ -131,9 +131,9 @@
                 </tr>
                 {% for item in user_cart %}
                 <tr>
-                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.product_name }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>₹{{ item.product.salePrice }}</td>
+                    <td>₹{{ item.price }}</td>
                     <td><img src="{{ item.product.image }}" alt="{{ item.product.name }}"></td>
                 </tr>
                 {% endfor %}
