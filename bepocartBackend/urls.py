@@ -4,6 +4,7 @@ from bepocartBackend.views import *
 
 urlpatterns = [
     path('register/',CustomerRegistration.as_view(), name="customer-register"),
+    path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
     path('login/',CustomerLogin.as_view(), name="customer-login"),
     path('category/',CategoryView.as_view(), name="category"),
     path('subcategorys/',AllSubCategoryView.as_view(), name="AllSubCategoryView"),
@@ -15,9 +16,6 @@ urlpatterns = [
 
 
     path('categories/', CategoryListView.as_view(), name='category-list'),
-
-
-
 
     path('wishlist/',CustomerWishlist.as_view(), name="CustomerWishlist"),
     path('add-wishlist/<int:pk>/',CustomerAddProductInWishlist.as_view(), name="Customer-add-Wishlist"),

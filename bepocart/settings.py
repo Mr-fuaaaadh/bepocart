@@ -237,15 +237,20 @@ EMAIL_USE_SSL = True  # Use SSL for SMTP
 EMAIL_HOST_USER = 'contact@bepocart.com'
 EMAIL_HOST_PASSWORD = 'haripriyaks@.com'
 
+ADMIN_EMAIL = 'contact@bepocart.com'
 
-RAZORPAY_KEY_ID = 'rzp_test_QUfWalFEmI7V4R'
-RAZORPAY_KEY_SECRET = 'H089Oz6KsmPix8So34s3VeAm'
+RAZORPAY_KEY_ID = 'rzp_live_ZfYGbj0N5IPOBi'
+RAZORPAY_KEY_SECRET = 'yu4HOaS7tK7zdmyHzK193K6w'
 
 
 SMSALERT_API_KEY = '5e0741771f08e'
 
+
 AWS_ACCESS_KEY_ID = 'AKIAQE3ROOKIXKPTB4F4'
 AWS_SECRET_ACCESS_KEY = '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'
+
+GOOGLE_CLIENT_ID = '517405395635-4tvq7b82kqpd97ba4ju6lk6gctdac1tk.apps.googleusercontent.com'
+
 
 AWS_STORAGE_BUCKET_NAME = 'bepocart-bkt-1'
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'

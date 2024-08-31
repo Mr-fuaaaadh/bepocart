@@ -14,7 +14,7 @@ class Customer(models.Model):
     image = models.ImageField(max_length=100, upload_to='UserProfile',null=True)
     place = models.CharField(max_length=100, null=True,blank=False)
     zip_code = models.CharField(max_length=6,null=True,blank=False)
-    password = models.CharField(max_length=100)
+    password = models.CharField(max_length=100,null=True)
 
     def save(self, *args, **kwargs):
         if not self.pk or 'password' in kwargs:  
@@ -166,7 +166,7 @@ class Review(models.Model):
     product = models.ForeignKey('bepocartAdmin.Product', on_delete=models.CASCADE)
     rating = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])
     review_text = models.TextField()
-    status = models.CharField(default="Pending",null=True)
+    status = models.CharField(default="Processing",null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
