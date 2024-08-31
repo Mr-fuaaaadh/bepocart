@@ -76,7 +76,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 APPEND_SLASH = False
-5
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_COOKIE = True
@@ -165,17 +165,6 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
-# DATABASES = {
-#     'default':  {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'bepocart',
-#         'USER': 'postgres',
-#         'PASSWORD': '252562',
-#         'HOST': 'localhost',
-#         'PORT': '5432'    
-#     }
-# }
-
 DATABASES = {
      'default': {
          'ENGINE': 'django.db.backends.postgresql',
@@ -186,6 +175,17 @@ DATABASES = {
          'PORT': '5432'
      }
  }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '9645848527',
+#         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+#         'PORT': '5432'
+#     }
+# }
 
 
 # Password validation

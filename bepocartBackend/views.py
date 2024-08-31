@@ -2425,16 +2425,7 @@ class CreateOrder(APIView):
 
                     total_amount += item.product.salePrice * item.quantity
 
-                # Apply the coupon if present
-                if coupon:
-                    if coupon.coupon_type == 'percentage':
-
-                        discount_amount = (coupon.discount / 100) * total_amount
-                        total_amount -= discount_amount
-                        order.coupon = coupon
-                    else :
-                        total_amount -= coupon.discount
-
+               
 
                 cart_items_list = [
                 {
@@ -2445,19 +2436,35 @@ class CreateOrder(APIView):
                 for item in cart_items
 
             ]
-                # Add COD charge if payment method is COD
-                if payment_method == 'COD':
-                    cod_charge = Decimal('40.00')  # Example COD charge
-                    total_amount += cod_charge
+                
 
                 # Apply shipping charge if total amount is less than or equal to 500
                 if total_amount <= Decimal('500.00'):
                     shipping_charge = Decimal('60.00')
                     total_amount += shipping_charge
 
+
+
+                 # Apply the coupon if present
+                if coupon:
+                    if coupon.coupon_type == 'percentage':
+                        discount_amount = (coupon.discount / 100) * total_amount
+                        total_amount -= discount_amount
+                        order.coupon = coupon
+                    else :
+                        total_amount -= coupon.discount
+
+
+
+
+                # Add COD charge if payment method is COD
+                if payment_method == 'COD':
+                    cod_charge = Decimal('40.00')  # Example COD charge
+                    total_amount += cod_charge
+
+
                 # Update order total amount and save
                 order.total_amount = total_amount
-                order.save()
 
                 # If payment method is razorpay, create a razorpay order
                 if payment_method == 'razorpay':
