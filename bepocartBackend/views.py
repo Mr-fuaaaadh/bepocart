@@ -2470,20 +2470,28 @@ class CreateOrder(APIView):
                     
                     razorpay_order_id = razorpay_order['id']
 
-                    # Retrieve the payment ID from the request (if necessary)
                     razorpay_payment_id = request.data.get('payment_id')
 
-
                     order.payment_id = razorpay_payment_id  
-                    order.order_id = razorpay_order_id  
+                    order.order_id = razorpay_order_id 
 
-                order.save()
-                # Delete cart items
+                   # Capture the payment manually if needed
+                    if razorpay_payment_id:
+                        try:
+                            # Attempt to capture the payment
+                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+                            
+                            if payment_capture_response['status'] == 'captured':
+                                order.save()
+                            else:
+                                return Response({"Payment capture failed": payment_capture_response})
+                        except Exception as e:
+                            return Response({"Error capturing payment": e})
+                    else:
+                        return  Response("Payment ID is missing. Cannot capture payment.")
+
                 cart_items.delete()
-
-                # Serialize the order and return success response
                 serializer = OrderSerializer(order)
-
                 email_subject = 'New Order Created'
 
                 email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
@@ -2491,7 +2499,7 @@ class CreateOrder(APIView):
                 email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items_list})
 
                 email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                email.content_subtype = 'html'  # Set the content type to HTML
+                email.content_subtype = 'html' 
                 email.send()
                 return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
