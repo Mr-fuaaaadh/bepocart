@@ -2497,7 +2497,7 @@ class CreateOrder(APIView):
                     except Exception as e:
                         return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                # Save the order with updated total amount
+                # Save the order with updated total amountsfbsdjhfsdjhgfsd
                 order.total_amount = total_amount
                 order.save()
                 cart_items.delete()
