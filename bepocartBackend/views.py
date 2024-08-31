@@ -1,5 +1,4 @@
 import razorpay
-from django.db.models import Sum
 import logging
 import jwt
 import requests
@@ -229,7 +228,6 @@ class CategoryListView(APIView):
     
 class CategoryView(APIView):
     def get(self, request):
-
         try:
             categories = Category.objects.all()  
             serializer = CategoryModelSerializer(categories, many=True) 
@@ -713,6 +711,7 @@ class CustomerCartProducts(APIView):
                                 total_free_quantity += free_quantity
                             
                             if intersection_exists:
+
                                 if discount_allowed_products:
                                     discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
@@ -1745,7 +1744,7 @@ class CreateOrder(APIView):
                                         'payment_capture': 1
                                     })
 
-                                    razorpay_order_id = razorpay_order['id']
+                                    razorpay_order_id = razorpay_order.get('id')
 
                                     # Retrieve the payment ID from the request (if necessary)
                                     razorpay_payment_id = request.data.get('payment_id')
@@ -1904,7 +1903,7 @@ class CreateOrder(APIView):
                                         'payment_capture': 1
                                     })
 
-                                    razorpay_order_id = razorpay_order['id']
+                                    razorpay_order_id = razorpay_order.get('id')
 
                                     # Retrieve the payment ID from the request (if necessary)
                                     razorpay_payment_id = request.data.get('payment_id')
@@ -2123,7 +2122,7 @@ class CreateOrder(APIView):
                                                 'payment_capture': 1
                                             })
 
-                                            razorpay_order_id = razorpay_order['id']
+                                            razorpay_order_id = razorpay_order.get('id')
 
                                             # Retrieve the payment ID from the request (if necessary)
                                             razorpay_payment_id = request.data.get('payment_id')
@@ -2324,7 +2323,7 @@ class CreateOrder(APIView):
                                                 'currency': 'INR',
                                                 'payment_capture': 1  # Auto capture payment
                                             })
-                                            razorpay_order_id = razorpay_order['id']
+                                            razorpay_order_id = razorpay_order.get('id')
 
                                             # Retrieve the payment ID from the request (if necessary)
                                             razorpay_payment_id = request.data.get('payment_id')
@@ -2435,7 +2434,7 @@ class CreateOrder(APIView):
                 }
                 for item in cart_items
 
-            	]
+            ]
                 
 
                 # Apply shipping charge if total amount is less than or equal to 500
@@ -2455,52 +2454,53 @@ class CreateOrder(APIView):
                         total_amount -= coupon.discount
 
 
+
+
+                # Add COD charge if payment method is COD
                 if payment_method == 'COD':
                     cod_charge = Decimal('40.00')  # Example COD charge
                     total_amount += cod_charge
-                
-		elif payment_method == 'razorpay':
-                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                    try:
-                        # Create Razorpay Order
-                        razorpay_order = razorpay_client.order.create({
-                            'amount': int(total_amount * 100),  # Amount in paisa
-                            'currency': 'INR',
-                            'payment_capture': 1  # Auto capture payment
-                        })
-                        
-                        razorpay_order_id = razorpay_order['id']
-                        razorpay_payment_id = request.data.get('payment_id')
-                        
-                        # Set order attributes
-                        order.payment_id = razorpay_payment_id
-                        order.order_id = razorpay_order_id
-                        
-                        # Capture the payment if payment_id is provided
-                        if razorpay_payment_id:
-                            try:
-                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
-                                
-                                if payment_capture_response['status'] == 'captured':
-                                    order.total_amount = total_amount
-                                    order.save()
-                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                else:
-                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-                            except Exception as e:
-                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                        else:
-                            return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-                    except Exception as e:
-                        return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                # Save the order with updated total amount
+
+
+                # Update order total amount and save
                 order.total_amount = total_amount
-                order.save()
+
+                # If payment method is razorpay, create a razorpay order
+                if payment_method == 'razorpay':
+                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                    razorpay_order = razorpay_client.order.create({
+                        'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
+                        'currency': 'INR',
+                        'payment_capture': 1  # Auto capture payment
+                    })
+                    
+                    razorpay_order_id = razorpay_order['id']
+
+                    razorpay_payment_id = request.data.get('payment_id')
+
+                    order.payment_id = razorpay_payment_id  
+                    order.order_id = razorpay_order_id 
+
+                    # Capture the payment manually if needed
+                    if razorpay_payment_id:
+                        try:
+                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+                            
+                            if payment_capture_response['status'] == 'captured':
+                                order.total_amount = total_amount
+                                order.save()
+                                return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                            else:
+                                return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+                        except Exception as e:
+                            return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    else:
+                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
+
                 cart_items.delete()
                 serializer = OrderSerializer(order)
                 email_subject = 'New Order Created'
                 email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items_list})
-
                 email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                 email.content_subtype = 'html' 
                 email.send()
