@@ -2453,49 +2453,53 @@ class CreateOrder(APIView):
                     else :
                         total_amount -= coupon.discount
 
+                    
 
 
 
-                # Add COD charge if payment method is COD
+
                 if payment_method == 'COD':
                     cod_charge = Decimal('40.00')  # Example COD charge
                     total_amount += cod_charge
-
-
-                # Update order total amount and save
-                order.total_amount = total_amount
-
-                # If payment method is razorpay, create a razorpay order
-                if payment_method == 'razorpay':
+                
+                elif payment_method == 'razorpay':
                     razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                    razorpay_order = razorpay_client.order.create({
-                        'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
-                        'currency': 'INR',
-                        'payment_capture': 1  # Auto capture payment
-                    })
-                    
-                    razorpay_order_id = razorpay_order['id']
+                    try:
+                        # Create Razorpay Order
+                        razorpay_order = razorpay_client.order.create({
+                            'amount': int(total_amount * 100),  # Amount in paisa
+                            'currency': 'INR',
+                            'payment_capture': 1  # Auto capture payment
+                        })
+                        
+                        razorpay_order_id = razorpay_order['id']
+                        razorpay_payment_id = request.data.get('payment_id')
+                        
+                        # Set order attributes
+                        order.payment_id = razorpay_payment_id
+                        order.order_id = razorpay_order_id
+                        
+                        # Capture the payment if payment_id is provided
+                        if razorpay_payment_id:
+                            try:
+                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+                                
+                                if payment_capture_response['status'] == 'captured':
+                                    order.total_amount = total_amount
+                                    order.save()
+                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                else:
+                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+                            except Exception as e:
+                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        else:
+                            return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
+                    except Exception as e:
+                        return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                    razorpay_payment_id = request.data.get('payment_id')
-
-                    order.payment_id = razorpay_payment_id  
-                    order.order_id = razorpay_order_id 
-
-                    # Capture the payment manually if needed
-                    if razorpay_payment_id:
-                        try:
-                            # Attempt to capture the payment
-                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
-                            
-                            if payment_capture_response['status'] == 'captured':
-                                order.save()
-                            else:
-                                return Response({"Payment capture failed": payment_capture_response})
-                        except Exception as e:
-                            return Response({"Error capturing payment": e})
-                    else:
-                        return  Response("Payment ID is missing. Cannot capture payment.")
-
+                # Save the order with updated total amount
+                order.total_amount = total_amount
+                order.save()
                 cart_items.delete()
                 serializer = OrderSerializer(order)
                 email_subject = 'New Order Created'
