@@ -2481,7 +2481,6 @@ class CreateOrder(APIView):
                     order.payment_id = razorpay_payment_id  
                     order.order_id = razorpay_order_id 
 
-                    # Capture the payment manually if needed
                     if razorpay_payment_id:
                         try:
                             payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
