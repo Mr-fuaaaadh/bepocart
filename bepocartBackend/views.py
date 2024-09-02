@@ -30,6 +30,8 @@ from django.db import transaction
 from decimal import Decimal
 from requests.exceptions import RequestException
 
+logger = logging.getLogger(__name__)
+
 class CustomerRegistration(APIView):
     def post(self, request):
         try:
@@ -2445,7 +2447,6 @@ class CreateOrder(APIView):
                     if total_amount <= Decimal('500.00'):
                         shipping_charge = Decimal('60.00')
                         total_amount += shipping_charge
-              
 
                     # Apply the coupon if present
                     if coupon:
@@ -2462,7 +2463,7 @@ class CreateOrder(APIView):
 
                             total_amount -= discount_amount
                             order.coupon = coupon
-        
+
                         except Exception as e:
                             return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -2528,6 +2529,7 @@ class CreateOrder(APIView):
 
 
         except Exception as e:
+            logging.error(f"Unexpected error: {e}")
             # Return error response if an exception occurs
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
