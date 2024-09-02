@@ -126,7 +126,7 @@ class Order(models.Model):
     coupon = models.ForeignKey('Coupon', on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=20, null=True)
     payment_id = models.CharField(max_length=100, null=True)
-    order_id = models.CharField(max_length=255,  null=True)
+    razorpay_order_id = models.CharField(max_length=255,  null=True)
     free_quantity = models.PositiveBigIntegerField(default=0, null=True)
     
     

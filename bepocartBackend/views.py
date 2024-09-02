@@ -2445,7 +2445,7 @@ class CreateOrder(APIView):
                     if total_amount <= Decimal('500.00'):
                         shipping_charge = Decimal('60.00')
                         total_amount += shipping_charge
-                        print(f"Total Amount after adding shipping charge: {total_amount}")
+              
 
                     # Apply the coupon if present
                     if coupon:
@@ -2462,7 +2462,7 @@ class CreateOrder(APIView):
 
                             total_amount -= discount_amount
                             order.coupon = coupon
-                            print(f"Total Amount after applying coupon: {total_amount}")
+        
                         except Exception as e:
                             return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -2470,7 +2470,6 @@ class CreateOrder(APIView):
                     if payment_method == 'COD':
                         cod_charge = Decimal('40.00')
                         total_amount += cod_charge
-                        print(f"Total Amount after adding COD charge: {total_amount}")
 
                     # If payment method is Razorpay, create a Razorpay order
                     elif payment_method == 'razorpay':
@@ -2492,7 +2491,7 @@ class CreateOrder(APIView):
 
                                 if payment_capture_response['status'] == 'captured':
                                     order.payment_id = razorpay_payment_id
-                                    order.order_id = razorpay_order_id
+                                    order.razorpay_order_id = razorpay_order_id
                                     order.save()
                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                 else:
@@ -2529,7 +2528,6 @@ class CreateOrder(APIView):
 
 
         except Exception as e:
-            print(e)
             # Return error response if an exception occurs
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
