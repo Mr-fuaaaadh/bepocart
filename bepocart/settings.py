@@ -34,7 +34,7 @@ CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
 APPEND_SLASH = False
 
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
 
 CORS_ALLOW_HEADERS = [
     'content-type',
