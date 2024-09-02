@@ -2532,6 +2532,7 @@ class CreateOrder(APIView):
 
 
         except Exception as e:
+            # Return error response if an exception occurs
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
