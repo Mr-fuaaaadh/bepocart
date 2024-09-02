@@ -2462,7 +2462,6 @@ class CreateOrder(APIView):
                             total_amount -= discount_amount
                             order.coupon = coupon
                         except Exception as e:
-                            logging.error(f"Error applying coupon: {e}")
                             return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                     # Add COD charge if payment method is COD
@@ -2496,10 +2495,8 @@ class CreateOrder(APIView):
                                 else:
                                     return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
                             except Exception as e:
-                                logging.error(f"Payment capture error: {e}")
                                 return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         except Exception as e:
-                            logging.error(f"Razorpay order creation error: {e}")
                             return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                     # Save the order and update the total amount
@@ -2516,18 +2513,15 @@ class CreateOrder(APIView):
                             email.content_subtype = 'html'
                             email.send()
                         except Exception as email_error:
-                            logging.error(f"Error sending email: {email_error}")
                             return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
 
                         # Return success response
                         serializer = OrderSerializer(order)
                         return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
                     except Exception as e:
-                        logging.error(f"Error saving order: {e}")
                         return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 except Exception as e:
-                    logging.error(f"Unexpected error: {e}")
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
