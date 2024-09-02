@@ -2434,76 +2434,83 @@ class CreateOrder(APIView):
                 }
                 for item in cart_items
 
-            ]
+                ]
                 
 
                 # Apply shipping charge if total amount is less than or equal to 500
-                if total_amount <= Decimal('500.00'):
-                    shipping_charge = Decimal('60.00')
-                    total_amount += shipping_charge
+                try:
+                    # Initial check for total amount and apply shipping charge if applicable
+                    if total_amount <= Decimal('500.00'):
+                        shipping_charge = Decimal('60.00')
+                        total_amount += shipping_charge
+                        print(f"Total Amount after shipping charge: {total_amount}")
 
+                    # Apply the coupon if present
+                    if coupon:
+                        if coupon.coupon_type == 'percentage':
+                            discount_amount = (coupon.discount / 100) * total_amount
+                            total_amount -= discount_amount
+                        else:
+                            total_amount -= coupon.discount
 
-
-                 # Apply the coupon if present
-                if coupon:
-                    if coupon.coupon_type == 'percentage':
-                        discount_amount = (coupon.discount / 100) * total_amount
-                        total_amount -= discount_amount
                         order.coupon = coupon
-                    else :
-                        total_amount -= coupon.discount
+                        print(f"Total Amount after applying coupon: {total_amount}")
 
+                    # Add COD charge if payment method is COD
+                    if payment_method == 'COD':
+                        cod_charge = Decimal('40.00')
+                        total_amount += cod_charge
+                        print(f"Total Amount after adding COD charge: {total_amount}")
 
+                    # Update order total amount
+                    order.total_amount = total_amount
 
+                    # If payment method is Razorpay, create a Razorpay order
+                    if payment_method == 'razorpay':
+                        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                        razorpay_order = razorpay_client.order.create({
+                            'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
+                            'currency': 'INR',
+                            'payment_capture': 1  # Auto capture payment
+                        })
+                        
+                        razorpay_order_id = razorpay_order['id']
+                        razorpay_payment_id = request.data.get('payment_id')
 
-                # Add COD charge if payment method is COD
-                if payment_method == 'COD':
-                    cod_charge = Decimal('40.00')  # Example COD charge
-                    total_amount += cod_charge
+                        order.payment_id = razorpay_payment_id  
+                        order.order_id = razorpay_order_id 
 
+                        if razorpay_payment_id:
+                            try:
+                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+                                
+                                if payment_capture_response['status'] == 'captured':
+                                    order.save()  # Save the order after payment capture
+                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                else:
+                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+                            except Exception as e:
+                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        else:
+                            return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Update order total amount and save
-                order.total_amount = total_amount
+                    # Save the order and send the confirmation email
+                    order.save()
 
-                # If payment method is razorpay, create a razorpay order
-                if payment_method == 'razorpay':
-                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                    razorpay_order = razorpay_client.order.create({
-                        'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
-                        'currency': 'INR',
-                        'payment_capture': 1  # Auto capture payment
-                    })
-                    
-                    razorpay_order_id = razorpay_order['id']
+                    # Send order creation email
+                    cart_items.delete()  # Clear the cart items after order creation
+                    serializer = OrderSerializer(order)
+                    email_subject = 'New Order Created'
+                    email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                    email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                    email.content_subtype = 'html' 
+                    email.send()
 
-                    razorpay_payment_id = request.data.get('payment_id')
+                    return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
-                    order.payment_id = razorpay_payment_id  
-                    order.order_id = razorpay_order_id 
-
-                    if razorpay_payment_id:
-                        try:
-                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
-                            
-                            if payment_capture_response['status'] == 'captured':
-                                order.total_amount = total_amount
-                                order.save()
-                                return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                            else:
-                                return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-                        except Exception as e:
-                            return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                    else:
-                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                cart_items.delete()
-                serializer = OrderSerializer(order)
-                email_subject = 'New Order Created'
-                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items_list})
-                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                email.content_subtype = 'html' 
-                email.send()
-                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                except Exception as e:
+                    # Return error response if an exception occurs
+                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
             # Return error response if an exception occurs
