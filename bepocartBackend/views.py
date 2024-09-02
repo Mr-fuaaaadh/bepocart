@@ -2493,7 +2493,7 @@ class CreateOrder(APIView):
 
                                 if payment_capture_response['status'] == 'captured':
                                     order.payment_id = razorpay_payment_id
-                                    order.order_id = razorpay_order_id
+                                    order.razorpay_order_id = razorpay_order_id
                                     order.save()
                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                 else:
