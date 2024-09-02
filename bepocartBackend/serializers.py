@@ -280,11 +280,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
-
-    id = serializers.CharField(source='order_id')
     class Meta:
         model = Order
-        fields = ['customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id",'id']
+        fields = ['id','customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id",'order_id']
 
     def create(self, validated_data):
         # Create the order
