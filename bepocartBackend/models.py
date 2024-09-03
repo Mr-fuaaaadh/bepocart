@@ -115,7 +115,7 @@ class Coupon(models.Model):
         return new_total, True
     
 class Order(models.Model):
-    order_id = models.CharField(max_length=20, null=True, unique=True, editable=False)
+    order_id = models.CharField(max_length=50, null=True, unique=True, editable=False)
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
     created_at = models.DateField(auto_now_add=True)
     created_time = models.TimeField(blank=True, null=True)
@@ -124,9 +124,9 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     address = models.ForeignKey('Address', on_delete=models.CASCADE)
     coupon = models.ForeignKey('Coupon', on_delete=models.CASCADE, null=True)
-    payment_method = models.CharField(max_length=20, null=True)
+    payment_method = models.CharField(max_length=50, null=True)
     payment_id = models.CharField(max_length=100, null=True)
-    razorpay_order_id = models.CharField(max_length=255,  null=True)
+    razorpay_order_id = models.CharField(max_length=500,  null=True)
     free_quantity = models.PositiveBigIntegerField(default=0, null=True)
     
     
