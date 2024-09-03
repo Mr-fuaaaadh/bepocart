@@ -855,7 +855,7 @@ class CustomerCartProducts(APIView):
                 total_discounted_price += sale_price * quantity
 
             if total_discounted_price <= 500:
-                shipping_fee = 60
+                shipping_fee = 0
             else:
                 shipping_fee = 0
                 
@@ -1687,83 +1687,136 @@ class CreateOrder(APIView):
 
                                     if item.product.type == "single":
                                         check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                                        if check_color is None:
+                                        if check_color is None :
                                             return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                                        for stock in check_color:
+                                        for stock in check_color :
                                             if stock.stock >= item.quantity:
                                                 stock.stock -= item.quantity
                                                 stock.save()
-                                    else:
+
+                                    else :
                                         product_variants = ProductVariant.objects.filter(product=item.product, color=item.color)
+
                                         if not product_variants.exists():
                                             return Response({"message": f"No variants found for {item.product.name} - {item.color}"}, status=status.HTTP_404_NOT_FOUND)
 
                                         for variant in product_variants:
+                                            # Filter the size stocks related to the current variant
                                             size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
+                                            
                                             for stock in size_stocks:
                                                 if stock.stock >= item.quantity:
+                                                    # Update stock
                                                     stock.stock -= item.quantity
                                                     stock.save()
-                                                    break
+                                                    break  # Break out of the inner loop if stock is updated
                                                 else:
                                                     return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
-                                # Apply the coupon if present
-                                if coupon:
-                                    if coupon.coupon_type == 'Percentage':
-                                        discount_amount = (coupon.discount / 100) * total_sale_price
-                                        total_sale_price -= discount_amount
-                                        order.coupon = coupon
-                                    else:
-                                        total_sale_price -= coupon.discount
-                                        order.coupon = coupon
 
-                                if payment_method == 'COD':
-                                    cod_charge = Decimal('40.00')
-                                    total_sale_price += cod_charge
+                                cart_items_list = [
+                                {
+                                    'product_name': item.product.name,
+                                    'quantity': item.quantity,
+                                    'price': item.product.salePrice
+                                }
+                                for item in cart_items
 
+                                ]
 
-                                # Calculate shipping fee based on total sale price
-                                if total_sale_price <= 500:
-                                    shipping_fee = Decimal('60.00')
-                                else:
-                                    shipping_fee = Decimal('0.00')
+                                try:
+                                    # Initial check for total amount and apply shipping charge if applicable
+                                    if total_sale_price is None or not isinstance(total_sale_price, Decimal):
+                                        return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                total_sale_price += shipping_fee
+                                    if total_sale_price <= Decimal('500.00'):
+                                        shipping_charge = Decimal('60.00')
+                                        total_sale_price += shipping_charge
 
-                                # Update the total amount in the order
-                                order.total_amount = total_sale_price
-                                order.save()
+                                    # Apply the coupon if present
+                                    # if coupon:
+                                    #     try:
+                                    #         if coupon.coupon_type == 'Percentage':
+                                    #             discount_amount = (coupon.discount / 100) * total_sale_price
+                                    #         elif coupon.coupon_type == 'Fixed Amount':
+                                    #             discount_amount = coupon.discount
+                                    #         else:
+                                    #             return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                # If payment method is razorpay, create a razorpay order
-                                if payment_method == 'razorpay':
-                                    razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                    razorpay_order = razorpay_client.order.create({
-                                        'amount': int(order.total_amount * 100),
-                                        'currency': 'INR',
-                                        'payment_capture': 1
-                                    })
+                                    #         if discount_amount > total_sale_price:
+                                    #             return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                    razorpay_order_id = razorpay_order.get('id')
+                                    #         total_sale_price -= discount_amount
+                                    #         order.coupon = coupon
+                                    #     except Exception as e:
+                                    #         logging.error(f"Error applying coupon: {e}")
+                                    #         return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                    # Retrieve the payment ID from the request (if necessary)
-                                    razorpay_payment_id = request.data.get('payment_id')
+                                    # Add COD charge if payment method is COD
+                                    if payment_method == 'COD':
+                                        cod_charge = Decimal('40.00')
+                                        total_sale_price += cod_charge
 
+                                    # If payment method is Razorpay, create a Razorpay order
+                                    elif payment_method == 'razorpay':
+                                        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                        try:
+                                            razorpay_order = razorpay_client.order.create({
+                                                'amount': int(total_sale_price * 100),  # Razorpay expects amount in paisa
+                                                'currency': 'INR',
+                                                'payment_capture': 1  # Auto capture payment
+                                            })
+                                            razorpay_order_id = razorpay_order['id']
+                                            razorpay_payment_id = request.data.get('payment_id')
 
-                                    order.payment_id = razorpay_payment_id  
-                                    order.order_id = razorpay_order_id  
-                                    order.save()
+                                            if not razorpay_payment_id:
+                                                return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
+                                            try:
+                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(1 * 100))
 
-                                cart_items.delete()
-                                serializer = OrderSerializer(order)
-                                email_subject = 'New Order Created'
-                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
-                                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                                email.content_subtype = 'html'  # Set the content type to HTML
-                                email.send()
+                                                if payment_capture_response['status'] == 'captured':
+                                                    order.payment_id = razorpay_payment_id
+                                                    order.razorpay_order_id = razorpay_order_id
+                                                    order.save()
+                                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                                else:
+                                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+                                            except Exception as e:
+                                                logging.error(f"Payment capture error: {e}")
+                                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                        except Exception as e:
+                                            logging.error(f"Razorpay order creation error: {e}")
+                                            return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                    # Save the order and update the total amount
+                                    order.total_amount = total_sale_price
+                                    try:
+                                        order.save()
+                                        cart_items.delete()
+
+                                        # Send order creation email
+                                        try:
+                                            email_subject = 'New Order Created'
+                                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                            email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                            email.content_subtype = 'html'
+                                            email.send()
+                                        except Exception as email_error:
+                                            logging.error(f"Error sending email: {email_error}")
+                                            return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
+
+                                        # Return success response
+                                        serializer = OrderSerializer(order)
+                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                    except Exception as e:
+                                        logging.error(f"Error saving order: {e}")
+                                        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                                except Exception as e:
+                                    logging.error(f"Unexpected error: {e}")
+                                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                
                         except Exception as e:
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
@@ -1807,15 +1860,15 @@ class CreateOrder(APIView):
                             if not address:
                                 return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                            coupon_code = request.data.get('coupon_code')
-                            coupon = None
-                            if coupon_code:
-                                try:
-                                    coupon = Coupon.objects.get(code=coupon_code)
-                                    if coupon.status != 'Active':
-                                        raise Coupon.DoesNotExist
-                                except Coupon.DoesNotExist:
-                                    return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                            # coupon_code = request.data.get('coupon_code')
+                            # coupon = None
+                            # if coupon_code:
+                            #     try:
+                            #         coupon = Coupon.objects.get(code=coupon_code)
+                            #         if coupon.status != 'Active':
+                            #             raise Coupon.DoesNotExist
+                            #     except Coupon.DoesNotExist:
+                            #         return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                             payment_method = request.data.get('payment_method')
                             if not payment_method or payment_method not in ['COD', 'razorpay']:
@@ -1877,53 +1930,70 @@ class CreateOrder(APIView):
                                                     return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
                                 # Apply the coupon if present
-                                if coupon:
-                                    discount_amount = (coupon.discount / 100) * total_cart_value_after_discount if coupon.coupon_type == 'Percentage' else coupon.discount
-                                    total_cart_value_after_discount -= discount_amount
-                                    order.coupon = coupon
+                                # if coupon:
+                                #     discount_amount = (coupon.discount / 100) * total_cart_value_after_discount if coupon.coupon_type == 'Percentage' else coupon.discount
+                                #     total_cart_value_after_discount -= discount_amount
+                                #     order.coupon = coupon
 
                                 if payment_method == 'COD':
                                     cod_charge = Decimal('40.00')
                                     total_cart_value_after_discount += cod_charge
 
-                                # Calculate shipping fee based on total sale price
-                                shipping_fee = Decimal('60.00') if total_cart_value_after_discount <= 500 else Decimal('0.00')
-                                total_cart_value_after_discount += shipping_fee
-
-                                # Update the total amount in the order
-                                order.total_amount = total_cart_value_after_discount
-                                order.save()
-
-                                # If payment method is razorpay, create a razorpay order
-                                if payment_method == 'razorpay':
+                                # If payment method is Razorpay, create a Razorpay order
+                                elif payment_method == 'razorpay':
                                     razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                    razorpay_order = razorpay_client.order.create({
-                                        'amount': int(order.total_amount * 100),
-                                        'currency': 'INR',
-                                        'payment_capture': 1
-                                    })
+                                    try:
+                                        razorpay_order = razorpay_client.order.create({
+                                            'amount': int(total_cart_value_after_discount * 100),  # Razorpay expects amount in paisa
+                                            'currency': 'INR',
+                                            'payment_capture': 1  # Auto capture payment
+                                        })
+                                        razorpay_order_id = razorpay_order['id']
+                                        razorpay_payment_id = request.data.get('payment_id')
 
-                                    razorpay_order_id = razorpay_order.get('id')
+                                        if not razorpay_payment_id:
+                                            return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                    # Retrieve the payment ID from the request (if necessary)
-                                    razorpay_payment_id = request.data.get('payment_id')
+                                        try:
+                                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(1 * 100))
 
+                                            if payment_capture_response['status'] == 'captured':
+                                                order.payment_id = razorpay_payment_id
+                                                order.razorpay_order_id = razorpay_order_id
+                                                order.save()
+                                                return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                            else:
+                                                return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+                                        except Exception as e:
+                                            logging.error(f"Payment capture error: {e}")
+                                            return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                    except Exception as e:
+                                        logging.error(f"Razorpay order creation error: {e}")
+                                        return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                    order.payment_id = razorpay_payment_id  
-                                    order.order_id = razorpay_order_id  
+                                # Save the order and update the total amount
+                                order.total_amount = total_cart_value_after_discount
+                                try:
                                     order.save()
+                                    cart_items.delete()
 
+                                    # Send order creation email
+                                    try:
+                                        email_subject = 'New Order Created'
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                        email.content_subtype = 'html'
+                                        email.send()
+                                    except Exception as email_error:
+                                        logging.error(f"Error sending email: {email_error}")
+                                        return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
 
-                                cart_items.delete()
-                                serializer = OrderSerializer(order)
-
-                                email_subject = 'New Order Created'
-                                email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
-                                email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                                email.content_subtype = 'html'  # Set the content type to HTML
-                                email.send()
-
-                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                    # Return success response
+                                    serializer = OrderSerializer(order)
+                                    return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                except Exception as e:
+                                    logging.error(f"Error saving order: {e}")
+                                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         except Exception as e:
                             return Response({"message": f"An error occurred during order processing: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -2088,60 +2158,131 @@ class CreateOrder(APIView):
                                                         else:
                                                             return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
-                                        # Apply the coupon if present
-                                        if coupon:
-                                            if coupon.coupon_type == 'Percentage':
+                                        cart_items_list = [
+                                        {
+                                            'product_name': item.product.name,
+                                            'quantity': item.quantity,
+                                            'price': item.product.salePrice
+                                        }
+                                        for item in cart_items
 
-                                                discount_amount = (coupon.discount / 100) * total_cart_value
-                                                total_cart_value -= discount_amount
-                                                order.coupon = coupon
-                                            else :
-                                                total_cart_value -= coupon.discount
-                                                order.coupon = coupon
-
-
+                                        ]
                                         
-                                        if payment_method == 'COD':
-                                            cod_charge = Decimal('40.00')
-                                            total_cart_value += cod_charge
 
-                                        # Calculate shipping fee based on total sale price
-                                        shipping_fee = Decimal('60.00') if total_cart_value <= 500 else Decimal('0.00')
-                                        total_cart_value += shipping_fee
+                                        try:
+                                            # Initial check for total amount and apply shipping charge if applicable
+                                            if total_cart_value is None or not isinstance(total_cart_value, Decimal):
+                                                return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                        # Update the total amount in the order
-                                        order.total_amount = total_cart_value
-                                        order.save()
+                                            if total_cart_value <= Decimal('500.00'):
+                                                shipping_charge = Decimal('60.00')
+                                                total_cart_value += shipping_charge
 
-                                        # If payment method is razorpay, create a razorpay order
-                                        if payment_method == 'razorpay':
-                                            razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                            razorpay_order = razorpay_client.order.create({
-                                                'amount': int(order.total_amount * 100),
-                                                'currency': 'INR',
-                                                'payment_capture': 1
-                                            })
+                                            # Apply the coupon if present
+                                            if coupon:
+                                                try:
+                                                    if coupon.coupon_type == 'Percentage':
+                                                        discount_amount = (coupon.discount / 100) * total_cart_value
+                                                    elif coupon.coupon_type == 'Fixed Amount':
+                                                        discount_amount = coupon.discount
+                                                    else:
+                                                        return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                            razorpay_order_id = razorpay_order.get('id')
+                                                    if discount_amount > total_cart_value:
+                                                        return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                            # Retrieve the payment ID from the request (if necessary)
-                                            razorpay_payment_id = request.data.get('payment_id')
+                                                    total_cart_value -= discount_amount
+                                                    order.coupon = coupon
+                                                except Exception as e:
+                                                    logging.error(f"Error applying coupon: {e}")
+                                                    return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                                            # Add COD charge if payment method is COD
+
+                                            logging.debug(f"Initial total_cart_value: {total_cart_value}")
 
 
-                                            order.payment_id = razorpay_payment_id  
-                                            order.order_id = razorpay_order_id  
-                                            order.save()
+                                            if payment_method == 'COD':
+                                                cod_charge = Decimal('40.00')
+                                                total_cart_value += cod_charge
 
-                                    
-                                        cart_items.delete()
+                                            # If payment method is Razorpay, create a Razorpay order
+                                            elif payment_method == 'razorpay':
+                                                razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                                try:
+                                                    razorpay_order = razorpay_client.order.create({
+                                                        'amount': int(total_cart_value * 100),  # Razorpay expects amount in paisa
+                                                        'currency': 'INR',
+                                                        'payment_capture': 1  # Auto capture payment
+                                                    })
+                                                    logging.debug(f"Total amount sent to Razorpay: {total_cart_value}")
 
-                                        serializer = OrderSerializer(order)
-                                        email_subject = 'New Order Created'
-                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
-                                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                                        email.content_subtype = 'html'  # Set the content type to HTML
-                                        email.send()
-                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                                    razorpay_order_id = razorpay_order['id']
+                                                    razorpay_payment_id = request.data.get('payment_id')
+
+                                                    logging.debug(f"Total amount before saving order: {total_cart_value}")
+
+
+                                                    if not razorpay_payment_id:
+                                                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    # Capture Razorpay payment
+                                                    try:
+                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+
+                                                        if payment_capture_response['status'] == 'captured':
+                                                            # Assuming `order` is correctly initialized before this
+                                                            order.payment_id = razorpay_payment_id
+                                                            order.razorpay_order_id = razorpay_order_id
+                                                            order.total_amount = total_cart_value  # Ensure total_cart_value is correctly assigned
+                                                            order.save()
+
+                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                                            cart_items.delete()  
+
+                                                            return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                                        else:
+                                                            return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    except Exception as e:
+                                                        logging.error(f"Payment capture error: {e}")
+                                                        return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                                    
+                                                except Exception as e:
+                                                    logging.error(f"Razorpay order creation error: {e}")
+                                                    return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                                            # Save the order and update the total amount
+                                            order.total_amount = total_cart_value
+                                            try:
+                                                order.save()
+                                                logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
+                                                cart_items.delete()
+
+                                                # Send order creation email
+                                                try:
+                                                    email_subject = 'New Order Created'
+                                                    email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                                    email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                                    email.content_subtype = 'html'
+                                                    email.send()
+                                                except Exception as email_error:
+                                                    logging.error(f"Error sending email: {email_error}")
+                                                    return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
+
+                                                # Return success response
+                                                serializer = OrderSerializer(order)
+                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                            
+                                            except Exception as e:
+                                                logging.error(f"Error saving order: {e}")
+                                                return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                            
+                                        except Exception as e:
+                                            logging.error(f"Unexpected error: {e}")
+                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                        
                                 except Exception as e:
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         
@@ -2152,9 +2293,6 @@ class CreateOrder(APIView):
                                     free_quantity = item.quantity * get
                                 else:
                                     free_quantity = 0
-
-                                total_quantity = item.quantity + free_quantity
-                                total_price = item.product.salePrice * item.quantity
 
                                 if item.product.pk in matched_product_pks:
                                     offer_products.append(item)
@@ -2299,49 +2437,131 @@ class CreateOrder(APIView):
                                                             break
                                                         else:
                                                             return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
+                                                        
 
-                                        if coupon:
-                                            if coupon.coupon_type == 'Percentage':
-                                                discount_amount = (coupon.discount / 100) * total_cart_value
-                                                total_cart_value -= discount_amount
-                                                order.coupon = coupon
-                                            else:
-                                                total_cart_value -= coupon.discount
-                                                order.coupon = coupon
+                                        cart_items_list = [
+                                        {
+                                            'product_name': item.product.name,
+                                            'quantity': item.quantity,
+                                            'price': item.product.salePrice
+                                        }
+                                        for item in cart_items
 
-                                        if payment_method == 'COD':
-                                            cod_charge = Decimal('40.00')  # Example COD charge
-                                            total_cart_value += cod_charge
+                                        ]
 
-                                        order.total_amount = total_cart_value
-                                        order.save()
+                                        try:
+                                            # Initial check for total amount and apply shipping charge if applicable
+                                            if total_cart_value is None or not isinstance(total_cart_value, Decimal):
+                                                return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                        if payment_method == 'razorpay':
-                                            razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                                            razorpay_order = razorpay_client.order.create({
-                                                'amount': int(order.total_amount * 100),  # Razorpay expects amount in paisa
-                                                'currency': 'INR',
-                                                'payment_capture': 1  # Auto capture payment
-                                            })
-                                            razorpay_order_id = razorpay_order.get('id')
+                                            if total_cart_value <= Decimal('500.00'):
+                                                shipping_charge = Decimal('60.00')
+                                                total_cart_value += shipping_charge
 
-                                            # Retrieve the payment ID from the request (if necessary)
-                                            razorpay_payment_id = request.data.get('payment_id')
+                                            # Apply the coupon if present
+                                            if coupon:
+                                                try:
+                                                    if coupon.coupon_type == 'Percentage':
+                                                        discount_amount = (coupon.discount / 100) * total_cart_value
+                                                    elif coupon.coupon_type == 'Fixed Amount':
+                                                        discount_amount = coupon.discount
+                                                    else:
+                                                        return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    if discount_amount > total_cart_value:
+                                                        return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    total_cart_value -= discount_amount
+                                                    order.coupon = coupon
+                                                except Exception as e:
+                                                    logging.error(f"Error applying coupon: {e}")
+                                                    return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                                            # Add COD charge if payment method is COD
+
+                                            logging.debug(f"Initial total_cart_value: {total_cart_value}")
 
 
-                                            order.payment_id = razorpay_payment_id  
-                                            order.order_id = razorpay_order_id  
-                                            order.save()
+                                            if payment_method == 'COD':
+                                                cod_charge = Decimal('40.00')
+                                                total_cart_value += cod_charge
 
-                                        cart_items.delete()
+                                            # If payment method is Razorpay, create a Razorpay order
+                                            elif payment_method == 'razorpay':
+                                                razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                                                try:
+                                                    razorpay_order = razorpay_client.order.create({
+                                                        'amount': int(total_cart_value * 100),  # Razorpay expects amount in paisa
+                                                        'currency': 'INR',
+                                                        'payment_capture': 1  # Auto capture payment
+                                                    })
+                                                    logging.debug(f"Total amount sent to Razorpay: {total_cart_value}")
 
-                                        serializer = OrderSerializer(order)
-                                        email_subject = 'New Order Created'
-                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart':cart_items})
-                                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                                        email.content_subtype = 'html'  # Set the content type to HTML
-                                        email.send()
-                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                                    razorpay_order_id = razorpay_order['id']
+                                                    razorpay_payment_id = request.data.get('payment_id')
+
+                                                    logging.debug(f"Total amount before saving order: {total_cart_value}")
+
+
+                                                    if not razorpay_payment_id:
+                                                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    # Capture Razorpay payment
+                                                    try:
+                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value * 100))
+
+                                                        if payment_capture_response['status'] == 'captured':
+                                                            # Assuming `order` is correctly initialized before this
+                                                            order.payment_id = razorpay_payment_id
+                                                            order.razorpay_order_id = razorpay_order_id
+                                                            order.total_amount = total_cart_value  # Ensure total_cart_value is correctly assigned
+                                                            order.save()
+
+                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                                            cart_items.delete()  
+
+                                                            return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
+                                                        else:
+                                                            return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+
+                                                    except Exception as e:
+                                                        logging.error(f"Payment capture error: {e}")
+                                                        return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                                    
+                                                except Exception as e:
+                                                    logging.error(f"Razorpay order creation error: {e}")
+                                                    return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                                            # Save the order and update the total amount
+                                            order.total_amount = total_cart_value
+                                            try:
+                                                order.save()
+                                                logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
+                                                cart_items.delete()
+
+                                                # Send order creation email
+                                                try:
+                                                    email_subject = 'New Order Created'
+                                                    email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                                    email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                                                    email.content_subtype = 'html'
+                                                    email.send()
+                                                except Exception as email_error:
+                                                    logging.error(f"Error sending email: {email_error}")
+                                                    return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
+
+                                                # Return success response
+                                                serializer = OrderSerializer(order)
+                                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                            
+                                            except Exception as e:
+                                                logging.error(f"Error saving order: {e}")
+                                                return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                            
+                                        except Exception as e:
+                                            logging.error(f"Unexpected error: {e}")
+                                            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                                 except Exception as e:
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         except Exception as e:
@@ -2466,6 +2686,10 @@ class CreateOrder(APIView):
                             return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                     # Add COD charge if payment method is COD
+
+                    logging.debug(f"Initial total_amount: {total_amount}")
+
+
                     if payment_method == 'COD':
                         cod_charge = Decimal('40.00')
                         total_amount += cod_charge
@@ -2479,25 +2703,39 @@ class CreateOrder(APIView):
                                 'currency': 'INR',
                                 'payment_capture': 1  # Auto capture payment
                             })
+                            logging.debug(f"Total amount sent to Razorpay: {total_amount}")
+
                             razorpay_order_id = razorpay_order['id']
                             razorpay_payment_id = request.data.get('payment_id')
+
+                            logging.debug(f"Total amount before saving order: {total_amount}")
+
 
                             if not razorpay_payment_id:
                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
+                            # Capture Razorpay payment
                             try:
                                 payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
 
                                 if payment_capture_response['status'] == 'captured':
+                                    # Assuming `order` is correctly initialized before this
                                     order.payment_id = razorpay_payment_id
                                     order.razorpay_order_id = razorpay_order_id
+                                    order.total_amount = total_amount  # Ensure total_amount is correctly assigned
                                     order.save()
+
+                                    logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                    cart_items.delete()  
+
                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                 else:
                                     return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+
                             except Exception as e:
                                 logging.error(f"Payment capture error: {e}")
                                 return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                            
                         except Exception as e:
                             logging.error(f"Razorpay order creation error: {e}")
                             return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2506,6 +2744,8 @@ class CreateOrder(APIView):
                     order.total_amount = total_amount
                     try:
                         order.save()
+                        logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
                         cart_items.delete()
 
                         # Send order creation email
@@ -2522,18 +2762,17 @@ class CreateOrder(APIView):
                         # Return success response
                         serializer = OrderSerializer(order)
                         return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                    
                     except Exception as e:
                         logging.error(f"Error saving order: {e}")
                         return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+                    
                 except Exception as e:
                     logging.error(f"Unexpected error: {e}")
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+                
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
-            # Return error response if an exception occurs
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

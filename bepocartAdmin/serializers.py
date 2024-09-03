@@ -150,7 +150,7 @@ class AdminOrderViewsSerializers(serializers.ModelSerializer):
         fields = [
             'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
             'updated_at', 'status', 'address', 'customerImage', 
-            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id'
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id'
         ]
 
     def get_couponName(self, obj):
