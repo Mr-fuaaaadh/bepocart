@@ -62,7 +62,6 @@ urlpatterns = [
     path('offers/', DiscountSaleProducts.as_view(), name='discount-sale'),
     path('best-sale/', BestSellerProductsAPIView.as_view(), name='flash-sale'),
     
-    path('send-otp/', SendOTPAPIView.as_view(), name='send-otp'),
 
     path('orders/', CustomerOrders.as_view(), name='CustomerOrders'),
     path('order-items/<int:pk>/', CustomerOrderItems.as_view(), name='CustomerOrderItems'),
@@ -80,7 +79,11 @@ urlpatterns = [
     path('cupons/', CoupensAll.as_view(), name='CoupensAll'),
 
     path('blog/',BlogView.as_view(),name="blog"),
-    path('coin/',CustomerCoinView.as_view(),name="coin")
+    path('coin/',CustomerCoinView.as_view(),name="coin"),
+
+
+    path('generate-otp/', GenerateOtpView.as_view(), name='generate-otp'),
+    path('verification-otp/', VerifyOtpView.as_view(), name='verify-otp'),
 
 
 
