@@ -1542,8 +1542,6 @@ class CreateOrder(APIView):
                                         if product_pk in discount_approved_products or product_pk in approved_discount_category_product_pks]
                                         
                         
-
-            
             if offer.is_active: 
                 try :
                     if offer and offer.offer_type == "BUY" and offer.method == "FREE":
@@ -1578,6 +1576,8 @@ class CreateOrder(APIView):
                                 total_free_quantity += free_quantity
 
 
+
+
                             if item.product.pk in matched_product_pks:
                                 offer_products.append(item)
                             if item.product.pk in allowed_discount_products:
@@ -1586,6 +1586,8 @@ class CreateOrder(APIView):
                             # Calculate subtotal and total sale price for each item
                             sub_total_sale_price += item.product.price * item.quantity
                             total_sale_price += item.product.salePrice * item.quantity
+
+
 
                         # Calculate the total free quantity based on the combined quantity
                         total_combined_free_quantity = int(total_combined_quantity / buy) * get
