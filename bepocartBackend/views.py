@@ -1700,7 +1700,7 @@ class CreateOrder(APIView):
                                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                     if total_sale_price <= Decimal('500.00'):
-                                        shipping_charge = Decimal('00.00')
+                                        shipping_charge = Decimal('60.00')
                                         total_sale_price += shipping_charge
 
                                     # Apply the coupon if present
@@ -1748,7 +1748,7 @@ class CreateOrder(APIView):
                                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
                                             try:
-                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(1 * 100))
+                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_sale_price * 100))
 
                                                 if payment_capture_response['status'] == 'captured':
                                                     order.payment_id = razorpay_payment_id
@@ -3372,6 +3372,7 @@ class GenerateOtpView(APIView):
             save_otp = OTP.objects.create(user =check_phone,otp=otp)
             return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
         else:
+	  
             return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
