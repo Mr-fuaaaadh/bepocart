@@ -179,7 +179,7 @@ class AdminOrderViewsSerializers(serializers.ModelSerializer):
         fields = [
             'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
             'updated_at', 'status', 'address', 'customerImage', 
-            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id'
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id','created_time'
         ]
 
     def get_couponName(self, obj):
@@ -333,10 +333,12 @@ class OfferProductModelSerializer(serializers.ModelSerializer):
 class BestSellerProductSerializer(serializers.ModelSerializer):
     total_sold = serializers.IntegerField(read_only=True)
     sale = serializers.SerializerMethodField()
+    mainCategory = serializers.CharField(source ='category.category.slug')
+
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'slug', 'salePrice', 'discount', 'image', 'price', 'total_sold', 'sale']
+        fields = ['id', 'name', 'slug', 'salePrice', 'discount', 'image', 'price', 'total_sold', 'sale','mainCategory']
 
     def get_sale(self, obj):
         return "popular"
