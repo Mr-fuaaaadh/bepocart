@@ -2,6 +2,7 @@ from rest_framework import serializers
 from.models import *
 from bepocartBackend.models import *
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 class AdminSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -111,9 +112,37 @@ class OfferProductSerializers(serializers.ModelSerializer):
 class CustomerAllProductSerializers(serializers.ModelSerializer):
     categoryName = serializers.CharField(source="category.name")
     mainCategory = serializers.CharField(source ='category.category.slug')
+    offer = serializers.SerializerMethodField()
     class Meta :
         model = Product
-        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName','mainCategory','type']
+        fields = ['id','name','short_description','description','price','salePrice','category','image','discount','categoryName','mainCategory','type','offer']
+
+    def get_offer(sel,obj):
+        product = obj.id
+        category = obj.category
+
+        try:
+            # Filter for active offers associated with the specific product or its category all
+            offer = OfferSchedule.objects.filter(
+                Q(offer_active=True) &
+                (Q(offer_products=product) | Q(offer_category=category))
+            ).first()
+            
+            # Check if an offer exists and if its type is "BUY"
+            if offer and offer.offer_type == "BUY":
+                return f"BUY {offer.get_option} GET {offer.get_value} {offer.method}"
+            
+            elif  offer and offer.offer_type == "SPEND":
+                discount_percentage = int(offer.discount_percentage) if offer.discount_percentage is not None else 0
+                return f"{offer.offer_type}   {offer.amount}   {discount_percentage}   {offer.method}"
+            # Default return value if no matching offer is found
+            return None
+        
+        except Exception as e:
+            return None
+
+
+
 
 
 class PasswordResetSerializer(serializers.Serializer):
