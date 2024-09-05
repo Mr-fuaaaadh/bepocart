@@ -1700,7 +1700,7 @@ class CreateOrder(APIView):
                                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                     if total_sale_price <= Decimal('500.00'):
-                                        shipping_charge = Decimal('60.00')
+                                        shipping_charge = Decimal('00.00')
                                         total_sale_price += shipping_charge
 
                                     # Apply the coupon if present
@@ -1727,6 +1727,8 @@ class CreateOrder(APIView):
                                         cod_charge = Decimal('40.00')
                                         total_sale_price += cod_charge
 
+
+
                                     # If payment method is Razorpay, create a Razorpay order
                                     elif payment_method == 'razorpay':
                                         razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -1739,6 +1741,9 @@ class CreateOrder(APIView):
                                             razorpay_order_id = razorpay_order['id']
                                             razorpay_payment_id = request.data.get('payment_id')
 
+
+
+
                                             if not razorpay_payment_id:
                                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1748,7 +1753,12 @@ class CreateOrder(APIView):
                                                 if payment_capture_response['status'] == 'captured':
                                                     order.payment_id = razorpay_payment_id
                                                     order.razorpay_order_id = razorpay_order_id
+                                                    order.total_amount = total_sale_price
                                                     order.save()
+
+                                                    logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                                    cart_items.delete()  
+
                                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                                 else:
                                                     return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
