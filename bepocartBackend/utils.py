@@ -65,7 +65,6 @@ def send_otp(phone_number, otp):
         response = requests.post(url, data=payload)
         response.raise_for_status()  # Raises HTTPError for bad responses
         response_data = response.json()
-        print('API Response:', response_data)
 
         if response_data.get('status') == 'success':
             print('OTP sent successfully:', response_data)

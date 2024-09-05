@@ -1698,7 +1698,7 @@ class CreateOrder(APIView):
                                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                     if total_sale_price <= Decimal('500.00'):
-                                        shipping_charge = Decimal('00.00')
+                                        shipping_charge = Decimal('60.00')
                                         total_sale_price += shipping_charge
 
                                     # Apply the coupon if present
@@ -1740,13 +1740,11 @@ class CreateOrder(APIView):
                                             razorpay_payment_id = request.data.get('payment_id')
 
 
-
-
                                             if not razorpay_payment_id:
                                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
                                             try:
-                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(1 * 100))
+                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_sale_price * 100))
 
                                                 if payment_capture_response['status'] == 'captured':
                                                     order.payment_id = razorpay_payment_id
@@ -1933,12 +1931,17 @@ class CreateOrder(APIView):
                                             return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
                                         try:
-                                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(1 * 100))
+                                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value_after_discount * 100))
 
                                             if payment_capture_response['status'] == 'captured':
                                                 order.payment_id = razorpay_payment_id
                                                 order.razorpay_order_id = razorpay_order_id
+                                                order.total_amount = total_cart_value_after_discount
                                                 order.save()
+
+                                                logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                                cart_items.delete()  
+
                                                 return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                             else:
                                                 return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
@@ -2202,13 +2205,12 @@ class CreateOrder(APIView):
 
                                                     # Capture Razorpay payment
                                                     try:
-                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value * 100))
 
                                                         if payment_capture_response['status'] == 'captured':
-                                                            # Assuming `order` is correctly initialized before this
                                                             order.payment_id = razorpay_payment_id
                                                             order.razorpay_order_id = razorpay_order_id
-                                                            order.total_amount = total_cart_value  # Ensure total_cart_value is correctly assigned
+                                                            order.total_amount = total_cart_value
                                                             order.save()
 
                                                             logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
@@ -2217,11 +2219,10 @@ class CreateOrder(APIView):
                                                             return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                                         else:
                                                             return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-
                                                     except Exception as e:
                                                         logging.error(f"Payment capture error: {e}")
                                                         return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                                    
+                                                                
                                                 except Exception as e:
                                                     logging.error(f"Razorpay order creation error: {e}")
                                                     return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2488,10 +2489,10 @@ class CreateOrder(APIView):
                                                             # Assuming `order` is correctly initialized before this
                                                             order.payment_id = razorpay_payment_id
                                                             order.razorpay_order_id = razorpay_order_id
-                                                            order.total_amount = total_cart_value  # Ensure total_cart_value is correctly assigned
+                                                            order.total_amount = total_cart_value  # Ensure total_amount is correctly assigned
                                                             order.save()
 
-                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                                                            logging.debug(f"Order saved successfully with total amount: {order.total_cart_value}")
                                                             cart_items.delete()  
 
                                                             return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
