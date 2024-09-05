@@ -65,6 +65,8 @@ class GoogleLoginAPIView(APIView):
         try:
             user_email = request.data.get('email')
             user_first_name = request.data.get('name')
+            user_phone = request.data.get('phone', None)  # Handle if phone is provided
+            # Add other fields if necessary
 
             # Validate input fields
             if not user_email or not user_first_name:
@@ -77,7 +79,7 @@ class GoogleLoginAPIView(APIView):
             # Update or create customer
             customer, created = Customer.objects.update_or_create(
                 email=user_email,
-                defaults={'first_name': user_first_name}
+                defaults={'first_name': user_first_name, 'phone': user_phone}
             )
 
             message = 'Customer created successfully' if created else 'Customer updated successfully'

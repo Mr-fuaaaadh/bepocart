@@ -166,15 +166,15 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 
 
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.postgresql',
-         'NAME': 'bepocart',
-         'USER': 'postgres',
-         'PASSWORD': '9645848527',
-         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
-         'PORT': '5432'
-     }
- }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bepocart',
+        'USER': 'postgres',
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432'
+    }
+}
 
 # DATABASES = {
 #     'default':  {
