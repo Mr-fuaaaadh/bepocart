@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from django.db.models import Count
 from django.db.models import Q
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth.hashers import check_password, make_password
 from django.template.loader import render_to_string
 from django.db import transaction
@@ -67,10 +68,11 @@ class GoogleLoginAPIView(APIView):
             user_email = request.data.get('email')
             user_first_name = request.data.get('name')
 
+            # Validate input fields
             if not user_email or not user_first_name:
                 raise DRFValidationError('Both email and name are required.')
 
-            # Additional email validation (optional)
+            # Basic email format validation
             if '@' not in user_email:
                 raise DRFValidationError('Invalid email format.')
 
@@ -96,14 +98,16 @@ class GoogleLoginAPIView(APIView):
             }, status=status.HTTP_200_OK)
 
         except DRFValidationError as e:
+            logger.error(f"Validation Error: {str(e)}", exc_info=True)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        except ValidationError as e:
+        except DjangoValidationError as e:
+            logger.error(f"Django Validation Error: {e.message_dict}", exc_info=True)
             return Response({'error': e.message_dict}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            logger.error(f"Unexpected Error: {str(e)}", exc_info=True)
             return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class CustomerLogin(APIView):
     def post(self, request):
