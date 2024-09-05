@@ -10,7 +10,7 @@ class Customer(models.Model):
     first_name = models.CharField(max_length=100,null=True, blank=False)
     last_name = models.CharField(max_length=100,null=True, blank=False)
     email = models.EmailField(max_length=100,unique=True)
-    phone = models.CharField(max_length=10,unique=True,null=True)
+    phone = models.CharField(max_length=10,unique=True,null=True,blank=True)
     image = models.ImageField(max_length=100, upload_to='UserProfile',null=True)
     place = models.CharField(max_length=100, null=True,blank=False)
     zip_code = models.CharField(max_length=6,null=True,blank=False)
