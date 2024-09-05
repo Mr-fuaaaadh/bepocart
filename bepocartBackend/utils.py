@@ -1,5 +1,8 @@
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+import random
+import requests
+from django.core.cache import cache
 from django.conf import settings
 
 def send_order_email(order):
@@ -23,3 +26,57 @@ def send_order_email(order):
 
     # Send the email 
     email.send()
+
+
+
+
+
+def generate_otp():
+    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+def store_otp(phone_number, otp):
+    """Store OTP in cache with a 5-minute expiration."""
+    cache.set(phone_number, otp, timeout=300)
+
+
+def send_otp(phone_number, otp):
+    sms_alert_username = 'francisgoskates@gmail.com'  # Replace with your actual SMSAlert username
+    sms_alert_password = 'xdr5IBU@'  # Replace with your actual SMSAlert password
+    sms_alert_sender_id = 'BECART'  # Replace with your actual Sender ID
+    template_id = '1707162624837116051'
+
+
+
+    message = f'Your verification code for login to Bepocart is {otp}'
+
+    url = 'https://www.smsalert.co.in/api/push.json'
+
+    payload = {
+        'user': sms_alert_username,
+        'pwd': sms_alert_password,
+        'sender': sms_alert_sender_id,
+        'mobileno': phone_number,
+        'text': message,
+        'template_id': template_id,
+    }
+    
+
+    try:
+        response = requests.post(url, data=payload)
+        response.raise_for_status()  # Raises HTTPError for bad responses
+        response_data = response.json()
+        print('API Response:', response_data)
+
+        if response_data.get('status') == 'success':
+            print('OTP sent successfully:', response_data)
+            return True
+        else:
+            print('Failed to send OTP:', response_data)
+            return False
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error occurred: {e.response.status_code} - {e.response.reason}")
+        print(f"Response Text: {e.response.text}")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        return False

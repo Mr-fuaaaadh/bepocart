@@ -41,11 +41,32 @@ class CategoryModelSerializer(serializers.ModelSerializer):
 
 
 class ProductViewSerializer(serializers.ModelSerializer):
-    mainCategory = serializers.CharField(source ='category.category.slug')
+    mainCategory = serializers.CharField(source='category.category.slug')
+    offer = serializers.SerializerMethodField()
 
-    class Meta :
+    class Meta:
         model = Product
-        fields = ['id','slug','name','description','short_description','price','salePrice','category','image','created_at','mainCategory','discount','type']
+        fields = ['id', 'slug', 'name', 'description', 'short_description', 'price', 'salePrice', 'category', 'image', 'created_at', 'mainCategory', 'discount', 'type', 'offer']
+
+    def get_offer(self, obj):
+        # Fetch the product ID and category
+        product = obj.id
+        category = obj.category
+        
+        # Query for active offers related to the product or category
+        offer = OfferSchedule.objects.filter(
+            Q(offer_active=True) &
+            (Q(offer_products=product) | Q(offer_category=category))
+        ).first()
+
+        # Return a customized string based on whether an offer is found
+        if offer:
+            return "Limited time deal"
+        return "none"
+
+
+
+
 
 
 class SubcatecoryBasedProductView(serializers.ModelSerializer):

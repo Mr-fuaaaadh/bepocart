@@ -29,6 +29,9 @@ from django.template.loader import render_to_string
 from django.db import transaction
 from decimal import Decimal
 from requests.exceptions import RequestException
+from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from .utils import *
 
 logger = logging.getLogger(__name__)
 
@@ -55,91 +58,33 @@ class CustomerRegistration(APIView):
                 "message": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-def generate_otp(length=6):
-    """Generate a random OTP of specified length."""
-    digits = "0123456789"
-    otp = "".join(random.choice(digits) for i in range(length))
-    return otp
-
-class SendOTPAPIView(APIView):
-
-    def post(self, request):
-        phone_number = request.data.get('phone')
-
-        if not phone_number:
-            return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if the user with the given phone number exists
-        try:
-            user = Customer.objects.filter(phone=phone_number).first()
-            if not user:
-                return Response({'error': 'User with this phone number does not exist'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': 'An error occurred while checking the user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        # Generate a random OTP
-        otp = generate_otp()
-
-        # API request to SMSAlert
-        url = "https://www.smsalert.co.in/api/user.json?apikey=5e0741771f08e"
-        payload = {
-            'apikey': '5e0741771f08e',  # Replace with your actual API key
-            'sender': '1707162747900008958',  # Replace with your sender ID
-            'mobileno': phone_number,
-            'text': f'Your OTP is {otp}'
-        }
-        try:
-            response = requests.post(url, data=payload)
-        except Exception as e:
-            return Response({'error': 'Failed to send OTP due to an exception'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        if response.status_code == 200:
-            return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': f'Failed to send OTP. Status code: {response.status_code}', 'details': response.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 
 logger = logging.getLogger(__name__)
 
 class GoogleLoginAPIView(APIView):
     def post(self, request):
-        token = request.data.get('token')
-        
-        if not token:
-            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            # Verify the token with Google's OAuth 2.0 API
-            response = requests.get(f'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={token}')
-            
-            if response.status_code != 200:
-                return Response({'error': 'Failed to verify token with Google', 'details': response.json()}, status=status.HTTP_400_BAD_REQUEST)
-            
-            id_info = response.json()
-            if 'error' in id_info:
-                return Response({'error': id_info.get('error_description', 'Invalid token')}, status=status.HTTP_400_BAD_REQUEST)
+            user_email = request.data.get('email')
+            user_first_name = request.data.get('name')
 
-            user_email = id_info.get('email')
-            user_first_name = id_info.get('given_name')
-            user_image = id_info.get('picture')
+            if not user_email or not user_first_name:
+                raise DRFValidationError('Both email and name are required.')
 
-            if not user_email:
-                return Response({'error': 'Email is missing from token data'}, status=status.HTTP_400_BAD_REQUEST)
+            # Additional email validation (optional)
+            if '@' not in user_email:
+                raise DRFValidationError('Invalid email format.')
 
             # Update or create customer
             customer, created = Customer.objects.update_or_create(
                 email=user_email,
-                defaults={
-                    'first_name': user_first_name,
-                    'image': user_image
-                }
+                defaults={'first_name': user_first_name}
             )
 
             message = 'Customer created successfully' if created else 'Customer updated successfully'
+
+            # Generate JWT token
             jwt_payload = {
-                'customer_id': customer.pk,
+                'id': customer.pk,
                 'email': customer.email,
             }
             jwt_token = jwt.encode(jwt_payload, settings.SECRET_KEY, algorithm='HS256')
@@ -150,11 +95,14 @@ class GoogleLoginAPIView(APIView):
                 'token': jwt_token
             }, status=status.HTTP_200_OK)
 
-        except requests.exceptions.RequestException as req_err:
-            return Response({'error': 'Failed to connect to Google for token verification', 'details': str(req_err)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
-            return Response({'error': 'An error occurred', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except DRFValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        except ValidationError as e:
+            return Response({'error': e.message_dict}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerLogin(APIView):
@@ -1549,9 +1497,17 @@ class CreateOrder(APIView):
         offer_approved_category = []
         discount_approved_products =[]
         discount_approved_category = []
+        coupon_approved_products = []
+        coupon_approved_categories = []
 
         offer = OfferSchedule.objects.filter(offer_active=True).first()
+
+        # Get active coupons
+        active_coupons = Coupon.objects.filter(status='Active')
+
         if offer:
+
+            coupon_approved_products = list()
             offer_approved_products = list(offer.offer_products.values_list('pk', flat=True))
             offer_approved_category = list(offer.offer_category.values_list('pk', flat=True))
 
@@ -1567,6 +1523,15 @@ class CreateOrder(APIView):
             approved_discount_category_products = Product.objects.filter(category__pk__in=discount_approved_category)
             approved_discount_category_product_pks = list(approved_discount_category_products.values_list('pk', flat=True))
 
+            for coupon in active_coupons:
+                # Extend the lists with products and categories from each coupon
+                coupon_approved_products.extend(coupon.discount_product.values_list('pk', flat=True))
+                coupon_approved_categories.extend(coupon.discount_category.values_list('pk', flat=True))
+
+            # Remove duplicates from the lists
+            coupon_approved_products = list(set(coupon_approved_products))
+            coupon_approved_categories = list(set(coupon_approved_categories))
+
             products_in_cart = [item.product.pk for item in cart_items]
 
 
@@ -1577,9 +1542,8 @@ class CreateOrder(APIView):
             # Find products in cart that are either approved for discount or  categories
             allowed_discount_products = [product_pk for product_pk in products_in_cart 
                                         if product_pk in discount_approved_products or product_pk in approved_discount_category_product_pks]
+                                        
                         
-
-            
             if offer.is_active: 
                 try :
                     if offer and offer.offer_type == "BUY" and offer.method == "FREE":
@@ -1614,6 +1578,8 @@ class CreateOrder(APIView):
                                 total_free_quantity += free_quantity
 
 
+
+
                             if item.product.pk in matched_product_pks:
                                 offer_products.append(item)
                             if item.product.pk in allowed_discount_products:
@@ -1622,6 +1588,8 @@ class CreateOrder(APIView):
                             # Calculate subtotal and total sale price for each item
                             sub_total_sale_price += item.product.price * item.quantity
                             total_sale_price += item.product.salePrice * item.quantity
+
+
 
                         # Calculate the total free quantity based on the combined quantity
                         total_combined_free_quantity = int(total_combined_quantity / buy) * get
@@ -1736,23 +1704,23 @@ class CreateOrder(APIView):
                                         total_sale_price += shipping_charge
 
                                     # Apply the coupon if present
-                                    # if coupon:
-                                    #     try:
-                                    #         if coupon.coupon_type == 'Percentage':
-                                    #             discount_amount = (coupon.discount / 100) * total_sale_price
-                                    #         elif coupon.coupon_type == 'Fixed Amount':
-                                    #             discount_amount = coupon.discount
-                                    #         else:
-                                    #             return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
+                                    if coupon:
+                                        try:
+                                            if coupon.coupon_type == 'Percentage':
+                                                discount_amount = (coupon.discount / 100) * total_sale_price
+                                            elif coupon.coupon_type == 'Fixed Amount':
+                                                discount_amount = coupon.discount
+                                            else:
+                                                return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                    #         if discount_amount > total_sale_price:
-                                    #             return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
+                                            if discount_amount > total_sale_price:
+                                                return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
-                                    #         total_sale_price -= discount_amount
-                                    #         order.coupon = coupon
-                                    #     except Exception as e:
-                                    #         logging.error(f"Error applying coupon: {e}")
-                                    #         return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                            total_sale_price -= discount_amount
+                                            order.coupon = coupon
+                                        except Exception as e:
+                                            logging.error(f"Error applying coupon: {e}")
+                                            return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                                     # Add COD charge if payment method is COD
                                     if payment_method == 'COD':
@@ -1862,15 +1830,15 @@ class CreateOrder(APIView):
                             if not address:
                                 return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                            # coupon_code = request.data.get('coupon_code')
-                            # coupon = None
-                            # if coupon_code:
-                            #     try:
-                            #         coupon = Coupon.objects.get(code=coupon_code)
-                            #         if coupon.status != 'Active':
-                            #             raise Coupon.DoesNotExist
-                            #     except Coupon.DoesNotExist:
-                            #         return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                            coupon_code = request.data.get('coupon_code')
+                            coupon = None
+                            if coupon_code:
+                                try:
+                                    coupon = Coupon.objects.get(code=coupon_code)
+                                    if coupon.status != 'Active':
+                                        raise Coupon.DoesNotExist
+                                except Coupon.DoesNotExist:
+                                    return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                             payment_method = request.data.get('payment_method')
                             if not payment_method or payment_method not in ['COD', 'razorpay']:
@@ -1932,10 +1900,10 @@ class CreateOrder(APIView):
                                                     return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
 
                                 # Apply the coupon if present
-                                # if coupon:
-                                #     discount_amount = (coupon.discount / 100) * total_cart_value_after_discount if coupon.coupon_type == 'Percentage' else coupon.discount
-                                #     total_cart_value_after_discount -= discount_amount
-                                #     order.coupon = coupon
+                                if coupon:
+                                    discount_amount = (coupon.discount / 100) * total_cart_value_after_discount if coupon.coupon_type == 'Percentage' else coupon.discount
+                                    total_cart_value_after_discount -= discount_amount
+                                    order.coupon = coupon
 
                                 if payment_method == 'COD':
                                     cod_charge = Decimal('40.00')
@@ -2060,10 +2028,6 @@ class CreateOrder(APIView):
                                     total_cart_value -= discount_amount
                                     remaining_free_quantity -= discount_quantity
                                     total_discount += discount_amount
-
-
-                                total_discount_after_adjustment = sub_total_sale_price - total_cart_value
-                                shipping_fee = 60 if total_cart_value <= 500 else 0
 
 
 
@@ -3374,3 +3338,65 @@ class AllOfferpRODUCTS(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+            
+
+class GenerateOtpView(APIView):
+    def post(self, request):
+        phone_number = request.data.get('phone')
+
+        # Validate phone number
+        if not phone_number:
+            return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if phone number exists in the database
+        check_phone = Customer.objects.filter(phone=phone_number).first()
+        if check_phone is None:
+            return Response({'error': 'Phone number not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Generate OTP and send it
+        otp = generate_otp()
+        if send_otp(phone_number, otp):
+            # Store the OTP in cache for verification later
+            cache.set(phone_number, otp, timeout=300)  # OTP valid for 5 minutes
+            save_otp = OTP.objects.create(user =check_phone,otp=otp)
+            return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class VerifyOtpView(APIView):
+    def post(self, request):
+        phone_number = request.data.get('phone')
+        otp = request.data.get('otp')
+
+        if not phone_number or not otp:
+            return Response({'error': 'Phone number and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Retrieve the user associated with the phone number
+        user = Customer.objects.filter(phone=phone_number).first()
+        if not user:
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify the OTP
+        check_otp = OTP.objects.filter(user=user, otp=otp).first()
+        if check_otp:
+            # Optionally, delete the OTP record after verification
+            check_otp.delete()
+
+            # Generate JWT token
+            jwt_payload = {
+                'id': user.pk,
+                'email': user.email,
+                'exp': datetime.utcnow() + timedelta(hours=1),  # Token expires in 1 hour
+                'iat': datetime.utcnow(),
+            }
+            jwt_token = jwt.encode(jwt_payload, settings.SECRET_KEY, algorithm='HS256')
+
+            return Response({
+                'message': 'OTP verified and token generated successfully',
+                'customer_id': user.pk,
+                'token': jwt_token
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
