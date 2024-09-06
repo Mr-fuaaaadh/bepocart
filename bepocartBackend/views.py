@@ -629,9 +629,6 @@ class CustomerCartProducts(APIView):
                         return Response({"message": "An error occurred during offer processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     try:
-                        # if not (matched_product_pks and allowed_discount_products):
-                        #     return Response({"message": "No products match the offer criteria"}, status=status.HTTP_400_BAD_REQUEST)
-
                         if offer.offer_type == "BUY" and offer.method == "FREE":
                             buy = offer.get_option
                             get = offer.get_value
@@ -1695,7 +1692,8 @@ class CreateOrder(APIView):
                                 {
                                     'product_name': item.product.name,
                                     'quantity': item.quantity,
-                                    'price': item.product.salePrice
+                                    'price': item.product.salePrice,
+                                    'image':item.product.image
                                 }
                                 for item in cart_items
 
@@ -1708,6 +1706,7 @@ class CreateOrder(APIView):
 
                                     if total_sale_price <= Decimal('500.00'):
                                         shipping_charge = Decimal('60.00')
+                                        order.shipping_charge = shipping_charge
                                         total_sale_price += shipping_charge
 
 
@@ -1738,6 +1737,8 @@ class CreateOrder(APIView):
                                         cod_charge = Decimal('40.00')
                                         total_sale_price += cod_charge
 
+                                        order.cod_charge = cod_charge
+
 
 
 
@@ -1766,7 +1767,6 @@ class CreateOrder(APIView):
                                                     order.razorpay_order_id = razorpay_order_id
                                                     order.total_amount = total_sale_price
                                                     order.save()
-
 
                                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
                                                     cart_items.delete() 
@@ -1929,6 +1929,7 @@ class CreateOrder(APIView):
 
                                 if payment_method == 'COD':
                                     cod_charge = Decimal('40.00')
+                                    order.cod_charge = cod_charge
                                     total_cart_value_after_discount += cod_charge
 
                                 # If payment method is Razorpay, create a Razorpay order
@@ -2035,6 +2036,7 @@ class CreateOrder(APIView):
 
                         if intersection_exists:
 
+
                             if discount_allowed_products:
                                 discount_allowed_products.sort(key=lambda item: item.product.salePrice)
 
@@ -2055,6 +2057,9 @@ class CreateOrder(APIView):
                                     total_cart_value -= discount_amount
                                     remaining_free_quantity -= discount_quantity
                                     total_discount += discount_amount
+
+
+
 
 
 
@@ -2155,7 +2160,8 @@ class CreateOrder(APIView):
                                         {
                                             'product_name': item.product.name,
                                             'quantity': item.quantity,
-                                            'price': item.product.salePrice
+                                            'price': item.product.salePrice,
+                                            'image':item.product.image
                                         }
                                         for item in cart_items
 
@@ -2169,7 +2175,11 @@ class CreateOrder(APIView):
 
                                             if total_cart_value <= Decimal('500.00'):
                                                 shipping_charge = Decimal('60.00')
+                                                order.shipping_charge = shipping_charge
                                                 total_cart_value += shipping_charge
+
+
+
 
                                             # Apply the coupon if present
                                             if coupon:
@@ -2199,6 +2209,10 @@ class CreateOrder(APIView):
                                                 cod_charge = Decimal('40.00')
                                                 total_cart_value += cod_charge
 
+                                                order.cod_charge = cod_charge
+
+
+
                                             # If payment method is Razorpay, create a Razorpay order
                                             elif payment_method == 'razorpay':
                                                 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -2213,7 +2227,9 @@ class CreateOrder(APIView):
                                                     razorpay_order_id = razorpay_order['id']
                                                     razorpay_payment_id = request.data.get('payment_id')
 
+
                                                     logging.debug(f"Total amount before saving order: {total_cart_value}")
+
 
 
                                                     if not razorpay_payment_id:
@@ -2245,9 +2261,11 @@ class CreateOrder(APIView):
 
                                             # Save the order and update the total amount
                                             order.total_amount = total_cart_value
+
                                             try:
                                                 order.save()
                                                 logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
 
                                                 cart_items.delete()
 
@@ -2434,7 +2452,8 @@ class CreateOrder(APIView):
                                         {
                                             'product_name': item.product.name,
                                             'quantity': item.quantity,
-                                            'price': item.product.salePrice
+                                            'price': item.product.salePrice,
+                                            'image':item.product.image
                                         }
                                         for item in cart_items
 
@@ -2448,6 +2467,8 @@ class CreateOrder(APIView):
                                             if total_cart_value <= Decimal('500.00'):
                                                 shipping_charge = Decimal('60.00')
                                                 total_cart_value += shipping_charge
+
+                                                order.shipping_charge = shipping_charge
 
                                             # Apply the coupon if present
                                             if coupon:
@@ -2476,6 +2497,8 @@ class CreateOrder(APIView):
                                             if payment_method == 'COD':
                                                 cod_charge = Decimal('40.00')
                                                 total_cart_value += cod_charge
+
+                                                order.cod_charge = cod_charge
 
                                             # If payment method is Razorpay, create a Razorpay order
                                             elif payment_method == 'razorpay':
@@ -2641,7 +2664,8 @@ class CreateOrder(APIView):
                 {
                     'product_name': item.product.name,
                     'quantity': item.quantity,
-                    'price': item.product.salePrice
+                    'price': item.product.salePrice,
+                    'image':item.product.image
                 }
                 for item in cart_items
 
@@ -2656,6 +2680,10 @@ class CreateOrder(APIView):
                     if total_amount <= Decimal('500.00'):
                         shipping_charge = Decimal('60.00')
                         total_amount += shipping_charge
+
+                        order.shipping_charge = shipping_charge
+
+
 
                     # Apply the coupon if present
                     if coupon:
@@ -2684,6 +2712,8 @@ class CreateOrder(APIView):
                     if payment_method == 'COD':
                         cod_charge = Decimal('40.00')
                         total_amount += cod_charge
+
+                        order.cod_charge = cod_charge
 
                     # If payment method is Razorpay, create a Razorpay order
                     elif payment_method == 'razorpay':

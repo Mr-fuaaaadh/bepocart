@@ -176,16 +176,7 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     'default':  {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'bepocart',
-#         'USER': 'postgres',
-#         'PASSWORD': '252562',
-#         'HOST': 'localhost',
-#         'PORT': '5432'    
-#     }
-# }
+
 
 
 
