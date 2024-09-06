@@ -10,7 +10,7 @@ class Customer(models.Model):
     first_name = models.CharField(max_length=100,null=True, blank=False)
     last_name = models.CharField(max_length=100,null=True, blank=False)
     email = models.EmailField(max_length=100,unique=True)
-    phone = models.CharField(max_length=10,unique=True,null=True,blank=True)
+    phone = models.CharField(max_length=15,unique=True,null=True,blank=True)
     image = models.ImageField(max_length=100, upload_to='UserProfile',null=True)
     place = models.CharField(max_length=100, null=True,blank=False)
     zip_code = models.CharField(max_length=6,null=True,blank=False)
@@ -118,7 +118,7 @@ class Order(models.Model):
     order_id = models.CharField(max_length=50, null=True, unique=True, editable=False)
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
     created_at = models.DateField(auto_now_add=True)
-    created_time = models.TimeField(blank=True, null=True)
+    created_time = models.TimeField(auto_now_add = True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -138,7 +138,14 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.order_id:
             self.order_id = self.generate_order_id()
+        if self.created_time is None:
+            self.created_time = timezone.now().time()  # Set the current time if not provided
         super(Order, self).save(*args, **kwargs)
+
+    def formatted_created_time(self):
+        if self.created_time:
+            return self.created_time.strftime('%I:%M %p')  # AM/PM format
+        return None
 
     def __str__(self):
         return self.order_id

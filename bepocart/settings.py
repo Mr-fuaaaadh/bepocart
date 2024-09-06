@@ -129,7 +129,7 @@ ROOT_URLCONF = 'bepocart.urls'
 # settings.py
 
 # Your JWT settings
-JWT_EXPIRATION_MINUTES = 1440  # Example expiration time
+JWT_EXPIRATION_MINUTES = 144440  # Example expiration time
 
 # Other Django settings
 
@@ -165,27 +165,27 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'bepocart',
-#         'USER': 'postgres',
-#         'PASSWORD': '9645848527',
-#         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
-#         'PORT': '5432'
-#     }
-# }
-
 DATABASES = {
-    'default':  {
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'bepocart',
         'USER': 'postgres',
-        'PASSWORD': '252562',
-        'HOST': 'localhost',
-        'PORT': '5432'    
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432'
     }
 }
+
+# DATABASES = {
+#     'default':  {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
+#         'PORT': '5432'    
+#     }
+# }
 
 
 
