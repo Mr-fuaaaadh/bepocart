@@ -68,7 +68,6 @@ class GoogleLoginAPIView(APIView):
             user_email = request.data.get('email')
             user_first_name = request.data.get('name')
             user_phone = request.data.get('phone', None)  # Handle if phone is provided
-            # Add other fields if necessary
 
             # Validate input fields
             if not user_email or not user_first_name:
@@ -87,16 +86,19 @@ class GoogleLoginAPIView(APIView):
             message = 'Customer created successfully' if created else 'Customer updated successfully'
 
             # Generate JWT token
-            jwt_payload = {
+            payload = {
                 'id': customer.pk,
                 'email': customer.email,
+                'exp': datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
             }
-            jwt_token = jwt.encode(jwt_payload, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
             return Response({
                 'message': message,
                 'customer_id': customer.pk,
-                'token': jwt_token
+                'token': token,
+                'exp': payload['exp'],
+                'iat': datetime.utcnow()
             }, status=status.HTTP_200_OK)
 
         except DRFValidationError as e:
@@ -110,7 +112,6 @@ class GoogleLoginAPIView(APIView):
         except Exception as e:
             logger.error(f"Unexpected Error: {str(e)}", exc_info=True)
             return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 class CustomerLogin(APIView):
     def post(self, request):
         serializer = CustomerLoginSerializer(data=request.data)
@@ -1597,6 +1598,8 @@ class CreateOrder(APIView):
 
 
 
+
+
                         # Calculate the total free quantity based on the combined quantity
                         total_combined_free_quantity = int(total_combined_quantity / buy) * get
                         serializer = CartSerializers(cart_items, many=True)
@@ -1709,6 +1712,8 @@ class CreateOrder(APIView):
                                         shipping_charge = Decimal('60.00')
                                         total_sale_price += shipping_charge
 
+
+
                                     # Apply the coupon if present
                                     if coupon:
                                         try:
@@ -1724,6 +1729,8 @@ class CreateOrder(APIView):
 
                                             total_sale_price -= discount_amount
                                             order.coupon = coupon
+
+
                                         except Exception as e:
                                             logging.error(f"Error applying coupon: {e}")
                                             return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1732,6 +1739,8 @@ class CreateOrder(APIView):
                                     if payment_method == 'COD':
                                         cod_charge = Decimal('40.00')
                                         total_sale_price += cod_charge
+
+
 
 
 
@@ -1760,8 +1769,9 @@ class CreateOrder(APIView):
                                                     order.total_amount = total_sale_price
                                                     order.save()
 
+
                                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-                                                    cart_items.delete()  
+                                                    cart_items.delete() 
 
                                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                                 else:
@@ -3361,26 +3371,50 @@ class AllOfferpRODUCTS(APIView):
 class GenerateOtpView(APIView):
     def post(self, request):
         phone_number = request.data.get('phone')
+        email = request.data.get('email')  # Email is optional
 
-        # Validate phone number
         if not phone_number:
             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if phone number exists in the database
-        check_phone = Customer.objects.filter(phone=phone_number).first()
-        if check_phone is None:
-            return Response({'error': 'Phone number not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Generate OTP and send it
-        otp = generate_otp()
-        if send_otp(phone_number, otp):
-            # Store the OTP in cache for verification later
-            cache.set(phone_number, otp, timeout=300)  # OTP valid for 5 minutes
-            save_otp = OTP.objects.create(user =check_phone,otp=otp)
-            return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
-        else:
-	  
-            return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            # Check if customer exists
+            customer = Customer.objects.filter(phone=phone_number).first()
+
+            if customer:
+                # If customer exists, generate and send OTP
+                otp = generate_otp()
+
+                if send_otp(phone_number, otp):
+                    cache.set(phone_number, otp, timeout=300)
+                    OTP.objects.create(user=customer, otp=otp)
+
+                    return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # Create a new customer
+                if email:
+                    customer = Customer.objects.create(phone=phone_number, email=email)
+                else:
+                    customer = Customer.objects.create(phone=phone_number)
+
+                otp = generate_otp()
+
+                if send_otp(phone_number, otp):
+                    cache.set(phone_number, otp, timeout=300)
+                    OTP.objects.create(user=customer, otp=otp)
+
+                    return Response({'message': 'Customer created and OTP sent successfully'}, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except IntegrityError as e:
+            logger.error(f"IntegrityError: {e}", exc_info=True)
+            return Response({'error': 'Duplicate entry or constraint violation'}, status=status.HTTP_400_BAD_REQUEST)
+       
+        except Exception as e:
+            logger.error(f"Error generating OTP: {e}", exc_info=True)
+            return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class VerifyOtpView(APIView):
@@ -3403,18 +3437,18 @@ class VerifyOtpView(APIView):
             check_otp.delete()
 
             # Generate JWT token
-            jwt_payload = {
+            payload = {
                 'id': user.pk,
                 'email': user.email,
                 'exp': datetime.utcnow() + timedelta(hours=1),  # Token expires in 1 hour
                 'iat': datetime.utcnow(),
             }
-            jwt_token = jwt.encode(jwt_payload, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
             return Response({
                 'message': 'OTP verified and token generated successfully',
-                'customer_id': user.pk,
-                'token': jwt_token
+                'id': user.pk,
+                'token': token
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)

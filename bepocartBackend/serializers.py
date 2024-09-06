@@ -254,7 +254,7 @@ class ProductViewSerializers(serializers.ModelSerializer):
     mainCategory = serializers.CharField(source ='category.category.slug')
     class Meta :
         model = Product
-        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price','slug']
+        fields = ['id','name','image','salePrice','mainCategory','category','short_description','description','price','slug','discount']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -303,7 +303,7 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = ['id','order_id','customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id",'razorpay_order_id']
+        fields = ['id','order_id','customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id",'razorpay_order_id','created_time']
 
 
     def create(self, validated_data):

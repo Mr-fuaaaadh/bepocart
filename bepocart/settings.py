@@ -129,7 +129,7 @@ ROOT_URLCONF = 'bepocart.urls'
 # settings.py
 
 # Your JWT settings
-JWT_EXPIRATION_MINUTES = 1440  # Example expiration time
+JWT_EXPIRATION_MINUTES = 144440  # Example expiration time
 
 # Other Django settings
 
@@ -161,7 +161,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bepocart.wsgi.application'
 
 
-# Database# https://docs.djangoproject.com/en/5.0/ref/settings/#databa
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -172,6 +172,8 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
