@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG =  False
+DEBUG =  True
 
 ALLOWED_HOSTS = ["localhost","127.0.0.1","https://bepocart.in","*"]
 CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
@@ -160,6 +160,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bepocart.wsgi.application'
 
+
 # Database# https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 DATABASES = {
     'default': {
@@ -171,9 +172,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
