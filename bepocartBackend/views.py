@@ -1476,7 +1476,6 @@ class UserProfileUpdate(APIView):
 class CreateOrder(APIView):
     def post(self, request, pk):
         token = request.headers.get('Authorization')
-        print(f"Token   {token}")
         if not token:
             return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -1596,7 +1595,6 @@ class CreateOrder(APIView):
                             total_sale_price += item.product.salePrice * item.quantity
 
 
-                        print(f"Total Price   {total_sale_price}")
 
 
 
@@ -1712,7 +1710,6 @@ class CreateOrder(APIView):
                                         shipping_charge = Decimal('60.00')
                                         total_sale_price += shipping_charge
 
-                                        print(f"After Shipping charge   {total_sale_price}")
 
 
                                     # Apply the coupon if present
@@ -1731,7 +1728,6 @@ class CreateOrder(APIView):
                                             total_sale_price -= discount_amount
                                             order.coupon = coupon
 
-                                            print(f"After Applay Copon   {total_sale_price}")
 
                                         except Exception as e:
                                             logging.error(f"Error applying coupon: {e}")
@@ -1742,7 +1738,6 @@ class CreateOrder(APIView):
                                         cod_charge = Decimal('40.00')
                                         total_sale_price += cod_charge
 
-                                        print(f"After COD   {total_sale_price}")
 
 
 
@@ -1771,12 +1766,10 @@ class CreateOrder(APIView):
                                                     order.razorpay_order_id = razorpay_order_id
                                                     order.total_amount = total_sale_price
                                                     order.save()
-                                                    print(f"Order saved successfully with total amount: {order.total_amount}")
 
 
                                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
                                                     cart_items.delete() 
-                                                    print("Cart Deleted successfully") 
 
                                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
                                                 else:
