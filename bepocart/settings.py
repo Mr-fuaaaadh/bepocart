@@ -165,6 +165,18 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bepocart',
+#         'USER': 'postgres',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
+#         'PORT': '5432'
+#     }
+# }
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -175,7 +187,6 @@ DATABASES = {
         'PORT': '5432'
     }
 }
-
 
 
 

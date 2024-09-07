@@ -3,22 +3,34 @@ from django.contrib.auth.hashers import make_password, check_password
 from bepocartAdmin.models import *
 from django.utils import timezone
 import uuid
+from django.core.validators import RegexValidator
 
 current_time = timezone.now()
 
 class Customer(models.Model):
-    first_name = models.CharField(max_length=100,null=True, blank=False)
-    last_name = models.CharField(max_length=100,null=True, blank=False)
-    email = models.EmailField(max_length=100,unique=True)
-    phone = models.CharField(max_length=15,unique=True,null=True,blank=True)
-    image = models.ImageField(max_length=100, upload_to='UserProfile',null=True)
-    place = models.CharField(max_length=100, null=True,blank=False)
-    zip_code = models.CharField(max_length=6,null=True,blank=False)
-    password = models.CharField(max_length=100,null=True)
+    phone_regex = RegexValidator(
+        regex=r'^\d+$',
+        message="Phone number must contain only digits."
+    )
+    
+    first_name = models.CharField(max_length=100, null=True, blank=False)
+    last_name = models.CharField(max_length=100, null=True, blank=False)
+    email = models.EmailField(max_length=100, unique=True,null=True, blank=True)
+    phone = models.CharField(validators=[phone_regex], max_length=15, unique=True, null=True, blank=True)
+    image = models.ImageField(max_length=100, upload_to='UserProfile', null=True)
+    place = models.CharField(max_length=100, null=True, blank=False)
+    zip_code = models.CharField(max_length=6, null=True, blank=False)
+    password = models.CharField(max_length=100, null=True)
 
     def save(self, *args, **kwargs):
+        # Clean the phone field: Remove non-numeric characters
+        if self.phone:
+            self.phone = ''.join(filter(str.isdigit, self.phone))
+        
+        # Hash the password if it's a new customer or password is being changed
         if not self.pk or 'password' in kwargs:  
             self.password = make_password(self.password)
+        
         super().save(*args, **kwargs)
 
     def check_password(self, raw_password):
