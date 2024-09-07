@@ -3401,7 +3401,7 @@ class AllOfferpRODUCTS(APIView):
 
             
 
-logger = logging.getLogger(__name__)
+
 
 class SendOtpView(APIView):
     def post(self, request):
@@ -3412,10 +3412,14 @@ class SendOtpView(APIView):
 
         phone_number = phone_number.strip()  # Clean up phone number
 
+        # Validate phone number format (example: check if it's a 10-digit number)
+        if not phone_number.isdigit() or len(phone_number) != 10:
+            return Response({'error': 'Invalid phone number format'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # Create or get the customer instance using the phone number only
+            # Create or get the customer instance using the phone number
             customer, created = Customer.objects.get_or_create(
-                phone=phone_number  # Set email to an empty string
+                phone=phone_number
             )
 
             if created:
@@ -3428,7 +3432,7 @@ class SendOtpView(APIView):
             # Generate and send OTP
             otp = generate_otp()
             if send_otp(phone_number, otp):
-                cache.set(phone_number, otp, timeout=300)
+                cache.set(phone_number, otp, timeout=300)  # Cache OTP for 5 minutes
                 OTP.objects.create(user=customer, otp=otp)
                 return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
             else:
