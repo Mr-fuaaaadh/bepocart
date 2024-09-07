@@ -67,15 +67,10 @@ def send_otp(phone_number, otp):
         response_data = response.json()
 
         if response_data.get('status') == 'success':
-            print('OTP sent successfully:', response_data)
             return True
-        else:
-            print('Failed to send OTP:', response_data)
+        else
             return False
     except requests.exceptions.HTTPError as e:
-        print(f"HTTP error occurred: {e.response.status_code} - {e.response.reason}")
-        print(f"Response Text: {e.response.text}")
         return False
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
         return False
