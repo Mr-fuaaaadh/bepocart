@@ -82,7 +82,7 @@ urlpatterns = [
     path('coin/',CustomerCoinView.as_view(),name="coin"),
 
 
-    path('generate-otp/', GenerateOtpView.as_view(), name='generate-otp'),
+    path('generate-otp/', SendOtpView.as_view(), name='generate-otp'),
     path('verification-otp/', VerifyOtpView.as_view(), name='verify-otp'),
 
 

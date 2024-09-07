@@ -3398,54 +3398,45 @@ class AllOfferpRODUCTS(APIView):
 
             
 
-class GenerateOtpView(APIView):
+logger = logging.getLogger(__name__)
+
+class SendOtpView(APIView):
     def post(self, request):
         phone_number = request.data.get('phone')
-        email = request.data.get('email')  # Email is optional
 
         if not phone_number:
             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        phone_number = phone_number.strip()  # Clean up phone number
+
         try:
-            # Check if customer exists
-            customer = Customer.objects.filter(phone=phone_number).first()
+            # Create or get the customer instance using the phone number only
+            customer, created = Customer.objects.get_or_create(
+                phone=phone_number  # Set email to an empty string
+            )
 
-            if customer:
-                # If customer exists, generate and send OTP
-                otp = generate_otp()
-
-                if send_otp(phone_number, otp):
-                    cache.set(phone_number, otp, timeout=300)
-                    OTP.objects.create(user=customer, otp=otp)
-
-                    return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
-                else:
-                    return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if created:
+                # Customer was created
+                logger.info(f"Created new customer with phone number {phone_number}")
             else:
-                # Create a new customer
-                if email:
-                    customer = Customer.objects.create(phone=phone_number, email=email)
-                else:
-                    customer = Customer.objects.create(phone=phone_number)
+                # Customer already exists
+                logger.info(f"Customer with phone number {phone_number} already exists")
 
-                otp = generate_otp()
+            # Generate and send OTP
+            otp = generate_otp()
+            if send_otp(phone_number, otp):
+                cache.set(phone_number, otp, timeout=300)
+                OTP.objects.create(user=customer, otp=otp)
+                return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                if send_otp(phone_number, otp):
-                    cache.set(phone_number, otp, timeout=300)
-                    OTP.objects.create(user=customer, otp=otp)
-
-                    return Response({'message': 'Customer created and OTP sent successfully'}, status=status.HTTP_201_CREATED)
-                else:
-                    return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except IntegrityError as e:
-            logger.error(f"IntegrityError: {e}", exc_info=True)
-            return Response({'error': 'Duplicate entry or constraint violation'}, status=status.HTTP_400_BAD_REQUEST)
-       
         except Exception as e:
-            logger.error(f"Error generating OTP: {e}", exc_info=True)
+            logger.error(f"Error in SendOtpView: {e}", exc_info=True)
             return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+
+
 
 class VerifyOtpView(APIView):
     def post(self, request):
