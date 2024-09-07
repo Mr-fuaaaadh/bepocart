@@ -68,7 +68,7 @@ def send_otp(phone_number, otp):
 
         if response_data.get('status') == 'success':
             return True
-        else
+        else:
             return False
     except requests.exceptions.HTTPError as e:
         return False
