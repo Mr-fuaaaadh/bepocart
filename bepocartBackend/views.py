@@ -2678,7 +2678,7 @@ class CreateOrder(APIView):
                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                     if total_amount <= Decimal('500.00'):
-                        shipping_charge = Decimal('60.00')
+                        shipping_charge = Decimal('00.00')
                         total_amount += shipping_charge
 
                         order.shipping_charge = shipping_charge
