@@ -303,7 +303,7 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = ['id','order_id','customer', 'created_at', 'updated_at', 'status', 'total_amount', 'address', 'items','payment_method','coupon',"payment_id",'razorpay_order_id','created_time']
+        fields = ['id','order_id','customer', 'created_at', 'updated_at', 'status', 'total_amount','shipping_charge','cod_charge', 'address', 'items','payment_method','coupon',"payment_id",'razorpay_order_id','created_time']
 
 
     def create(self, validated_data):

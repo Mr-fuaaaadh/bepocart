@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Order Notification</title>
+    <title>Invoice</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@
             padding: 0;
         }
         .container {
-            max-width: 600px;
+            max-width: 800px;
             width: 100%;
             margin: 0 auto;
             background-color: #ffffff;
@@ -21,88 +21,82 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding-bottom: 20px;
             border-bottom: 2px solid #4CAF50;
-            background-color: #4CAF50;
-            color: #ffffff;
         }
         .header img {
-            max-width: 150px;
-            height: auto;
+            max-width: 120px;
         }
         .header h1 {
             font-size: 28px;
-            margin: 10px 0;
-        }
-        .order-details {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f4f4f4;
-            border-radius: 8px;
-            border: 1px solid #dddddd;
-        }
-        .order-details h2 {
             color: #4CAF50;
-            font-size: 20px;
-            margin-top: 0;
         }
-        .order-summary {
+        .invoice-info {
             margin-top: 20px;
-            width: 100%;
+        }
+        .invoice-info h2 {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .invoice-details div {
+            width: 45%;
+        }
+        .invoice-details h3 {
+            font-size: 18px;
+            color: #4CAF50;
+            margin-bottom: 10px;
         }
         .order-summary table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
         .order-summary th, .order-summary td {
             border: 1px solid #dddddd;
-            text-align: left;
             padding: 10px;
-            font-size: 14px;
+            text-align: left;
         }
         .order-summary th {
             background-color: #4CAF50;
             color: #ffffff;
-            font-weight: bold;
-        }
-        .order-summary tr:nth-child(even) {
-            background-color: #f2f2f2;
         }
         .order-summary td img {
-            max-width: 80px;
+            max-width: 60px;
             height: auto;
-            display: block;
-            border-radius: 4px;
+        }
+        .total-amount {
+            text-align: right;
+            font-size: 20px;
+            margin-top: 10px;
+            color: #4CAF50;
         }
         .footer {
-            margin-top: 20px;
             text-align: center;
+            margin-top: 20px;
             font-size: 12px;
             color: #999999;
         }
         @media only screen and (max-width: 600px) {
-            .container {
-                padding: 10px;
+            .header {
+                flex-direction: column;
+                text-align: center;
             }
-            .header h1 {
-                font-size: 24px;
+            .invoice-details {
+                flex-direction: column;
+                align-items: flex-start;
             }
-            .order-details h2 {
-                font-size: 18px;
-            }
-            .order-summary th, .order-summary td {
-                font-size: 12px;
-                padding: 8px;
-            }
-            .order-summary table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
-            }
-            .order-summary th, .order-summary td {
-                display: inline-block;
-                min-width: 100px;
+            .invoice-details div {
+                width: 100%;
+                margin-bottom: 20px;
             }
         }
     </style>
@@ -110,37 +104,48 @@
 <body>
     <div class="container">
         <div class="header">
-            <!-- Add your logo or header image here -->
             <img src="https://drive.google.com/file/d/1ls6mBCSuZxm1yLDGnBk0odrG1tAcNrC4/view" alt="Company Logo">
-            <h1>Bepocart New Order Created</h1>
+            <h1>Invoice</h1>
         </div>
-        <div class="order-details">
-            <h2>Order Details</h2>
-            <p><strong>Order ID:</strong> {{ order.order_id }}</p>
-            <p><strong>Customer Name:</strong> {{ order.customer.first_name }} {{ order.customer.last_name }}</p>
-            <p><strong>Total Amount:</strong> ₹{{ order.total_amount }}</p>
+
+        <div class="invoice-info">
+            <p>Date: {{ order.created_at }}</p>
+            <p>Order ID: {{ order.order_id }}</p>
+            <p>Shipping Charge: {{ order.shipping_charge }}</p>
+            <p>COD Charge: {{ order.cod_charge }}</p>
+            <p>Total Amount: {{ order.total_amount }}</p>
+
         </div>
+
+        
+
         <div class="order-summary">
             <h2>Order Summary</h2>
             <table>
                 <tr>
                     <th>Product</th>
+                    <th>Image</th>
                     <th>Quantity</th>
                     <th>Price</th>
-                    <th>Image</th>
                 </tr>
                 {% for item in user_cart %}
                 <tr>
                     <td>{{ item.product_name }}</td>
+                    <td><img src="{{ item.image.url }}"></td>
                     <td>{{ item.quantity }}</td>
                     <td>₹{{ item.price }}</td>
-                    <td><img src="{{ item.product.image }}" alt="{{ item.product.name }}"></td>
                 </tr>
                 {% endfor %}
             </table>
         </div>
+
+        <div class="total-amount">
+            <p><strong>Total Amount: ₹{{ order.total_amount }}</strong></p>
+        </div>
+
         <div class="footer">
-            <p>This is an automated notification. Please do not reply to this email.</p>
+            <p>Thank you for shopping with us!</p>
+            <p>If you have any questions, please contact us at support@bepocart.com</p>
         </div>
     </div>
 </body>

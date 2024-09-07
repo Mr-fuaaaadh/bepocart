@@ -122,6 +122,8 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    shipping_charge = models.IntegerField(default=0,null=True)
+    cod_charge = models.IntegerField(default=0,null=True)
     address = models.ForeignKey('Address', on_delete=models.CASCADE)
     coupon = models.ForeignKey('Coupon', on_delete=models.CASCADE, null=True)
     payment_method = models.CharField(max_length=50, null=True)

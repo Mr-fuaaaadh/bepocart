@@ -1897,6 +1897,13 @@ class UpdateReviewStatus(APIView):
 
         except Exception as e:
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+# class AdminDeleteReview(APIView):
+#     def delete(self, request, pk):
+#         try:
+#             token = request.headers.get()
 
 
 
