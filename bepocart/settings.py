@@ -43,33 +43,8 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
 ]
 
-# Security settings
-# SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-#<<<<<<< HEAD
-#'CORS_ALLOWED_ORIGINS = [
-#    "http://localhost:3000",
-#    "https://arranged-tax-wait-rapid.trycloudflare.com",
-    # Add other origins as needed
-#]
-#CORS_ORIGIN_WHITELIST = (
-#    "http://localhost:3000",
-#    "https://arranged-tax-wait-rapid.trycloudflare.com",
-
-#)
-#=======
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "https://secondary-rolls-rocket-glance.trycloudflare.com",
-#     # Add other origins as needed
-# ]
-# CORS_ORIGIN_WHITELIST = (
-#     "http://localhost:3000",
-#     "https://secondary-rolls-rocket-glance.trycloudflare.com",
-
-# )
-#>>>>>>> 3bcb419738e68d39ae1acf78eb0a73eeecb367
 
 CORS_ALLOWED_ORIGINS = [
     "https://bepocart.in"

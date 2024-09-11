@@ -1668,35 +1668,66 @@ class CustomersDelete(APIView):
 
         
 
-class ExportOrderDataView(APIView):
-    def get(self, request, *args, **kwargs):
-        date = request.GET.get('date', None)
-        # end_date = request.GET.get('end_date', None)
-        
-        # Query orders based on selected date range
-        if date :
-            orders = Order.objects.filter(created_at=[date])
-        else:
-            orders = Order.objects.all()
+class ExportOrdersToExcel(APIView):
+    def post(self, request, *args, **kwargs):
+        # Get start_date and end_date from request data
+        start_date_str = request.data.get('startDate')
+        end_date_str = request.data.get('endDate')
+        status_filter = request.data.get('status')  # status filter can be null
 
-        data = {
-            'Customer': [order.customer.first_name for order in orders],
-            'Email': [order.customer.email for order in orders],
-            'Phone': [order.customer.phone for order in orders],
-            'Total': [order.total_amount for order in orders],
-            'Date': [order.created_at for order in orders],
-        }
+        if not start_date_str or not end_date_str:
+            return Response({"error": "Please provide both startDate and endDate in YYYY-MM-DD format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Filter orders by date range and status (if status is provided)
+        if status_filter:
+            orders = Order.objects.filter(created_at__range=[start_date, end_date], status=status_filter)
+        else:
+            orders = Order.objects.filter(created_at__range=[start_date, end_date])
+
+        if not orders:
+            return Response({"error": "No orders found for the given date range."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminOrderViewsSerializers(orders, many=True)
+
+        # Prepare data for DataFrame
+        data = []
+        for order in serializer.data:
+            for item in order.get('order_items', []):
+                data.append({
+                    "Order ID": order.get('order_id'),
+                    "Name": order.get('name'),  # Fixed typo from 'ame'
+                    "Phone": order.get('phone'),
+                    "City": order.get('city'),
+                    "State": order.get('state'),
+                    "Pincode": order.get('pincode'),
+                    "Coupon Code ": item.get('couponName'),
+                    "Total Amount": order.get('total_amount'),
+                    "Created At": order.get('created_at'),
+                    "Payment Method": order.get('payment_method'),
+                    "Payment ID": order.get('payment_id'),
+                    "Status": order.get('status'),
+                    "Product": f"{item.get('name')} - {item.get('color')} - {item.get('size')}",
+                    "Quantity": item.get('quantity'),
+                    "Price": item.get('price'),
+                })
+
         df = pd.DataFrame(data)
 
-        excel_file = "order_data.xlsx"
+        # Create an HTTP response with the Excel file
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="orders_{start_date_str}_to_{end_date_str}.xlsx"'
 
-        df.to_excel(excel_file, index=False)
+        with pd.ExcelWriter(response, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Orders')
 
-        with open(excel_file, 'rb') as f:
-            response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = 'attachment; filename=' + excel_file
-            return response
-
+        return response
+    
             
 class OrderInvoiceBillCreating(APIView):
     def get(self, request, order_id):
