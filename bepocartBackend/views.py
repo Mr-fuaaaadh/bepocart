@@ -1758,6 +1758,8 @@ class CreateOrder(APIView):
                                             razorpay_order_id = razorpay_order['id']
                                             razorpay_payment_id = request.data.get('payment_id')
 
+                                           
+
 
                                             if not razorpay_payment_id:
                                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
@@ -1772,6 +1774,7 @@ class CreateOrder(APIView):
                                                     order.save()
 
                                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
                                                     cart_items.delete() 
 
                                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
@@ -1793,7 +1796,7 @@ class CreateOrder(APIView):
                                         # Send order creation email
                                         try:
                                             email_subject = 'New Order Created'
-                                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
                                             email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                             email.content_subtype = 'html'
                                             email.send()
@@ -1947,6 +1950,7 @@ class CreateOrder(APIView):
                                         razorpay_order_id = razorpay_order['id']
                                         razorpay_payment_id = request.data.get('payment_id')
 
+                                       
                                         if not razorpay_payment_id:
                                             return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1960,6 +1964,7 @@ class CreateOrder(APIView):
                                                 order.save()
 
                                                 logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
                                                 cart_items.delete()  
 
                                                 return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
@@ -1981,7 +1986,7 @@ class CreateOrder(APIView):
                                     # Send order creation email
                                     try:
                                         email_subject = 'New Order Created'
-                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
                                         email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                         email.content_subtype = 'html'
                                         email.send()
@@ -2002,8 +2007,7 @@ class CreateOrder(APIView):
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
-                try :
-                   
+                try :                   
                     if offer.offer_type == "BUY" and offer.method == "FREE":
                         buy = offer.get_option
                         get = offer.get_value
@@ -2038,6 +2042,7 @@ class CreateOrder(APIView):
                             total_free_quantity += free_quantity
 
                         if intersection_exists:
+
 
 
                             if discount_allowed_products:
@@ -2164,7 +2169,7 @@ class CreateOrder(APIView):
                                             'product_name': item.product.name,
                                             'quantity': item.quantity,
                                             'price': item.product.salePrice,
-                                            'image':item.product.image
+                                            'image':item.product.image.url
                                         }
                                         for item in cart_items
 
@@ -2249,6 +2254,7 @@ class CreateOrder(APIView):
                                                             order.save()
 
                                                             logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
                                                             cart_items.delete()  
 
                                                             return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
@@ -2275,7 +2281,7 @@ class CreateOrder(APIView):
                                                 # Send order creation email
                                                 try:
                                                     email_subject = 'New Order Created'
-                                                    email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                                                    email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
                                                     email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                                                     email.content_subtype = 'html'
                                                     email.send()
@@ -2299,6 +2305,8 @@ class CreateOrder(APIView):
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         
                         try:
+
+
                             total_free_quantity = 0
                             for item in user_cart:
                                 if item.product.pk in matched_product_pks:
@@ -2456,7 +2464,7 @@ class CreateOrder(APIView):
                                             'product_name': item.product.name,
                                             'quantity': item.quantity,
                                             'price': item.product.salePrice,
-                                            'image':item.product.image
+                                            'image':item.product.image.url
                                         }
                                         for item in cart_items
 
@@ -2517,6 +2525,7 @@ class CreateOrder(APIView):
                                                     razorpay_order_id = razorpay_order['id']
                                                     razorpay_payment_id = request.data.get('payment_id')
 
+                                                   
                                                     logging.debug(f"Total amount before saving order: {total_cart_value}")
 
 
@@ -2534,7 +2543,8 @@ class CreateOrder(APIView):
                                                             order.total_amount = total_cart_value  # Ensure total_amount is correctly assigned
                                                             order.save()
 
-                                                            logging.debug(f"Order saved successfully with total amount: {order.total_cart_value}")
+                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+
                                                             cart_items.delete()  
 
                                                             return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
@@ -2542,11 +2552,9 @@ class CreateOrder(APIView):
                                                             return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
 
                                                     except Exception as e:
-                                                        logging.error(f"Payment capture error: {e}")
                                                         return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                                                     
                                                 except Exception as e:
-                                                    logging.error(f"Razorpay order creation error: {e}")
                                                     return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                                             # Save the order and update the total amount
@@ -2578,6 +2586,7 @@ class CreateOrder(APIView):
                                             
                                         except Exception as e:
                                             logging.error(f"Unexpected error: {e}")
+
                                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                                 except Exception as e:
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2668,7 +2677,7 @@ class CreateOrder(APIView):
                     'product_name': item.product.name,
                     'quantity': item.quantity,
                     'price': item.product.salePrice,
-                    'image':item.product.image
+                    'image':item.product.image.url
                 }
                 for item in cart_items
 
@@ -2732,7 +2741,6 @@ class CreateOrder(APIView):
                             razorpay_order_id = razorpay_order['id']
                             razorpay_payment_id = request.data.get('payment_id')
 
-                            logging.debug(f"Total amount before saving order: {total_amount}")
 
 
                             if not razorpay_payment_id:
@@ -2773,7 +2781,7 @@ class CreateOrder(APIView):
                         # Send order creation email
                         try:
                             email_subject = 'New Order Created'
-                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
                             email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
                             email.content_subtype = 'html'
                             email.send()
@@ -2791,7 +2799,6 @@ class CreateOrder(APIView):
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except Exception as e:
-            logging.error(f"Unexpected error: {e}")
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

@@ -114,10 +114,31 @@
             <p>Shipping Charge: {{ order.shipping_charge }}</p>
             <p>COD Charge: {{ order.cod_charge }}</p>
             <p>Total Amount: {{ order.total_amount }}</p>
-
         </div>
 
-        
+        <!-- From and To Address Section -->
+        <div class="invoice-details">
+            <div>
+                <h3>From:</h3>
+                <p><strong>Michael export and import pvt ltd
+                </strong></p>
+                <p>GV Ayyer Road, Willingdon Island</p>
+                <p>PIN :682003, Kochi, 
+                </p>
+                <P><strong>GST NO: - 32AAJCM8151G2ZH
+                </strong></P>
+                <p>Phone: 70254 94747</p>
+                <p>Email: contact@bepocart.com</p>
+            </div>
+            <div>
+                <h3>To:</h3>
+                <p><strong>{{ customer.user.first_name }} {{ customer.user.last_name }}</strong></p>
+                <p>{{ customer.address }}</p>
+                <p>{{ customer.state }},{{ customer.city }}, {{ customer.pincode }}</p>
+                <p>Phone: {{ customer.phone }}</p>
+                <p>Email: {{ customer.email }}</p>
+            </div>
+        </div>
 
         <div class="order-summary">
             <h2>Order Summary</h2>
@@ -131,8 +152,9 @@
                 {% for item in user_cart %}
                 <tr>
                     <td>{{ item.product_name }}</td>
-                    <td><img src="{{ item.image.url }}"></td>
+                    <td><img src="{{ item.image }}"></td>
                     <td>{{ item.quantity }}</td>
+
                     <td>₹{{ item.price }}</td>
                 </tr>
                 {% endfor %}
