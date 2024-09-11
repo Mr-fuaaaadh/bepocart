@@ -33,6 +33,7 @@ from requests.exceptions import RequestException
 from django.core.exceptions import ValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from .utils import *
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -2680,7 +2681,7 @@ class CreateOrder(APIView):
                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                     if total_amount <= Decimal('500.00'):
-                        shipping_charge = Decimal('00.00')
+                        shipping_charge = Decimal('60.00')
                         total_amount += shipping_charge
 
                         order.shipping_charge = shipping_charge
@@ -3427,18 +3428,19 @@ class SendOtpView(APIView):
 
             # Generate and send OTP
             otp = generate_otp()
-            if send_otp(phone_number, otp):
+            send_status = send_otp(phone_number, otp)
+            if send_status:
                 cache.set(phone_number, otp, timeout=300)  # Cache OTP for 5 minutes
                 OTP.objects.create(user=customer, otp=otp)
                 return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
             else:
-		logger.error(f"Failed to send OTP to phone number {phone_number}. Status: {send_status}")
+                # Log the failure reason
+                logger.error(f"Failed to send OTP to phone number {phone_number}. Status: {send_status}")
                 return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
             logger.error(f"Error in SendOtpView: {e}", exc_info=True)
-            return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
 
 
 
