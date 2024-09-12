@@ -1706,7 +1706,7 @@ class CreateOrder(APIView):
                                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                     if total_sale_price <= Decimal('500.00'):
-                                        shipping_charge = Decimal('0.00')
+                                        shipping_charge = Decimal('60.00')
                                         order.shipping_charge = shipping_charge
                                         total_sale_price += shipping_charge
 
@@ -2180,7 +2180,7 @@ class CreateOrder(APIView):
                                                 return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                             if total_cart_value <= Decimal('500.00'):
-                                                shipping_charge = Decimal('0.00')
+                                                shipping_charge = Decimal('60.00')
                                                 order.shipping_charge = shipping_charge
                                                 total_cart_value += shipping_charge
 
@@ -2474,7 +2474,7 @@ class CreateOrder(APIView):
                                                 return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                                             if total_cart_value <= Decimal('500.00'):
-                                                shipping_charge = Decimal('0.00')
+                                                shipping_charge = Decimal('60.00')
                                                 total_cart_value += shipping_charge
 
                                                 order.shipping_charge = shipping_charge
@@ -2735,14 +2735,11 @@ class CreateOrder(APIView):
                                 'payment_capture': 1  # Auto capture payment
                             })
                             logging.debug(f"Total amount sent to Razorpay: {total_amount}")
-                            print(f"Total amount sent to Razorpay: {total_amount}")
 
 
                             razorpay_order_id = razorpay_order['id']
                             razorpay_payment_id = request.data.get('payment_id')
 
-                            print(f"Razorpay Order ID   :{razorpay_order_id}")
-                            print(f"Razorpay Payment ID   :{razorpay_payment_id}")
 
 
                             if not razorpay_payment_id:
@@ -2760,7 +2757,6 @@ class CreateOrder(APIView):
                                     order.save()
 
                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-                                    print(f"Order saved successfully with total amount: {order.total_amount}")
 
                                     cart_items.delete()  
 
@@ -2781,7 +2777,6 @@ class CreateOrder(APIView):
                     try:
                         order.save()
                         logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-                        print(f"Order saved successfully with total amount: {order.total_amount}")
 
 
                         cart_items.delete()

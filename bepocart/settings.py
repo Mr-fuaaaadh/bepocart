@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","https://bepocart.in",' https://compressed-rendering-assigned-arc.trycloudflare.com',"*"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","https://bepocart.in","*"]
 CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
 APPEND_SLASH = False
 
@@ -47,7 +47,8 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
 CORS_ALLOWED_ORIGINS = [
-    "https://bepocart.in"
+    "https://bepocart.in",
+    "https://bepocart.com"
 ]
 
 APPEND_SLASH = False

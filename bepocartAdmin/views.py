@@ -15,7 +15,7 @@ import pandas as pd
 from django.utils import timezone
 import openpyxl
 import pytz
-
+from django.db.models import Sum
 from .utils import send_order_status_email
 from .sms_utils import send_order_status_sms
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError, DecodeError
@@ -1626,24 +1626,24 @@ class AdminBlogUpdate(APIView):
 class AdminCustomerView(APIView):
     def get(self, request):
         try:
-            # token = request.headers.get('Authorization')
-            # if token is None:
-            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # try:
-            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            # except ExpiredSignatureError:
-            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            # except (DecodeError, InvalidTokenError):
-            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # user_id = payload.get('id')
-            # if user_id is None:
-            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # user = User.objects.filter(pk=user_id).first()
-            # if user is None:
-            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
             customers = Customer.objects.all()
             serializer = AdminCustomerViewSerilizers(customers, many=True)  
@@ -1658,6 +1658,26 @@ class AdminCustomerView(APIView):
 class CustomersDelete(APIView):
     def delete(self, request, pk):
         try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+
             customer = Customer.objects.filter(pk=pk).first()
             if customer is None:
                 return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1665,6 +1685,74 @@ class CustomersDelete(APIView):
             return Response({"message": "Customer deleted successfully"}, status=status.HTTP_200_OK)
         except Exception as e :
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class CustomerUpdate(APIView):
+    def get(self,request,pk):
+        try:
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+
+            customer = Customer.objects.filter(pk=pk).first()
+            if customer is None:
+                return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = AdminCustomerViewSerilizers(customer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    def put(self, request, pk):
+        try:
+
+            token = request.headers.get('Authorization')
+            if token is None:
+                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except ExpiredSignatureError:
+                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (DecodeError, InvalidTokenError):
+                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = payload.get('id')
+            if user_id is None:
+                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user = User.objects.filter(pk=user_id).first()
+            if user is None:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            customer = Customer.objects.filter(pk=pk).first()
+            if customer is None:
+                return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = AdminCustomerViewSerilizers(customer, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
 
         
 
@@ -2056,3 +2144,51 @@ class  toggle_offer_active(APIView):
             return Response({'offer_active': offer.offer_active}, status=status.HTTP_200_OK)
         except Exception as e :
             return Response({"status": "error", "message": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TotalSaledProductsView(APIView):
+   
+    def get(self, request):
+        try:
+            # Aggregate total sold quantities for each product
+            sold_products_data = (
+                OrderItem.objects
+                .values('product')  # Get product IDs
+                .annotate(total_sold=Sum('quantity'))
+                .order_by('-total_sold')
+            )
+            
+            if not sold_products_data:
+                return Response({"message": "No products have been sold."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Fetch detailed product information for each product ID
+            product_ids = [data['product'] for data in sold_products_data]
+            products = Product.objects.filter(id__in=product_ids).prefetch_related('category')
+
+            # Map total sold quantities to product instances
+            product_data = []
+            for product in products:
+                # Find corresponding sold data
+                sold_data = next(item for item in sold_products_data if item['product'] == product.id)
+                serialized_product = ProductViewSerializer(product).data
+                serialized_product['total_sold'] = sold_data['total_sold']
+                product_data.append(serialized_product)
+
+            # Return the serialized data
+            return Response({"total_saled_products": product_data}, status=status.HTTP_200_OK)
+
+        except DatabaseError as db_error:
+            return Response({
+                "error": "Database error occurred. Please try again later.",
+                "details": str(db_error)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        except Exception as e:
+            return Response({
+                "error": "An unexpected error occurred.",
+                "details": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
