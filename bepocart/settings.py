@@ -34,8 +34,6 @@ CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
 CORS_ALLOW_CREDENTIALS = False
 
 
-# Security settings
-# SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CORS_ALLOWED_ORIGINS = [
@@ -122,29 +120,16 @@ WSGI_APPLICATION = 'bepocart.wsgi.application'
 
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'bepocart',
-#         'USER': 'postgres',
-#         'PASSWORD': '252562',
-#         'HOST': 'localhost',
-#         'PORT': '5432'
-#     }
-# }
-
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bepocart',
-        'USER': 'postgres',
-        'PASSWORD': '9645848527',
-        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
-        'PORT': '5432',
-    }
-}
-
+     'default': {
+         'ENGINE': 'django.db.backends.postgresql',
+         'NAME': 'bepocart',
+         'USER': 'postgres',
+         'PASSWORD': '9645848527',
+         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+         'PORT': '5432'
+     }
+ }
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

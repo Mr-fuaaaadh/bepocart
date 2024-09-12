@@ -3,6 +3,7 @@ from.models import *
 from bepocartBackend.models import *
 from django.contrib.auth.models import User
 from django.db.models import Q
+from bepocartBackend.serializers import *
 
 class AdminSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -158,40 +159,46 @@ class AdminOrderSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class AdminOrderViewsSerializers(serializers.ModelSerializer):
-    customerImage = serializers.ImageField(source ='customer.image')
-    customerName  = serializers.CharField(source ='customer.username')
-    # name = serializers.CharField(source='coupon.code')
+# class AdminOrderViewsSerializers(serializers.ModelSerializer):
+#     customerImage = serializers.ImageField(source ='customer.image')
+#     customerName  = serializers.CharField(source ='customer.username')
+#     # name = serializers.CharField(source='coupon.code')
+#     class Meta :
+#         model = Order
+#         fields = ['id','customer','total_amount','created_at','updated_at','status','address','customerImage','customerName','coupon']
+
+class AdminOrderItemSerializers(serializers.ModelSerializer):
     class Meta :
-        model = Order
-        fields = ['id','customer','total_amount','created_at','updated_at','status','address','customerImage','customerName','coupon']
-
-
+        model = OrderItem
+        fields = "__all__"
 
 class AdminOrderViewsSerializers(serializers.ModelSerializer):
     customerImage = serializers.ImageField(source='customer.image')
     customerName = serializers.CharField(source='customer.first_name')
     couponName = serializers.SerializerMethodField() 
-    couponType = serializers.SerializerMethodField()  
+    couponType = serializers.SerializerMethodField() 
+    address = serializers.CharField(source='address.address')
+    phone = serializers.IntegerField(source="customer.phone")
+    city = serializers.CharField(source="address.city")
+    state = serializers.CharField(source="address.state")
+    pincode = serializers.IntegerField(source="address.pincode")
+    order_items = CustomerAllOrderSerializers(many=True, read_only=True)
+
 
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id',
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id','phone','city','state','pincode',
             'updated_at', 'status', 'address', 'customerImage', 
-            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id','created_time'
+            'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id','created_time','order_items'
         ]
-
     def get_couponName(self, obj):
         return obj.coupon.code if obj.coupon else None  # Return the coupon code or None
 
     def get_couponType(self, obj):
         return obj.coupon.coupon_type if obj.coupon else None 
 
-class AdminOrderItemSerializers(serializers.ModelSerializer):
-    class Meta :
-        model = OrderItem
-        fields = "__all__"
+
 
 
 

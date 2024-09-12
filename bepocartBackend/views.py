@@ -1696,7 +1696,7 @@ class CreateOrder(APIView):
                                     'product_name': item.product.name,
                                     'quantity': item.quantity,
                                     'price': item.product.salePrice,
-                                    'image':item.product.image
+                                    'image':item.product.image.url
                                 }
                                 for item in cart_items
 
@@ -2737,10 +2737,11 @@ class CreateOrder(APIView):
                                 'payment_capture': 1  # Auto capture payment
                             })
                             logging.debug(f"Total amount sent to Razorpay: {total_amount}")
+                            
+
 
                             razorpay_order_id = razorpay_order['id']
                             razorpay_payment_id = request.data.get('payment_id')
-
 
 
                             if not razorpay_payment_id:
@@ -2758,6 +2759,8 @@ class CreateOrder(APIView):
                                     order.save()
 
                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
+                      
+
                                     cart_items.delete()  
 
                                     return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
@@ -2775,7 +2778,6 @@ class CreateOrder(APIView):
                     try:
                         order.save()
                         logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
                         cart_items.delete()
 
                         # Send order creation email
