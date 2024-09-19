@@ -6,6 +6,7 @@ urlpatterns = [
     path('register/',CustomerRegistration.as_view(), name="customer-register"),
     path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
     path('login/',CustomerLogin.as_view(), name="customer-login"),
+    path('delete-account/',CustomerDeleteAccount.as_view(), name="customer-delete"),
     path('category/',CategoryView.as_view(), name="category"),
     path('subcategorys/',AllSubCategoryView.as_view(), name="AllSubCategoryView"),
     path('category/<int:pk>/',SubcategoryView.as_view(), name="subcategory"),
@@ -58,6 +59,7 @@ urlpatterns = [
 
 
     path('order/create/<int:pk>/', CreateOrder.as_view(), name='create_order'),
+    path('verify-razorpay-payment/', VerifyRazorpayPaymentAPIView.as_view(), name='verify_razorpay_payment'),
 
     path('offers/', DiscountSaleProducts.as_view(), name='discount-sale'),
     path('best-sale/', BestSellerProductsAPIView.as_view(), name='flash-sale'),
@@ -84,6 +86,10 @@ urlpatterns = [
 
     path('generate-otp/', SendOtpView.as_view(), name='generate-otp'),
     path('verification-otp/', VerifyOtpView.as_view(), name='verify-otp'),
+
+
+    path('all-products-schema/', AllProductsSchemaAPIView.as_view(), name='all-products-schema'),
+    path('product-schema/<slug:slug>/', ProductSchemaAPIView.as_view(), name='product-schema'),
 
 
 

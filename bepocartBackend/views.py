@@ -1,6 +1,8 @@
 import razorpay
 import logging
 import jwt
+import hashlib
+from django.db.models import Avg,Sum, Count
 import requests
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
@@ -1745,48 +1747,28 @@ class CreateOrder(APIView):
 
 
                                     # If payment method is Razorpay, create a Razorpay order
-                                    elif payment_method == 'razorpay':
+                                    if payment_method == 'razorpay':
                                         razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                                         try:
                                             razorpay_order = razorpay_client.order.create({
-                                                'amount': int(total_sale_price * 100),  # Razorpay expects amount in paisa
+                                                'amount': int(total_sale_price * 100),
                                                 'currency': 'INR',
-                                                'payment_capture': 1  # Auto capture payment
+                                                'payment_capture': 1
                                             })
                                             razorpay_order_id = razorpay_order['id']
-                                            razorpay_payment_id = request.data.get('payment_id')
-
-                                           
-
-
-                                            if not razorpay_payment_id:
-                                                return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                                            try:
-                                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_sale_price * 100))
-
-                                                if payment_capture_response['status'] == 'captured':
-                                                    order.payment_id = razorpay_payment_id
-                                                    order.razorpay_order_id = razorpay_order_id
-                                                    order.total_amount = total_sale_price
-                                                    order.save()
-
-                                                    logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-                                                    cart_items.delete() 
-
-                                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                                else:
-                                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-                                            except Exception as e:
-                                                logging.error(f"Payment capture error: {e}")
-                                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                            order.razorpay_order_id = razorpay_order_id
+                                            order.save()
+                                            return Response({
+                                                "message": "Razorpay order created successfully.",
+                                                "razorpay_order_id": razorpay_order_id,
+                                                "order_id": order.order_id
+                                            }, status=status.HTTP_200_OK)
                                         except Exception as e:
                                             logging.error(f"Razorpay order creation error: {e}")
                                             return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                    # Save the order and update the total amount
                                     order.total_amount = total_sale_price
+                                    order.save()
                                     try:
                                         order.save()
                                         cart_items.delete()
@@ -1937,46 +1919,28 @@ class CreateOrder(APIView):
                                     total_cart_value_after_discount += cod_charge
 
                                 # If payment method is Razorpay, create a Razorpay order
-                                elif payment_method == 'razorpay':
+                                if payment_method == 'razorpay':
                                     razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                                     try:
                                         razorpay_order = razorpay_client.order.create({
-                                            'amount': int(total_cart_value_after_discount * 100),  # Razorpay expects amount in paisa
+                                            'amount': int(total_cart_value_after_discount * 100),
                                             'currency': 'INR',
-                                            'payment_capture': 1  # Auto capture payment
+                                            'payment_capture': 1
                                         })
                                         razorpay_order_id = razorpay_order['id']
-                                        razorpay_payment_id = request.data.get('payment_id')
-
-                                       
-                                        if not razorpay_payment_id:
-                                            return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                                        try:
-                                            payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value_after_discount * 100))
-
-                                            if payment_capture_response['status'] == 'captured':
-                                                order.payment_id = razorpay_payment_id
-                                                order.razorpay_order_id = razorpay_order_id
-                                                order.total_amount = total_cart_value_after_discount
-                                                order.save()
-
-                                                logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-                                                cart_items.delete()  
-
-                                                return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                            else:
-                                                return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-                                        except Exception as e:
-                                            logging.error(f"Payment capture error: {e}")
-                                            return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                        order.razorpay_order_id = razorpay_order_id
+                                        order.save()
+                                        return Response({
+                                            "message": "Razorpay order created successfully.",
+                                            "razorpay_order_id": razorpay_order_id,
+                                            "order_id": order.order_id
+                                        }, status=status.HTTP_200_OK)
                                     except Exception as e:
                                         logging.error(f"Razorpay order creation error: {e}")
                                         return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                # Save the order and update the total amount
                                 order.total_amount = total_cart_value_after_discount
+                                order.save()
                                 try:
                                     order.save()
                                     cart_items.delete()
@@ -2220,54 +2184,28 @@ class CreateOrder(APIView):
 
 
                                             # If payment method is Razorpay, create a Razorpay order
-                                            elif payment_method == 'razorpay':
+                                            if payment_method == 'razorpay':
                                                 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                                                 try:
                                                     razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(total_cart_value * 100),  # Razorpay expects amount in paisa
+                                                        'amount': int(total_cart_value * 100),
                                                         'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
+                                                        'payment_capture': 1
                                                     })
-                                                    logging.debug(f"Total amount sent to Razorpay: {total_cart_value}")
-
                                                     razorpay_order_id = razorpay_order['id']
-                                                    razorpay_payment_id = request.data.get('payment_id')
-
-
-                                                    logging.debug(f"Total amount before saving order: {total_cart_value}")
-
-
-
-                                                    if not razorpay_payment_id:
-                                                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                                                    # Capture Razorpay payment
-                                                    try:
-                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value * 100))
-
-                                                        if payment_capture_response['status'] == 'captured':
-                                                            order.payment_id = razorpay_payment_id
-                                                            order.razorpay_order_id = razorpay_order_id
-                                                            order.total_amount = total_cart_value
-                                                            order.save()
-
-                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-                                                            cart_items.delete()  
-
-                                                            return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                                        else:
-                                                            return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-                                                    except Exception as e:
-                                                        logging.error(f"Payment capture error: {e}")
-                                                        return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                                                
+                                                    order.razorpay_order_id = razorpay_order_id
+                                                    order.save()
+                                                    return Response({
+                                                        "message": "Razorpay order created successfully.",
+                                                        "razorpay_order_id": razorpay_order_id,
+                                                        "order_id": order.order_id
+                                                    }, status=status.HTTP_200_OK)
                                                 except Exception as e:
                                                     logging.error(f"Razorpay order creation error: {e}")
                                                     return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                            # Save the order and update the total amount
                                             order.total_amount = total_cart_value
+                                            order.save()
 
                                             try:
                                                 order.save()
@@ -2510,53 +2448,29 @@ class CreateOrder(APIView):
                                                 order.cod_charge = cod_charge
 
                                             # If payment method is Razorpay, create a Razorpay order
-                                            elif payment_method == 'razorpay':
+                                            if payment_method == 'razorpay':
                                                 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                                                 try:
                                                     razorpay_order = razorpay_client.order.create({
-                                                        'amount': int(total_cart_value * 100),  # Razorpay expects amount in paisa
+                                                        'amount': int(total_cart_value* 100),
                                                         'currency': 'INR',
-                                                        'payment_capture': 1  # Auto capture payment
+                                                        'payment_capture': 1
                                                     })
-                                                    logging.debug(f"Total amount sent to Razorpay: {total_cart_value}")
-
                                                     razorpay_order_id = razorpay_order['id']
-                                                    razorpay_payment_id = request.data.get('payment_id')
-
-                                                   
-                                                    logging.debug(f"Total amount before saving order: {total_cart_value}")
-
-
-                                                    if not razorpay_payment_id:
-                                                        return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                                                    # Capture Razorpay payment
-                                                    try:
-                                                        payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_cart_value * 100))
-
-                                                        if payment_capture_response['status'] == 'captured':
-                                                            # Assuming `order` is correctly initialized before this
-                                                            order.payment_id = razorpay_payment_id
-                                                            order.razorpay_order_id = razorpay_order_id
-                                                            order.total_amount = total_cart_value  # Ensure total_amount is correctly assigned
-                                                            order.save()
-
-                                                            logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-                                                            cart_items.delete()  
-
-                                                            return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                                        else:
-                                                            return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-
-                                                    except Exception as e:
-                                                        return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                                                    
+                                                    order.razorpay_order_id = razorpay_order_id
+                                                    order.save()
+                                                    return Response({
+                                                        "message": "Razorpay order created successfully.",
+                                                        "razorpay_order_id": razorpay_order_id,
+                                                        "order_id": order.order_id
+                                                    }, status=status.HTTP_200_OK)
                                                 except Exception as e:
+                                                    logging.error(f"Razorpay order creation error: {e}")
                                                     return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                                            # Save the order and update the total amount
                                             order.total_amount = total_cart_value
+                                            order.save()
+
                                             try:
                                                 order.save()
                                                 logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
@@ -2688,7 +2602,7 @@ class CreateOrder(APIView):
                         return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
 
                     if total_amount <= Decimal('500.00'):
-                        shipping_charge = Decimal('0.00')
+                        shipping_charge = Decimal('00.00')
                         total_amount += shipping_charge
 
                         order.shipping_charge = shipping_charge
@@ -2719,92 +2633,119 @@ class CreateOrder(APIView):
                     logging.debug(f"Initial total_amount: {total_amount}")
 
 
+                    
+
+                    # Add COD charge if payment method is COD
                     if payment_method == 'COD':
                         cod_charge = Decimal('40.00')
                         total_amount += cod_charge
-
                         order.cod_charge = cod_charge
 
                     # If payment method is Razorpay, create a Razorpay order
-                    elif payment_method == 'razorpay':
+                    if payment_method == 'razorpay':
                         razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                         try:
                             razorpay_order = razorpay_client.order.create({
-                                'amount': int(total_amount * 100),  # Razorpay expects amount in paisa
+                                'amount': int(total_amount * 100),
                                 'currency': 'INR',
-                                'payment_capture': 1  # Auto capture payment
+                                'payment_capture': 1
                             })
-                            logging.debug(f"Total amount sent to Razorpay: {total_amount}")
-
-
                             razorpay_order_id = razorpay_order['id']
-                            razorpay_payment_id = request.data.get('payment_id')
-
-
-
-                            if not razorpay_payment_id:
-                                return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
-
-                            # Capture Razorpay payment
-                            try:
-                                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
-
-                                if payment_capture_response['status'] == 'captured':
-                                    # Assuming `order` is correctly initialized before this
-                                    order.payment_id = razorpay_payment_id
-                                    order.razorpay_order_id = razorpay_order_id
-                                    order.total_amount = total_amount  # Ensure total_amount is correctly assigned
-                                    order.save()
-
-                                    logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-                                    cart_items.delete()  
-
-                                    return Response({"message": "Payment captured successfully."}, status=status.HTTP_200_OK)
-                                else:
-                                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
-
-                            except Exception as e:
-                                logging.error(f"Payment capture error: {e}")
-                                return Response({"error": "Error capturing payment.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                            
+                            order.razorpay_order_id = razorpay_order_id
+                            order.save()
+                            return Response({
+                                "message": "Razorpay order created successfully.",
+                                "razorpay_order_id": razorpay_order_id,
+                                "order_id": order.order_id
+                            }, status=status.HTTP_200_OK)
                         except Exception as e:
                             logging.error(f"Razorpay order creation error: {e}")
                             return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                    # Save the order and update the total amount
                     order.total_amount = total_amount
+                    order.save()
+
+                    # Send order creation email
                     try:
-                        order.save()
-                        logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-
-
+                        email_subject = 'New Order Created'
+                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
+                        email.content_subtype = 'html'
+                        email.send()
                         cart_items.delete()
+                    except Exception as email_error:
+                        logging.error(f"Error sending email: {email_error}")
 
-                        # Send order creation email
-                        try:
-                            email_subject = 'New Order Created'
-                            email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
-                            email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                            email.content_subtype = 'html'
-                            email.send()
-                        except Exception as email_error:
-                            logging.error(f"Error sending email: {email_error}")
-                            return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
+                    serializer = OrderSerializer(order)
+                    return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
-                        # Return success response
-                        serializer = OrderSerializer(order)
-                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
-                    
-                    except Exception as e:
-                        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                    
                 except Exception as e:
+                    logging.error(f"Order creation error: {e}")
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
+                    
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
+
+class VerifyRazorpayPaymentAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Extract payment details from the request
+            razorpay_order_id = request.data.get('order_id')
+            razorpay_payment_id = request.data.get('payment_id')
+            razorpay_signature = request.data.get('razorpay_signature')
+            total_amount = Decimal(request.data.get('total_amount', 0))
+
+           
+
+            # Fetch the order from the database
+            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+
+            # Check if the payment is already processed
+            if order.payment_id:
+                return Response({"error": "Payment already processed."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verify Razorpay signature
+            razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            try:
+                razorpay_client.utility.verify_payment_signature({
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_payment_id': razorpay_payment_id,
+                    'razorpay_signature': razorpay_signature
+                })
+
+                # Fetch payment details from Razorpay
+                payment_details = razorpay_client.payment.fetch(razorpay_payment_id)
+                if payment_details['status'] == 'captured':
+                    order.payment_id = razorpay_payment_id
+                    order.total_amount = total_amount
+                    order.save()
+                    return Response({"message": "Payment already captured."}, status=status.HTTP_200_OK)
+
+                # Capture the payment
+                payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
+
+                # Check if the payment capture was successful
+                if payment_capture_response['status'] == 'captured':
+                    # Update the order with payment details
+                    order.payment_id = razorpay_payment_id
+                    order.total_amount = total_amount
+                    order.save()
+
+                    return Response({"message": "Payment verified and captured successfully."}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"error": "Payment capture failed.", "details": payment_capture_response}, status=status.HTTP_400_BAD_REQUEST)
+
+            except razorpay.errors.SignatureVerificationError as e:
+                return Response({"error": "Invalid payment signature."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logging.error(f"Error during Razorpay payment verification: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class RelatedProduct(APIView):
@@ -2831,7 +2772,7 @@ class DiscountSaleProducts(APIView):
                     offer_products = Product.objects.filter(category__in=offer_category_products)
                     if not offer_products.exists():
                         return Response({'error': 'No products found for the offer categories'}, status=status.HTTP_404_NOT_FOUND)
-                serializer = ProductSerializer(offer_products, many=True)
+                serializer = ProductViewSerializer(offer_products, many=True)
                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
             else:
                 return Response({'error': 'No offer schedule found'}, status=status.HTTP_404_NOT_FOUND)
@@ -3491,3 +3432,152 @@ class VerifyOtpView(APIView):
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class AllProductsSchemaAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        products = Product.objects.all().order_by('pk')
+        schemas = []
+
+        for product in products:
+            # Fetch reviews for the current product
+            reviews = Review.objects.filter(product=product)
+            review_count = reviews.count()
+            rating_value = 0
+
+            if review_count > 0:
+                # Calculate average rating
+                rating_value = reviews.aggregate(Avg('rating'))['rating__avg']
+
+            schema = {
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "@id": f"{settings.FRONTEND_URL}/single-product/{product.slug}/",
+                "name": product.name,
+                "image": product.image.url if product.image else "",
+                "description": product.description,
+                "sku": str(product.pk),  # Ensure sku is a string
+                "brand": {
+                    "@type": "Brand",
+                    "name": "bepocart"
+                },
+                "offers": {
+                    "@type": "Offer",
+                    "url": f"{settings.FRONTEND_URL}/single-product/{product.slug}/",
+                    "priceCurrency": "INR",
+                    "price": "{:.2f}".format(product.salePrice),  # Format price to two decimal places
+                    "priceValidUntil": "2050-11-20T23:59:59Z",  # ISO 8601 format for date
+                    "itemCondition": "https://schema.org/NewCondition",
+                    "availability": "https://schema.org/InStock",
+                    "seller": "bepocart"
+                },
+                "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": "{:.1f}".format(rating_value),  # Format rating to one decimal place
+                    "reviewCount": review_count,
+                },
+            }
+            schemas.append(schema)
+
+        return JsonResponse(schemas, safe=False)
+    
+
+
+
+class ProductSchemaAPIView(APIView):
+    def get(self, request, slug, *args, **kwargs):
+        # Fetch the product by slug
+        product = Product.objects.filter(slug=slug).first()
+        if not product:
+            return JsonResponse({"error": "Product not found"}, status=404)
+
+        # Fetch reviews for the current product
+        reviews = Review.objects.filter(product=product)
+        review_count = reviews.count()
+        rating_value = 0
+
+        if review_count > 0:
+            # Calculate average rating
+            rating_value = reviews.aggregate(Avg('rating'))['rating__avg']
+
+        # Fetch additional product data based on type
+        if product.type == "single":
+            product_data = ProductColorStock.objects.filter(product=product).values('color', 'stock', 'image1', 'image2', 'image3', 'image4', 'image5')
+        else:
+            product_data = ProductVariant.objects.filter(product=product).values('color', 'image1', 'image2', 'image3', 'image4', 'image5')
+
+        # Prepare image list for schema
+        images = []
+        for item in product_data:
+            images.extend([item['image1'], item['image2'], item['image3'], item['image4'], item['image5']])
+
+        # Construct the schema
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "image": images,  # Insert the list of images here
+            "description": product.description,
+            "sku": str(product.pk),  # Ensure SKU is a string
+            "brand": {
+                "@type": "Brand",
+                "name": "bepocart"
+            },
+            "offers": {
+                "@type": "Offer",
+                "url": f"{settings.FRONTEND_URL}/single-product/{product.slug}/",
+                "priceCurrency": "INR",
+                "price": "{:.2f}".format(product.salePrice),  # Format price to two decimal places
+                "priceValidUntil": "2050-11-20T23:59:59Z",  # ISO 8601 format for date
+                "itemCondition": "https://schema.org/NewCondition",
+                "availability": "https://schema.org/InStock"
+            },
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "{:.1f}".format(rating_value) if rating_value else None,  # Format rating to one decimal place
+                "reviewCount": review_count,
+            }
+        }
+
+        return JsonResponse(schema, safe=False)
+
+
+
+
+
+
+class CustomerDeleteAccount(APIView):
+    def delete(self, request):
+        try:
+            # Extract and validate token
+            token = request.headers.get('Authorization')
+            if token is None :
+                return Response({"message": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+            try:
+                user_token = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return Response({"message": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            except (jwt.DecodeError, jwt.InvalidTokenError) as e:
+                return Response({"message": f"Invalid token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_id = user_token.get('id')
+            if not user_id:
+                return Response({"message": "Invalid token: user ID not found"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch user based on user ID
+            user = Customer.objects.filter(pk=user_id).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Perform deletion in a transaction
+            with transaction.atomic():
+                user.delete()
+
+            return Response({"message": "Account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            logging.error(f"Error deleting account: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
