@@ -37,6 +37,7 @@ CORS_ALLOW_CREDENTIALS = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CORS_ALLOWED_ORIGINS = [
+
     "https://bepocart.in","https://bepocart.com","http://localhost:5176"
 ]
 

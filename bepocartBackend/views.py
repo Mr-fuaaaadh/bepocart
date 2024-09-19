@@ -2737,12 +2737,9 @@ class CreateOrder(APIView):
                                 'payment_capture': 1  # Auto capture payment
                             })
                             logging.debug(f"Total amount sent to Razorpay: {total_amount}")
-                            
-
 
                             razorpay_order_id = razorpay_order['id']
                             razorpay_payment_id = request.data.get('payment_id')
-
 
                             if not razorpay_payment_id:
                                 return Response({"error": "Payment ID is missing. Cannot capture payment."}, status=status.HTTP_400_BAD_REQUEST)
@@ -2759,7 +2756,6 @@ class CreateOrder(APIView):
                                     order.save()
 
                                     logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-                      
 
                                     cart_items.delete()  
 
@@ -2829,7 +2825,7 @@ class DiscountSaleProducts(APIView):
                     offer_products = Product.objects.filter(category__in=offer_category_products)
                     if not offer_products.exists():
                         return Response({'error': 'No products found for the offer categories'}, status=status.HTTP_404_NOT_FOUND)
-                serializer = ProductSerializer(offer_products, many=True)
+                serializer = ProductViewSerializer(offer_products, many=True)
                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
             else:
                 return Response({'error': 'No offer schedule found'}, status=status.HTTP_404_NOT_FOUND)

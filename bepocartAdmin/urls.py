@@ -53,6 +53,7 @@ urlpatterns = [
     path('Bepocart-Order-status-update/<int:pk>/',OrderStatusUpdation.as_view()),
     path('Bepocart-Order-Item/<int:customer>/',AllOrderItems.as_view()),
     path('Bepocart-Order-Bill/<str:order_id>/',OrderInvoiceBillCreating.as_view()),
+    path('Bepocart-saled-products/', TotalSaledProductsView.as_view(), name='total-saled-products'),
 
 
     path('Bepocart-product-varient/<int:pk>/',VarientProductAdding.as_view()),
@@ -75,6 +76,8 @@ urlpatterns = [
 
     path('Bepocart-customers/',AdminCustomerView.as_view()),
     path('Bepocart-customer-delete/<int:pk>/',CustomersDelete.as_view()),
+    path('Bepocart-customer-update/<int:pk>/',CustomerUpdate.as_view()),
+
     path('export-orders/', ExportOrdersToExcel.as_view(), name='export_orders'),
 
     path('Bepocart-Bcoin/',AdminCoinCreating.as_view()),

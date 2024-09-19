@@ -28,7 +28,7 @@ class Customer(models.Model):
             self.phone = ''.join(filter(str.isdigit, self.phone))
         
         # Hash the password if it's a new customer or password is being changed
-        if not self.pk or 'password' in kwargs:  
+        if not self.pk or self._state.adding or self.password != Customer.objects.get(pk=self.pk).password:
             self.password = make_password(self.password)
         
         super().save(*args, **kwargs)

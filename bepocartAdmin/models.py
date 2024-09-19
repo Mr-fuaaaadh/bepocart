@@ -268,3 +268,15 @@ class OfferSchedule(models.Model):
     class Meta :
         db_table = "Offer Schedule"
 
+
+
+
+
+class Notification(models.Model):
+    message = models.TextField()
+    link = models.URLField(null=True, blank=True)  
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Notification for {self.message}"
