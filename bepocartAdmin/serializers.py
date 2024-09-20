@@ -84,7 +84,7 @@ class ProductSerializerView(serializers.ModelSerializer):
 
     class Meta :
         model = Product
-        fields = ['id','name','description','short_description','sale_price','category','image','categoryName','mainCategory','price','discount','type','slug']
+        fields = ['id','name','description','short_description','salePrice','category','image','categoryName','mainCategory','price','discount','type','slug']
 
 
 class CarousalSerializers(serializers.ModelSerializer):

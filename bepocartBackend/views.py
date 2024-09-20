@@ -477,6 +477,7 @@ class CustomerCartProducts(APIView):
             cart = Cart.objects.filter(customer=user)
             if not cart:
                 return Response({"message": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
+        
             
 
             offer = OfferSchedule.objects.filter(offer_active=True).first()
@@ -1772,8 +1773,6 @@ class CreateOrder(APIView):
                                     try:
                                         order.save()
                                         cart_items.delete()
-
-                                        # Send order creation email
                                         try:
                                             email_subject = 'New Order Created'
                                             email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
@@ -2665,7 +2664,6 @@ class CreateOrder(APIView):
                     order.total_amount = total_amount
                     order.save()
 
-                    # Send order creation email
                     try:
                         email_subject = 'New Order Created'
                         email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
