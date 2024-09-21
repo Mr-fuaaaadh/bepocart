@@ -938,28 +938,28 @@ class ProductDelete(APIView):
 class AllOrders(APIView):
     def get(self, request):
         try:
-            token = request.headers.get('Authorization')
-            if not token:
-                return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.headers.get('Authorization')
+            # if not token:
+            #     return Response({"status": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-                user_id = payload.get('id')
-                if not user_id:
-                    return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            #     user_id = payload.get('id')
+            #     if not user_id:
+            #         return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-                user = User.objects.filter(pk=user_id).first()
-                if not user:
-                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            #     user = User.objects.filter(pk=user_id).first()
+            #     if not user:
+            #         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
                 order_products = Order.objects.all().order_by('-id')
                 serializer = AdminOrderViewsSerializers(order_products, many=True)
                 return Response({"message": "Orders fetched successfully", "data": serializer.data}, status=status.HTTP_200_OK)
 
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
