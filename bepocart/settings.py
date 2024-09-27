@@ -119,6 +119,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bepocart.wsgi.application'
 
+
 DATABASES = {
      'default': {
          'ENGINE': 'django.db.backends.postgresql',
@@ -129,6 +130,10 @@ DATABASES = {
          'PORT': '5432'
      }
  }
+
+
+# Database
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
 
 
