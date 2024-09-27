@@ -2283,7 +2283,7 @@ def update_variant_stock(item):
 
 def handle_shipping_and_coupon(total_amount, coupon, order):
     if total_amount <= Decimal('500.00'):
-        shipping_charge = Decimal('0.00')
+        shipping_charge = Decimal('60.00')
         total_amount += shipping_charge
         order.shipping_charge = shipping_charge
 
