@@ -113,6 +113,7 @@ class GoogleLoginAPIView(APIView):
         except Exception as e:
             logger.error(f"Unexpected Error: {str(e)}", exc_info=True)
             return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 class CustomerLogin(APIView):
     def post(self, request):
         serializer = CustomerLoginSerializer(data=request.data)
@@ -2473,7 +2474,8 @@ class VerifyRazorpayPaymentAPIView(APIView):
                         for item in cart_items
 
                         ]
-                        return Response({"message": "Payment already captured."}, status=status.HTTP_200_OK)
+                        serializer = OrderSerializer(order)
+                        return Response({"message": "Payment already captured.","success":serializer.data}, status=status.HTTP_200_OK)
 
                 payment_capture_response = razorpay_client.payment.capture(razorpay_payment_id, int(total_amount * 100))
 
