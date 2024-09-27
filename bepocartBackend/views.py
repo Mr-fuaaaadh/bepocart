@@ -2229,130 +2229,14 @@ class CreateOrder(APIView):
                         else:
                             update_variant_stock(item)
 
-<<<<<<< HEAD
-                        for variant in product_variants:
-                            # Filter the size stocks related to the current variant
-                            size_stocks = ProductVarientSizeStock.objects.filter(product_variant=variant, size=item.size)
-                            
-                            for stock in size_stocks:
-                                if stock.stock >= item.quantity:
-                                    # Update stock
-                                    stock.stock -= item.quantity
-                                    stock.save()
-                                    break  # Break out of the inner loop if stock is updated
-                                else:
-                                    return Response({"message": f"Insufficient stock for {item.product.name} - {item.color} - {item.size}"}, status=status.HTTP_400_BAD_REQUEST)
-
-                    total_amount += item.product.salePrice * item.quantity
-
-               
-
-                cart_items_list = [
-                {
-                    'product_name': item.product.name,
-                    'quantity': item.quantity,
-                    'price': item.product.salePrice,
-                    'image':item.product.image.url
-                }
-                for item in cart_items
-
-                ]
-                
-
-                try:
-                    # Initial check for total amount and apply shipping charge if applicable
-                    if total_amount is None or not isinstance(total_amount, Decimal):
-                        return Response({"error": "Invalid total amount."}, status=status.HTTP_400_BAD_REQUEST)
-
-                    if total_amount <= Decimal('500.00'):
-                        shipping_charge = Decimal('60.00')
-                        total_amount += shipping_charge
-
-                        order.shipping_charge = shipping_charge
-
-
-
-                    # Apply the coupon if present
-                    if coupon:
-                        try:
-                            if coupon.coupon_type == 'Percentage':
-                                discount_amount = (coupon.discount / 100) * total_amount
-                            elif coupon.coupon_type == 'Fixed Amount':
-                                discount_amount = coupon.discount
-                            else:
-                                return Response({"error": "Invalid coupon type."}, status=status.HTTP_400_BAD_REQUEST)
-
-                            if discount_amount > total_amount:
-                                return Response({"error": "Discount exceeds total amount."}, status=status.HTTP_400_BAD_REQUEST)
-
-                            total_amount -= discount_amount
-                            order.coupon = coupon
-
-                        except Exception as e:
-                            return Response({"error": "Error applying coupon.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                    # Add COD charge if payment method is COD
-
-                    logging.debug(f"Initial total_amount: {total_amount}")
-=======
                         total_amount += item.product.salePrice * item.quantity
->>>>>>> 8928cf1aa89704dd4167e6a23184021f9db0552c
 
                     total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
 
                     # Add COD charge
                     order.cod_charge = Decimal('40.00')
                     total_amount += order.cod_charge
-                    
-<<<<<<< HEAD
 
-                    # Add COD charge if payment method is COD
-                    if payment_method == 'COD':
-                        cod_charge = Decimal('40.00')
-                        total_amount += cod_charge
-                        order.cod_charge = cod_charge
-
-                    # If payment method is Razorpay, create a Razorpay order
-                    if payment_method == 'razorpay':
-                        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                        try:
-                            razorpay_order = razorpay_client.order.create({
-                                'amount': int(total_amount * 100),
-                                'currency': 'INR',
-                                'payment_capture': 1
-                            })
-                            logging.debug(f"Total amount sent to Razorpay: {total_amount}")
-                            razorpay_order_id = razorpay_order['id']
-                            order.razorpay_order_id = razorpay_order_id
-                            order.save()
-                            return Response({
-                                "message": "Razorpay order created successfully.",
-                                "razorpay_order_id": razorpay_order_id,
-                                "order_id": order.order_id
-                            }, status=status.HTTP_200_OK)
-                        except Exception as e:
-                            return Response({"error": "Error creating Razorpay order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                    order.total_amount = total_amount
-                    order.save()
-
-                    try:
-                        order.save()
-                        logging.debug(f"Order saved successfully with total amount: {order.total_amount}")
-              
-                        email_subject = 'New Order Created'
-                        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list,'customer':address})
-                        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-                        email.content_subtype = 'html'                        
-                        email.send()
-                    except Exception as email_error:
-                         return Response({"message": "Order saved but failed to send email.", "data": OrderSerializer(order).data}, status=status.HTTP_201_CREATED)
-                    serializer = OrderSerializer(order)
-                except Exception as e:
-                    logging.error(f"Order creation error: {e}")
-                    return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                    
-=======
                     order.total_amount = total_amount
                     order.save()
 
@@ -2371,7 +2255,6 @@ class CreateOrder(APIView):
                     "razorpay_order_id": razorpay_order_id,
                 }, status=status.HTTP_200_OK)
 
->>>>>>> 8928cf1aa89704dd4167e6a23184021f9db0552c
         except Exception as e:
             logging.error(f"Order creation error: {e}")
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2402,7 +2285,7 @@ def update_variant_stock(item):
 
 def handle_shipping_and_coupon(total_amount, coupon, order):
     if total_amount <= Decimal('500.00'):
-        shipping_charge = Decimal('0.00')
+        shipping_charge = Decimal('60.00')
         total_amount += shipping_charge
         order.shipping_charge = shipping_charge
 
