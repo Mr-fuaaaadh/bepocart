@@ -120,22 +120,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bepocart.wsgi.application'
 
 
+
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.postgresql',
-         'NAME': 'bepocart',
-         'USER': 'postgres',
-         'PASSWORD': '9645848527',
-         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
-         'PORT': '5432'
-     }
- }
-
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databa
-
-
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bepocart',
+        'USER': 'postgres',
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432'
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
