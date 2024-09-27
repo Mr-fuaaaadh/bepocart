@@ -187,7 +187,7 @@ class AdminOrderViewsSerializers(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id','phone','city','state','pincode',
+            'id', 'customer', 'total_amount', 'created_at','coupon' ,'order_id','phone','city','state','pincode','cod_charge','shipping_charge',
             'updated_at', 'status', 'address', 'customerImage', 
             'customerName', 'couponName', 'couponType', 'payment_method', 'payment_id','razorpay_order_id','created_time','order_items'
         ]

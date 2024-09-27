@@ -43,6 +43,7 @@ class Customer(models.Model):
 
 class Address(models.Model):
     user = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100,null=True)
     address =  models.CharField(max_length=250)
     email = models.CharField(max_length=250)
     phone = models.CharField(max_length=10)
