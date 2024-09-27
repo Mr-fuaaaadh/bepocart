@@ -806,24 +806,24 @@ class ProductAdd(APIView):
 class ProductView(APIView):
     def get(self, request):
         try :
-            token = request.headers.get('Authorization')
-            if token is None:
-                return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+            # token = request.headers.get('Authorization')
+            # if token is None:
+            #     return Response({"status": "error", "message": "Unauthenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except ExpiredSignatureError:
-                return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
-            except (DecodeError, InvalidTokenError):
-                return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+            # try:
+            #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            # except ExpiredSignatureError:
+            #     return Response({"error": "Token has expired"}, status=status.HTTP_401_UNAUTHORIZED)
+            # except (DecodeError, InvalidTokenError):
+            #     return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user_id = payload.get('id')
-            if user_id is None:
-                return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
+            # user_id = payload.get('id')
+            # if user_id is None:
+            #     return Response({"error": "Invalid token payload"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(pk=user_id).first()
-            if user is None:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            # user = User.objects.filter(pk=user_id).first()
+            # if user is None:
+            #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             products = Product.objects.all().order_by('id')
             serializer = ProductSerializerView(products,many=True)
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)

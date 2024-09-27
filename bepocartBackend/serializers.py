@@ -294,28 +294,53 @@ class UserProfileSErilizers(serializers.ModelSerializer):
         fields = ['first_name','last_name','email','password','zip_code','place','image','phone']
 
 
+# class OrderItemSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = OrderItem
+#         fields = ['id', 'product', 'quantity', 'price','']
+
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price','']
+        fields = []
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        
+        # Custom fields as per the fbq format
+        representation['id'] = instance.product.id
+        # representation['variant'] = instance.size if instance.size else "default"
+        representation['name'] = instance.product.name
+        representation['currency'] = "INR"
+        representation['price'] = instance.price
+        representation['quantity'] = instance.quantity
+
+        return representation
 
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True, source='order_items')
+
     class Meta:
         model = Order
-        fields = ['id','order_id','customer', 'created_at', 'updated_at', 'status', 'total_amount','shipping_charge','cod_charge', 'address', 'items','payment_method','coupon',"payment_id",'razorpay_order_id','created_time']
+        fields = ['items']
 
+    def to_representation(self, instance):
+       
+        response = super().to_representation(instance)
 
-    def create(self, validated_data):
-        # Create the order
-        order = super().create(validated_data)
-        
-        # Send the order email
-        send_order_email(order)
-        
-        return order
+        # Custom fields to match the fbq 'track' structure
+        response['transaction_id'] = instance.order_id
+        response['value'] = instance.total_amount
+        response['currency'] = 'INR'
+        response['content_ids'] = [item.product.id for item in instance.order_items.all()]
+        response['contents'] = response.pop('items')  # Move items under 'contents'
+        response['num_items'] = len(instance.order_items.all())
+        response['content_type'] = 'product'
+        response['coupon_code'] = instance.coupon.code if instance.coupon else None
+        response['payment_method'] = instance.payment_method
+        response['customer_segment'] = 'new_customer'  # Assuming you have logic for this
 
-
+        return response
 
 class SingleProductSerilizers(serializers.ModelSerializer):
     class Meta :
@@ -463,3 +488,24 @@ class OfferModelSerilizers(serializers.ModelSerializer):
     class Meta:
         model = OfferSchedule
         fields = "__all__"
+
+
+
+
+
+class OrderModelCartSerializers(serializers.ModelSerializer):
+    name = serializers.CharField(source='product.name')
+    category = serializers.IntegerField(source='product.category.pk')
+    slug = serializers.CharField(source='product.slug')
+    salePrice = serializers.CharField(source='product.salePrice')
+    price = serializers.IntegerField(source='product.price')
+    subcategory_slug = serializers.CharField(source='product.category.slug')
+    image = serializers.ImageField(source='product.image')
+    mainCategory = serializers.CharField(source='product.category.category.slug')
+
+    class Meta:
+        model = Cart
+        fields = [
+            'id', 'customer', 'product', 'name', 'salePrice', 'image', 'category', 
+            'mainCategory', 'quantity', 'slug', 'price', 'color', 'size', 'subcategory_slug'
+        ]
