@@ -2254,9 +2254,14 @@ class CreateOrder(APIView):
                 for item in cart_items:
                     total_amount += item.product.salePrice * item.quantity
                 
+                # Log the total amount
+                logger.info(f'Total amount before applying coupon: {total_amount}')
+                
                 # Apply coupon if available
                 total_amount = handle_shipping_and_coupon(total_amount, coupon, None)  # Pass `None` for order
-
+                
+                logger.info(f'Total amount after applying coupon: {total_amount}')
+                
                 razorpay_order_id = create_razorpay_order(total_amount)
                 return Response({
                     "message": "Razorpay order created successfully.",

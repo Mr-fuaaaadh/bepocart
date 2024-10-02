@@ -27,25 +27,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-^hn!j!ra&i6p)52$-f0xmqpym%b8*&)+9k!hv5*#*rrc2ac31o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG =  True
+DEBUG = True
 
 ALLOWED_HOSTS = ["localhost","127.0.0.1","https://bepocart.in","*"]
 CSRF_TRUSTED_ORIGINS = ["https://bepocart.in"]
-CORS_ALLOW_CREDENTIALS = False
-
-
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-CORS_ALLOWED_ORIGINS = [
-
-    "https://bepocart.in","https://bepocart.com","http://localhost:5176"
-]
-
 APPEND_SLASH = False
 
-CORS_ALLOW_ALL_ORIGINS = True
 
-SECURE_COOKIE = True
+CORS_ALLOW_CREDENTIALS = False
 
 CORS_ALLOW_HEADERS = [
     'content-type',
@@ -56,6 +45,34 @@ CORS_ALLOW_HEADERS = [
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+CORS_ALLOWED_ORIGINS = [
+    "https://bepocart.in",
+    "https://bepocart.com"
+]
+
+APPEND_SLASH = False
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+SECURE_COOKIE = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'accept',
+    'authorization',
+    'x-csrftoken',
+]
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+
+
+# Application definition
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -120,43 +137,35 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bepocart.wsgi.application'
 
 
-<<<<<<< HEAD
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databa
 
-=======
->>>>>>> acd86659a8a3ba7c0e92958607b3965a63a812af
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bepocart',
-        'USER': 'postgres',
-        'PASSWORD': '252562',
-        'HOST': 'localhost',
-        'PORT': '5432'
-    }
-}
-
-<<<<<<< HEAD
 
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
 #         'NAME': 'bepocart',
 #         'USER': 'postgres',
-#         'PASSWORD': '9645848527',
-#         'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+#         'PASSWORD': '252562',
+#         'HOST': 'localhost',
 #         'PORT': '5432'
 #     }
 # }
 
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bepocart',
+        'USER': 'postgres',
+        'PASSWORD': '9645848527',
+        'HOST': 'database-1.c3qgaks0kpy9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432'
+    }
+}
 
 
 
-=======
->>>>>>> acd86659a8a3ba7c0e92958607b3965a63a812af
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
