@@ -38,6 +38,8 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from .utils import *
 from django.core.cache import cache
 
+logger = logging.getLogger(__name__)
+
 class CustomerRegistration(APIView):
     def post(self, request):
         try:
@@ -2236,7 +2238,7 @@ class CreateOrder(APIView):
                     # Add COD charge
                     order.cod_charge = Decimal('40.00')
                     total_amount += order.cod_charge
-                    
+
                     order.total_amount = total_amount
                     order.save()
 
@@ -3118,7 +3120,6 @@ class SendOtpView(APIView):
 
         if not phone_number:
             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
-
         phone_number = phone_number.strip()  # Clean up phone number
 
         # Validate phone number format (example: check if it's a 10-digit number)
@@ -3191,7 +3192,6 @@ class VerifyOtpView(APIView):
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 

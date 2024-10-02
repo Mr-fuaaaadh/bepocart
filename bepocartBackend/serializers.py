@@ -342,8 +342,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
         return response
 
-
-
 class SingleProductSerilizers(serializers.ModelSerializer):
     class Meta :
         model = ProductColorStock

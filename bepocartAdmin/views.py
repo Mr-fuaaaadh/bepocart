@@ -1789,7 +1789,7 @@ class ExportOrdersToExcel(APIView):
             for item in order.get('order_items', []):
                 data.append({
                     "Order ID": order.get('order_id'),
-                    "Name": order.get('name'),  # Fixed typo from 'ame'
+                    "Name": order.get('customerName'),  # Fixed typo from 'ame'
                     "Phone": order.get('phone'),
                     "City": order.get('city'),
                     "State": order.get('state'),
