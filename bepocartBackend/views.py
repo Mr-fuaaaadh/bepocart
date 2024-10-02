@@ -2,6 +2,7 @@ import razorpay
 import logging
 import jwt
 import hashlib
+from django.shortcuts import render
 from django.db.models import Avg,Sum, Count
 import requests
 from django.shortcuts import get_object_or_404
@@ -49,6 +50,7 @@ class CustomerRegistration(APIView):
                     "data": serializer.data
                 }, status=status.HTTP_201_CREATED)
             else:
+                print(serializer.errors)
                 return Response({
                     "status": "error",
                     "message": "Registration failed",
@@ -2245,8 +2247,14 @@ class CreateOrder(APIView):
                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
             else:
+                total_amount = Decimal('0.00')  # Initialize total_amount for Razorpay
+
                 for item in cart_items:
-                    total_amount = item.product.salePrice * item.quantity
+                    total_amount += item.product.salePrice * item.quantity
+                
+                # Apply coupon if available
+                total_amount = handle_shipping_and_coupon(total_amount, coupon, None)  # Pass `None` for order
+
                 razorpay_order_id = create_razorpay_order(total_amount)
                 return Response({
                     "message": "Razorpay order created successfully.",
@@ -3237,6 +3245,9 @@ class AllProductsSchemaAPIView(APIView):
 
 
 
+from django.shortcuts import render
+import json
+
 class ProductSchemaAPIView(APIView):
     def get(self, request, slug, *args, **kwargs):
         # Fetch the product by slug
@@ -3259,10 +3270,8 @@ class ProductSchemaAPIView(APIView):
         else:
             product_data = ProductVariant.objects.filter(product=product).values('color', 'image1', 'image2', 'image3', 'image4', 'image5')
 
-        # Prepare image list for schema
-        images = []
-        for item in product_data:
-            images.extend([item['image1'], item['image2'], item['image3'], item['image4'], item['image5']])
+        # Prepare image list for schema, filter out None values
+        images = [image for item in product_data for image in [item['image1'], item['image2'], item['image3'], item['image4'], item['image5']] if image]
 
         # Construct the schema
         schema = {
@@ -3292,7 +3301,16 @@ class ProductSchemaAPIView(APIView):
             }
         }
 
-        return JsonResponse(schema, safe=False)
+        # Convert schema to JSON
+        schema_json = json.dumps(schema)
+
+        # Render HTML with the schema embedded in the <script> tag
+        context = {
+            "schema_json": schema_json,
+            "product": product,
+        }
+        return render(request, 'product_schema.html', context)
+
 
 
 

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }}</title>
+    
+    <!-- Structured Data Schema in JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "{{ product.name }}",
+      "image": [
+        {% for image in images %}
+          "{{ image }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "description": "{{ product.description|escapejs }}",
+      "sku": "{{ product.pk }}",
+      "brand": {
+        "@type": "Brand",
+        "name": "bepocart"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "{{ settings.FRONTEND_URL }}/single-product/{{ product.slug }}/",
+        "priceCurrency": "INR",
+        "price": "{{ product.salePrice|floatformat:2 }}",
+        "priceValidUntil": "2050-11-20T23:59:59Z",
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": "https://schema.org/InStock"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ rating_value|floatformat:1 }}",
+        "reviewCount": "{{ review_count }}"
+      }
+    }
+    </script>
+</head>
+<body>
+    <h1>{{ product.name }}</h1>
+    <p>{{ product.description }}</p>
+
+    <h2>Product Images</h2>
+    <ul>
+        {% for image in images %}
+            <li><img src="{{ image }}" alt="{{ product.name }}" width="200px"></li>
+        {% endfor %}
+    </ul>
+
+    <h2>Price: {{ product.salePrice }} INR</h2>
+
+    <h2>Aggregate Rating</h2>
+    {% if rating_value %}
+        <p>Rating: {{ rating_value|floatformat:1 }} / 5 ({{ review_count }} reviews)</p>
+    {% else %}
+        <p>No reviews available</p>
+    {% endif %}
+</body>
+</html>
