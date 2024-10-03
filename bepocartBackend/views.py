@@ -52,7 +52,6 @@ class CustomerRegistration(APIView):
                     "data": serializer.data
                 }, status=status.HTTP_201_CREATED)
             else:
-                print(serializer.errors)
                 return Response({
                     "status": "error",
                     "message": "Registration failed",
@@ -1632,6 +1631,18 @@ class CreateOrder(APIView):
                             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
                         
                         total_amount = total_sale_price
+                        
+                        cart_items_list = [
+            
+                            {
+                                
+                                'name': item.product.name,
+                                'quantity': item.quantity,
+                                'price': item.product.salePrice,
+                                'image':item.product.image.url
+                            }
+                            
+                            for item in cart_items]
                         try:
                             if payment_method == "COD":
                                 with transaction.atomic():
@@ -1690,14 +1701,21 @@ class CreateOrder(APIView):
                                     order.total_amount = total_amount
                                     order.save()
 
-                                    send_order_email(order, cart_items)
+                                    send_order_email(order, cart_items_list)
                                     cart_items.delete()
 
                                     serializer = OrderSerializer(order)
                                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                             else:
+                                logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
+
+                                # Apply shipping and coupon, if available
+                                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon)
+
+                                # Create a Razorpay order
                                 razorpay_order_id = create_razorpay_order(total_amount)
+                                
                                 return Response({
                                     "message": "Razorpay order created successfully.",
                                     "razorpay_order_id": razorpay_order_id,
@@ -1762,6 +1780,18 @@ class CreateOrder(APIView):
                             
                             total_amount = total_cart_value_after_discount
                             
+                            cart_items_list = [
+            
+                                    {
+                                        
+                                        'name': item.product.name,
+                                        'quantity': item.quantity,
+                                        'price': item.product.salePrice,
+                                        'image':item.product.image.url
+                                    }
+                                    
+                                    for item in cart_items]
+                            
                             if payment_method == 'COD': 
                                 with transaction.atomic():
                                     order = Order.objects.create(
@@ -1813,13 +1843,19 @@ class CreateOrder(APIView):
                                     order.total_amount = total_amount
                                     order.save()
 
-                                    send_order_email(order, cart_items)
+                                    send_order_email(order, cart_items_list)
                                     cart_items.delete()
 
                                     serializer = OrderSerializer(order)
                                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                             else:
+                                logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
+
+                                # Apply shipping and coupon, if available
+                                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon)
+
+                                # Create a Razorpay order
                                 razorpay_order_id = create_razorpay_order(total_amount)
                                 return Response({
                                     "message": "Razorpay order created successfully.",
@@ -1919,6 +1955,18 @@ class CreateOrder(APIView):
                                 
                                 total_amount = total_cart_value
                                 
+                                cart_items_list = [
+            
+                                        {
+                                            
+                                            'name': item.product.name,
+                                            'quantity': item.quantity,
+                                            'price': item.product.salePrice,
+                                            'image':item.product.image.url
+                                        }
+                                        
+                                        for item in cart_items]
+                                
                                 try:
                                     if payment_method == "COD":
                                         with transaction.atomic():
@@ -1988,13 +2036,19 @@ class CreateOrder(APIView):
                                             order.total_amount = total_amount
                                             order.save()
 
-                                            send_order_email(order, cart_items)
+                                            send_order_email(order, cart_items_list)
                                             cart_items.delete()
 
                                             serializer = OrderSerializer(order)
                                             return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                                     else:
+                                        logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
+
+                                        # Apply shipping and coupon, if available
+                                        total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon)
+
+                                        # Create a Razorpay order
                                         razorpay_order_id = create_razorpay_order(total_amount)
                                         return Response({
                                             "message": "Razorpay order created successfully.",
@@ -2162,7 +2216,14 @@ class CreateOrder(APIView):
 
                                     else:
                                         
+                                        logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
+
+                                        # Apply shipping and coupon, if available
+                                        total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon)
+
+                                        # Create a Razorpay order
                                         razorpay_order_id = create_razorpay_order(total_amount)
+                                        
                                         return Response({
                                             "message": "Razorpay order created successfully.",
                                             "razorpay_order_id": razorpay_order_id,
@@ -2199,6 +2260,18 @@ class CreateOrder(APIView):
         if payment_method not in ['COD', 'razorpay']:
             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
         
+        cart_items_list = [
+            
+            {
+                
+                'name': item.product.name,
+                'quantity': item.quantity,
+                'price': item.product.salePrice,
+                'image':item.product.image.url
+            }
+            
+            for item in cart_items]
+        
         
         try:
             if payment_method == "COD":
@@ -2232,8 +2305,11 @@ class CreateOrder(APIView):
                             update_variant_stock(item)
 
                         total_amount += item.product.salePrice * item.quantity
+                        
 
-                    total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
+                    total_amount = handle_shipping_and_coupon(total_amount,cart_items, coupon, order)
+                    
+                    
 
                     # Add COD charge
                     order.cod_charge = Decimal('40.00')
@@ -2242,7 +2318,7 @@ class CreateOrder(APIView):
                     order.total_amount = total_amount
                     order.save()
 
-                    send_order_email(order, cart_items)
+                    send_order_email(order, cart_items_list)
                     cart_items.delete()
 
                     serializer = OrderSerializer(order)
@@ -2254,22 +2330,22 @@ class CreateOrder(APIView):
                 for item in cart_items:
                     total_amount += item.product.salePrice * item.quantity
                 
-                # Log the total amount
-                logger.info(f'Total amount before applying coupon: {total_amount}')
-                
-                # Apply coupon if available
-                total_amount = handle_shipping_and_coupon(total_amount, coupon, None)  # Pass `None` for order
-                
-                logger.info(f'Total amount after applying coupon: {total_amount}')
-                
+                # Log the calculated total amount for tracking purposes
+                logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
+
+                # Apply shipping and coupon, if available
+                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon)
+
+                # Create a Razorpay order
                 razorpay_order_id = create_razorpay_order(total_amount)
+                
                 return Response({
                     "message": "Razorpay order created successfully.",
                     "razorpay_order_id": razorpay_order_id,
                 }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logging.error(f"Order creation error: {e}")
+            logging.info(f"Order creation error: {e}")
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def update_single_product_stock(check_color, item):
@@ -2296,40 +2372,108 @@ def update_variant_stock(item):
         else:
             raise ValueError(f"Insufficient stock for {item.product.name} - {item.color} - {item.size}")
 
-def handle_shipping_and_coupon(total_amount, coupon, order):
+def handle_shipping_and_coupon(total_amount, cart_items, coupon, order):
     if total_amount <= Decimal('500.00'):
         shipping_charge = Decimal('60.00')
         total_amount += shipping_charge
         order.shipping_charge = shipping_charge
 
     if coupon:
-        discount_amount = apply_coupon(coupon, total_amount)
+        # Pass the coupon code string instead of the coupon object
+        discount_amount = apply_coupon(coupon, total_amount, cart_items)
         total_amount -= discount_amount
         order.coupon = coupon
+        
 
     return total_amount
 
-def apply_coupon(coupon, total_amount):
-    if coupon.coupon_type == 'Percentage':
-        discount_amount = (coupon.discount / 100) * total_amount
-    elif coupon.coupon_type == 'Fixed Amount':
-        discount_amount = coupon.discount
+
+
+def handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon):
+    # Add shipping charges if necessary
+    if total_amount <= Decimal('500.00'):
+        shipping_charge = Decimal('60.00')
+        total_amount += shipping_charge
+
+    # Apply the coupon if available
+    if coupon:
+        discount_amount = apply_coupon(coupon, total_amount, cart_items)
+        total_amount -= discount_amount
+
+    logging.info("Final total amount after shipping and coupon: ", total_amount)
+    return total_amount
+
+
+
+
+def apply_coupon(coupon, total_amount, cart_items):
+    logging.info(coupon)
+
+    # Fetch a single coupon from the database
+    check_coupon = Coupon.objects.filter(code=coupon).first()
+    if not check_coupon:
+        raise ValueError("Coupon not found.")
+    
+    is_applicable = False
+    approved_products = []
+
+    # Check for specific products or categories where the coupon applies
+    applicable_products = check_coupon.discount_product.values_list('id', flat=True)
+    applicable_categories = check_coupon.discount_category.values_list('id', flat=True)
+
+    for cart_item in cart_items:
+        product = cart_item.product  # Make sure each cart_item refers to a single product
+        
+        if product.id in applicable_products or product.category.pk in applicable_categories:
+            approved_products.append(product)  # Add product to approved list
+            is_applicable = True
+
+    if not is_applicable:
+        raise ValueError("Coupon is not applicable to the products in your cart.")
+
+    # Calculate the discount amount based on coupon type
+    total_approved_products_price = sum(cart_item.product.salePrice for cart_item in cart_items if cart_item.product in approved_products)
+
+    if check_coupon.coupon_type == 'Percentage':
+        discount_amount = (check_coupon.discount / 100) * total_approved_products_price
+    elif check_coupon.coupon_type == 'Fixed Amount':
+        discount_amount = min(check_coupon.discount, total_approved_products_price)
     else:
         raise ValueError("Invalid coupon type.")
-    
+
+    # Ensure discount does not exceed the total amount
     if discount_amount > total_amount:
         raise ValueError("Discount exceeds total amount.")
 
     return discount_amount
 
-def send_order_email(order, cart_items):
+
+
+
+
+def send_order_email(order, cart_items_list):
     try:
+        # Email details
         email_subject = 'New Order Created'
-        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items})
-        email = EmailMessage(subject=email_subject, body=email_body, from_email=settings.EMAIL_HOST_USER, to=[settings.EMAIL_HOST_USER])
-        email.content_subtype = 'html'
+        
+        # Render the email template with order and cart details
+        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+        
+        # List of recipient emails: admin and the user's email
+        recipient_list = [settings.EMAIL_HOST_USER, order.customer.email]  # Assuming order.customer.email is the user's email
+        
+        # Create and send the email
+        email = EmailMessage(
+            subject=email_subject, 
+            body=email_body, 
+            from_email=settings.EMAIL_HOST_USER, 
+            to=recipient_list
+        )
+        email.content_subtype = 'html'  # Specify HTML content type
         email.send()
+
     except Exception as email_error:
+        # Log the error if email fails
         logging.error(f"Error sending email: {email_error}")
 
 def create_razorpay_order(total_amount):
@@ -2489,6 +2633,7 @@ class VerifyRazorpayPaymentAPIView(APIView):
                         for item in cart_items
 
                         ]
+                        send_order_razorpay_email(order, cart_items_list)
                         serializer = OrderSerializer(order)
                         return Response({"message": "Payment already captured.","success":serializer.data}, status=status.HTTP_200_OK)
 
@@ -2499,6 +2644,18 @@ class VerifyRazorpayPaymentAPIView(APIView):
                     order.payment_id = razorpay_payment_id
                     order.total_amount = total_amount
                     order.save()
+                    
+                    cart_items_list = [
+                        {
+                            'product_name': item.product.name,
+                            'quantity': item.quantity,
+                            'price': item.product.salePrice,
+                            'image':item.product.image.url
+                        }
+                        for item in cart_items
+
+                        ]
+                    send_order_razorpay_email(order, cart_items_list)
 
                     return Response({"message": "Payment verified and captured successfully."}, status=status.HTTP_200_OK)
                 else:
@@ -2512,6 +2669,33 @@ class VerifyRazorpayPaymentAPIView(APIView):
         except Exception as e:
             logging.error(f"Error during Razorpay payment verification: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+        
+def send_order_razorpay_email(order, cart_items_list):
+    try:
+        # Email details
+        email_subject = 'New Order Created'
+        
+        # Render the email template with order and cart details
+        email_body = render_to_string('new_order.html', {'order': order, 'user_cart': cart_items_list})
+        
+        # List of recipient emails: admin and the user's email
+        recipient_list = [settings.EMAIL_HOST_USER, order.customer.email]  # Assuming order.customer.email is the user's email
+        
+        # Create and send the email
+        email = EmailMessage(
+            subject=email_subject, 
+            body=email_body, 
+            from_email=settings.EMAIL_HOST_USER, 
+            to=recipient_list
+        )
+        email.content_subtype = 'html'  # Specify HTML content type
+        email.send()
+
+    except Exception as email_error:
+        # Log the error if email fails
+        logging.error(f"Error sending email: {email_error}")
 
 
 class RelatedProduct(APIView):
