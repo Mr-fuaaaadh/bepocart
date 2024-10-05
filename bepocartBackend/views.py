@@ -2538,6 +2538,7 @@ class VerifyRazorpayPaymentAPIView(APIView):
             total_amount = Decimal(request.data.get('total_amount', 0))
             coupon_code = request.data.get('coupon_code',None)
             address_id = request.data.get('address_id')
+            shipping_charge = request.data.get('shipping_charge', 0)
             
             
             
@@ -2578,6 +2579,7 @@ class VerifyRazorpayPaymentAPIView(APIView):
                             payment_id = razorpay_payment_id,
                             total_amount = total_amount,
                             coupon = coupon,
+                            shipping_charge = shipping_charge
                         )
 
                         for item in cart_items:
