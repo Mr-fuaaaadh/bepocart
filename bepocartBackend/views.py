@@ -1692,20 +1692,31 @@ class CreateOrder(APIView):
 
                                     total_amount = total_sale_price
 
-                                    total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
+                                if coupon:  # Check if 'coupon' has a value that is considered "truthy"
+                                    total_amount = apply_coupon(total_amount, cart_items, coupon)
 
-                                    # Add COD charge
-                                    order.cod_charge = Decimal('40.00')
-                                    total_amount += order.cod_charge
-                                    
-                                    order.total_amount = total_amount
-                                    order.save()
+                                # Determine shipping charge based on total_amount
+                                if total_amount <= Decimal('500.00'):
+                                    order.shipping_charge = Decimal('60.00')
+                                else:
+                                    order.shipping_charge = Decimal('0.00')
 
-                                    send_order_email(order, cart_items_list)
-                                    cart_items.delete()
+                                # Add COD charge
+                                order.cod_charge = Decimal('40.00')
+                                total_amount += order.shipping_charge + order.cod_charge
 
-                                    serializer = OrderSerializer(order)
-                                    return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                # Update order total amount and save
+                                order.total_amount = total_amount
+                                order.save()
+
+                                # Send order email and delete cart items
+                                send_order_email(order, cart_items_list)
+                                cart_items.delete()
+
+                                # Serialize the order data and return response
+                                serializer = OrderSerializer(order)
+                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+
 
                             else:
                                 logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
@@ -1832,22 +1843,32 @@ class CreateOrder(APIView):
                                         else:
                                             update_variant_stock(item)
 
-                                    total_amount = total_cart_value_after_discount
+                                    total_amount = total_sale_price
 
-                                    total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
+                                if coupon:  # Check if 'coupon' has a value that is considered "truthy"
+                                    total_amount = apply_coupon(total_amount, cart_items, coupon)
 
-                                    # Add COD charge
-                                    order.cod_charge = Decimal('40.00')
-                                    total_amount += order.cod_charge
-                                    
-                                    order.total_amount = total_amount
-                                    order.save()
+                                # Determine shipping charge based on total_amount
+                                if total_amount <= Decimal('500.00'):
+                                    order.shipping_charge = Decimal('60.00')
+                                else:
+                                    order.shipping_charge = Decimal('0.00')
 
-                                    send_order_email(order, cart_items_list)
-                                    cart_items.delete()
+                                # Add COD charge
+                                order.cod_charge = Decimal('40.00')
+                                total_amount += order.shipping_charge + order.cod_charge
 
-                                    serializer = OrderSerializer(order)
-                                    return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                # Update order total amount and save
+                                order.total_amount = total_amount
+                                order.save()
+
+                                # Send order email and delete cart items
+                                send_order_email(order, cart_items_list)
+                                cart_items.delete()
+
+                                # Serialize the order data and return response
+                                serializer = OrderSerializer(order)
+                                return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                             else:
                                 logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
@@ -2025,22 +2046,32 @@ class CreateOrder(APIView):
                                                 else:
                                                     update_variant_stock(item)
 
-                                            total_amount = total_cart_value
+                                            total_amount = total_sale_price
 
-                                            total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
+                                        if coupon:  # Check if 'coupon' has a value that is considered "truthy"
+                                            total_amount = apply_coupon(total_amount, cart_items, coupon)
 
-                                            # Add COD charge
-                                            order.cod_charge = Decimal('40.00')
-                                            total_amount += order.cod_charge
-                                            
-                                            order.total_amount = total_amount
-                                            order.save()
+                                        # Determine shipping charge based on total_amount
+                                        if total_amount <= Decimal('500.00'):
+                                            order.shipping_charge = Decimal('60.00')
+                                        else:
+                                            order.shipping_charge = Decimal('0.00')
 
-                                            send_order_email(order, cart_items_list)
-                                            cart_items.delete()
+                                        # Add COD charge
+                                        order.cod_charge = Decimal('40.00')
+                                        total_amount += order.shipping_charge + order.cod_charge
 
-                                            serializer = OrderSerializer(order)
-                                            return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                        # Update order total amount and save
+                                        order.total_amount = total_amount
+                                        order.save()
+
+                                        # Send order email and delete cart items
+                                        send_order_email(order, cart_items_list)
+                                        cart_items.delete()
+
+                                        # Serialize the order data and return response
+                                        serializer = OrderSerializer(order)
+                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                                     else:
                                         logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
@@ -2199,20 +2230,30 @@ class CreateOrder(APIView):
 
                                             total_amount = total_cart_value
 
-                                            total_amount = handle_shipping_and_coupon(total_amount, coupon, order)
+                                        if coupon:  # Check if 'coupon' has a value that is considered "truthy"
+                                            total_amount = apply_coupon(total_amount, cart_items, coupon)
 
-                                            # Add COD charge
-                                            order.cod_charge = Decimal('40.00')
-                                            total_amount += order.cod_charge
-                                            
-                                            order.total_amount = total_amount
-                                            order.save()
+                                        # Determine shipping charge based on total_amount
+                                        if total_amount <= Decimal('500.00'):
+                                            order.shipping_charge = Decimal('60.00')
+                                        else:
+                                            order.shipping_charge = Decimal('0.00')
 
-                                            send_order_email(order, cart_items)
-                                            cart_items.delete()
+                                        # Add COD charge
+                                        order.cod_charge = Decimal('40.00')
+                                        total_amount += order.shipping_charge + order.cod_charge
 
-                                            serializer = OrderSerializer(order)
-                                            return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+                                        # Update order total amount and save
+                                        order.total_amount = total_amount
+                                        order.save()
+
+                                        # Send order email and delete cart items
+                                        send_order_email(order, cart_items_list)
+                                        cart_items.delete()
+
+                                        # Serialize the order data and return response
+                                        serializer = OrderSerializer(order)
+                                        return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
                                     else:
                                         
@@ -2280,7 +2321,7 @@ class CreateOrder(APIView):
                         customer=user,
                         address=address,
                         status='pending',
-                        payment_method=payment_method
+                        payment_method=payment_method,
                     )
 
                     total_amount = Decimal('0.00')
@@ -2304,25 +2345,33 @@ class CreateOrder(APIView):
                         else:
                             update_variant_stock(item)
 
-                        total_amount += item.product.salePrice * item.quantity
-                        
+                        total_amount = total_sale_price
 
-                    total_amount = handle_shipping_and_coupon(total_amount,cart_items, coupon, order)
-                    
-                    
+                    if coupon:  # Check if 'coupon' has a value that is considered "truthy"
+                        total_amount = apply_coupon(total_amount, cart_items, coupon)
+
+                    # Determine shipping charge based on total_amount
+                    if total_amount <= Decimal('500.00'):
+                        order.shipping_charge = Decimal('60.00')
+                    else:
+                        order.shipping_charge = Decimal('0.00')
 
                     # Add COD charge
                     order.cod_charge = Decimal('40.00')
-                    total_amount += order.cod_charge
+                    total_amount += order.shipping_charge + order.cod_charge
 
+                    # Update order total amount and save
                     order.total_amount = total_amount
                     order.save()
 
+                    # Send order email and delete cart items
                     send_order_email(order, cart_items_list)
                     cart_items.delete()
 
+                    # Serialize the order data and return response
                     serializer = OrderSerializer(order)
                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
+
 
             else:
                 total_amount = Decimal('0.00')  # Initialize total_amount for Razorpay
