@@ -2017,6 +2017,20 @@ class UpdateReviewStatus(APIView):
         except Exception as e:
             return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+    def delete(self, request, pk):
+        try:
+            review = Review.objects.filter(pk=pk).first()
+            if not review:
+                return Response({"error": "Review not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            review.delete()
+            return Response({"message": "Review deletd successfuly"}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"error": "Internal server error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+            
+           
 
 
 # class AdminDeleteReview(APIView):
