@@ -2285,15 +2285,25 @@ class CreateOrder(APIView):
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
         coupon_code = request.data.get('coupon_code')
-        coupon = None
+        if coupon_code:
+            coupon = Coupon.objects.filter(code=coupon_code).first()
+            if not coupon or coupon.status != 'Active':
+                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Calculate the total amount before applying the coupon
+        total_amount = sum(item.product.salePrice * item.quantity for item in cart_items)
+        
         if coupon_code:
             try:
-                coupon = Coupon.objects.filter(code=coupon_code).first()
-            except Coupon.DoesNotExist:
-                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+                discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                total_amount -= discount_amount 
+            except ValueError as e:
+                return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            if coupon.status != 'Active':
-                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        
+            
 
         payment_method = request.data.get('payment_method')
         if not payment_method:
@@ -2322,9 +2332,10 @@ class CreateOrder(APIView):
                         address=address,
                         status='pending',
                         payment_method=payment_method,
+                        coupon = coupon,
                     )
 
-                    total_amount = Decimal('0.00')
+                    
 
                     for item in cart_items:
                         order_item = OrderItem.objects.create(
@@ -2344,11 +2355,13 @@ class CreateOrder(APIView):
                             update_single_product_stock(check_color, item)
                         else:
                             update_variant_stock(item)
-
-                        total_amount = total_sale_price
-
-                    if coupon:  # Check if 'coupon' has a value that is considered "truthy"
-                        total_amount = apply_coupon(total_amount, cart_items, coupon)
+                        
+                        
+                        
+            
+                    
+                        
+                    
 
                     # Determine shipping charge based on total_amount
                     if total_amount <= Decimal('500.00'):
@@ -2394,7 +2407,6 @@ class CreateOrder(APIView):
                 }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logging.info(f"Order creation error: {e}")
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def update_single_product_stock(check_color, item):
@@ -2455,34 +2467,37 @@ def handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon):
 
 
 
-def apply_coupon(coupon, total_amount, cart_items):
-    logging.info(coupon)
+def apply_coupon(coupon_code, total_amount, cart_items):
 
-    # Fetch a single coupon from the database
-    check_coupon = Coupon.objects.filter(code=coupon).first()
-    if not check_coupon:
-        raise ValueError("Coupon not found.")
-    
+    # Fetch a single coupon from the database or raise a 404 error
+    check_coupon = get_object_or_404(Coupon, code=coupon_code)
+
+    # Validate the coupon
+    if not check_coupon.is_valid():
+        raise ValueError("Coupon is invalid or inactive.")
+
     is_applicable = False
     approved_products = []
 
-    # Check for specific products or categories where the coupon applies
-    applicable_products = check_coupon.discount_product.values_list('id', flat=True)
-    applicable_categories = check_coupon.discount_category.values_list('id', flat=True)
+    # Get applicable product and category IDs
+    applicable_products = set(check_coupon.discount_product.values_list('id', flat=True))
+    applicable_categories = set(check_coupon.discount_category.values_list('id', flat=True))
 
+    # Check cart items against the coupon's applicable products/categories
     for cart_item in cart_items:
-        product = cart_item.product  # Make sure each cart_item refers to a single product
-        
+        product = cart_item.product
+
         if product.id in applicable_products or product.category.pk in applicable_categories:
-            approved_products.append(product)  # Add product to approved list
+            approved_products.append(product)
             is_applicable = True
 
     if not is_applicable:
         raise ValueError("Coupon is not applicable to the products in your cart.")
 
-    # Calculate the discount amount based on coupon type
-    total_approved_products_price = sum(cart_item.product.salePrice for cart_item in cart_items if cart_item.product in approved_products)
+    # Calculate total price of approved products
+    total_approved_products_price = sum(cart_item.product.salePrice * cart_item.quantity for cart_item in cart_items if cart_item.product in approved_products)
 
+    # Calculate discount based on coupon type
     if check_coupon.coupon_type == 'Percentage':
         discount_amount = (check_coupon.discount / 100) * total_approved_products_price
     elif check_coupon.coupon_type == 'Fixed Amount':
@@ -2490,11 +2505,12 @@ def apply_coupon(coupon, total_amount, cart_items):
     else:
         raise ValueError("Invalid coupon type.")
 
-    # Ensure discount does not exceed the total amount
+    # Ensure the discount does not exceed the total amount
     if discount_amount > total_amount:
         raise ValueError("Discount exceeds total amount.")
 
     return discount_amount
+
 
 
 
@@ -2588,6 +2604,10 @@ class VerifyRazorpayPaymentAPIView(APIView):
             coupon_code = request.data.get('coupon_code',None)
             address_id = request.data.get('address_id')
             shipping_charge = request.data.get('shipping_charge', 0)
+            
+            
+            
+
             
             
             

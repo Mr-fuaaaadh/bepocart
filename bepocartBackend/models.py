@@ -98,11 +98,10 @@ class Coupon(models.Model):
         return self.code
 
     def is_valid(self):
-        return (
-            self.status == 'Active' and
-            self.used_count < self.max_uses and
-            self.start_date <= timezone.now().date() <= self.end_date
-        )
+        return self.status == 'Active' 
+            # self.used_count < self.max_uses and
+            # self.start_date <= timezone.now().date() <= self.end_date
+        
     
     class Meta:
         db_table = "Coupon"
