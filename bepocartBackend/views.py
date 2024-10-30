@@ -1614,15 +1614,20 @@ class CreateOrder(APIView):
                             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
                         coupon_code = request.data.get('coupon_code')
-                        coupon = None
+                        if coupon_code:
+                            coupon = Coupon.objects.filter(code=coupon_code).first()
+                            if not coupon or coupon.status != 'Active':
+                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                        # Calculate the total amount before applying the coupon
+                        total_amount = total_sale_price
+                        
                         if coupon_code:
                             try:
-                                coupon = Coupon.objects.get(code=coupon_code)
-                            except Coupon.DoesNotExist:
-                                return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-                            if coupon.status != 'Active':
-                                return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                                discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                total_amount -= discount_amount 
+                            except ValueError as e:
+                                return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                         payment_method = request.data.get('payment_method')
                         if not payment_method:
@@ -1630,7 +1635,6 @@ class CreateOrder(APIView):
                         if payment_method not in ['COD', 'razorpay']:
                             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
                         
-                        total_amount = total_sale_price
                         
                         cart_items_list = [
             
@@ -1690,10 +1694,7 @@ class CreateOrder(APIView):
                                         else:
                                             update_variant_stock(item)
 
-                                    total_amount = total_sale_price
-
-                                if coupon:  # Check if 'coupon' has a value that is considered "truthy"
-                                    total_amount = apply_coupon(total_amount, cart_items, coupon)
+                                
 
                                 # Determine shipping charge based on total_amount
                                 if total_amount <= Decimal('500.00'):
@@ -1775,21 +1776,27 @@ class CreateOrder(APIView):
                                 return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
                             coupon_code = request.data.get('coupon_code')
-                            coupon = None
+                            if coupon_code:
+                                coupon = Coupon.objects.filter(code=coupon_code).first()
+                                if not coupon or coupon.status != 'Active':
+                                    return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                            # Calculate the total amount before applying the coupon
+                            total_amount = total_cart_value_after_discount
+                            
                             if coupon_code:
                                 try:
-                                    coupon = Coupon.objects.get(code=coupon_code)
-                                    if coupon.status != 'Active':
-                                        raise Coupon.DoesNotExist
-                                except Coupon.DoesNotExist:
-                                    return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                                    discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                    total_amount -= discount_amount 
+                                except ValueError as e:
+                                    return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                             payment_method = request.data.get('payment_method')
                             if not payment_method or payment_method not in ['COD', 'razorpay']:
                                 return Response({"message": "Invalid or missing payment method"}, status=status.HTTP_400_BAD_REQUEST)
                             
                             
-                            total_amount = total_cart_value_after_discount
+                            
                             
                             cart_items_list = [
             
@@ -1843,10 +1850,9 @@ class CreateOrder(APIView):
                                         else:
                                             update_variant_stock(item)
 
-                                    total_amount = total_sale_price
+                                    
 
-                                if coupon:  # Check if 'coupon' has a value that is considered "truthy"
-                                    total_amount = apply_coupon(total_amount, cart_items, coupon)
+                                
 
                                 # Determine shipping charge based on total_amount
                                 if total_amount <= Decimal('500.00'):
@@ -1958,15 +1964,20 @@ class CreateOrder(APIView):
                                     return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
                                 coupon_code = request.data.get('coupon_code')
-                                coupon = None
+                                if coupon_code:
+                                    coupon = Coupon.objects.filter(code=coupon_code).first()
+                                    if not coupon or coupon.status != 'Active':
+                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                # Calculate the total amount before applying the coupon
+                                total_amount = total_cart_value
+                                
                                 if coupon_code:
                                     try:
-                                        coupon = Coupon.objects.get(code=coupon_code)
-                                    except Coupon.DoesNotExist:
-                                        return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                    if coupon.status != 'Active':
-                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                                        discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                        total_amount -= discount_amount 
+                                    except ValueError as e:
+                                        return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                                 payment_method = request.data.get('payment_method')
                                 if not payment_method:
@@ -1974,7 +1985,7 @@ class CreateOrder(APIView):
                                 if payment_method not in ['COD', 'razorpay']:
                                     return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
                                 
-                                total_amount = total_cart_value
+                                
                                 
                                 cart_items_list = [
             
@@ -2046,11 +2057,9 @@ class CreateOrder(APIView):
                                                 else:
                                                     update_variant_stock(item)
 
-                                            total_amount = total_sale_price
+                                            
 
-                                        if coupon:  # Check if 'coupon' has a value that is considered "truthy"
-                                            total_amount = apply_coupon(total_amount, cart_items, coupon)
-
+                                        
                                         # Determine shipping charge based on total_amount
                                         if total_amount <= Decimal('500.00'):
                                             order.shipping_charge = Decimal('60.00')
@@ -2154,15 +2163,20 @@ class CreateOrder(APIView):
                                     return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
                                 coupon_code = request.data.get('coupon_code')
-                                coupon = None
+                                if coupon_code:
+                                    coupon = Coupon.objects.filter(code=coupon_code).first()
+                                    if not coupon or coupon.status != 'Active':
+                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+
+                                # Calculate the total amount before applying the coupon
+                                total_amount = total_cart_value
+                                
                                 if coupon_code:
                                     try:
-                                        coupon = Coupon.objects.get(code=coupon_code)
-                                    except Coupon.DoesNotExist:
-                                        return Response({"message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
-
-                                    if coupon.status != 'Active':
-                                        return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
+                                        discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                        total_amount -= discount_amount 
+                                    except ValueError as e:
+                                        return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                                 payment_method = request.data.get('payment_method')
                                 if not payment_method:
@@ -2170,7 +2184,7 @@ class CreateOrder(APIView):
                                 if payment_method not in ['COD', 'razorpay']:
                                     return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
                                 
-                                total_amount = total_cart_value
+                                
                                 try:
                                     if payment_method == "COD":
                                         with transaction.atomic():
@@ -2230,8 +2244,7 @@ class CreateOrder(APIView):
 
                                             total_amount = total_cart_value
 
-                                        if coupon:  # Check if 'coupon' has a value that is considered "truthy"
-                                            total_amount = apply_coupon(total_amount, cart_items, coupon)
+                                        
 
                                         # Determine shipping charge based on total_amount
                                         if total_amount <= Decimal('500.00'):
@@ -2356,12 +2369,6 @@ class CreateOrder(APIView):
                         else:
                             update_variant_stock(item)
                         
-                        
-                        
-            
-                    
-                        
-                    
 
                     # Determine shipping charge based on total_amount
                     if total_amount <= Decimal('500.00'):
