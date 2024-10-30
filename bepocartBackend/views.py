@@ -1655,7 +1655,8 @@ class CreateOrder(APIView):
                                         address=address,
                                         status='pending',
                                         payment_method=payment_method,
-                                        free_quantity=total_combined_free_quantity
+                                        free_quantity=total_combined_free_quantity,
+                                        coupon = coupon,
                                     )
 
                                     for item in user_cart:
@@ -1817,6 +1818,7 @@ class CreateOrder(APIView):
                                         address=address,
                                         status='pending',
                                         payment_method=payment_method,
+                                        coupon = coupon,
                                     )
 
                                     for item in user_cart:
@@ -2007,6 +2009,7 @@ class CreateOrder(APIView):
                                                 address=address,
                                                 status='pending',
                                                 payment_method=payment_method,
+                                                coupon = coupon,
 
                                             )
 
@@ -2193,6 +2196,7 @@ class CreateOrder(APIView):
                                                 address=address,
                                                 status='pending',
                                                 payment_method=payment_method,
+                                                coupon = coupon,
                                             )
 
                                             for item in cart_items:
