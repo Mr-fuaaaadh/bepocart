@@ -2302,6 +2302,7 @@ class CreateOrder(APIView):
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
         coupon_code = request.data.get('coupon_code')
+        coupon = None
         if coupon_code:
             coupon = Coupon.objects.filter(code=coupon_code).first()
             if not coupon or coupon.status != 'Active':
@@ -2365,13 +2366,13 @@ class CreateOrder(APIView):
                             size=item.size
                         )
 
-                        # if item.product.type == "single":
-                        #     check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
-                        #     if not check_color.exists():
-                        #         return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
-                        #     update_single_product_stock(check_color, item)
-                        # else:
-                        #     update_variant_stock(item)
+                        if item.product.type == "single":
+                            check_color = ProductColorStock.objects.filter(product=item.product, color=item.color)
+                            if not check_color.exists():
+                                return Response({"message": "Color not found"}, status=status.HTTP_400_BAD_REQUEST)
+                            update_single_product_stock(check_color, item)
+                        else:
+                            update_variant_stock(item)
                         
 
                     # Determine shipping charge based on total_amount
@@ -2418,7 +2419,6 @@ class CreateOrder(APIView):
                 }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logging.error(str(e))  
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def update_single_product_stock(check_color, item):
