@@ -1613,25 +1613,31 @@ class CreateOrder(APIView):
                         if not address:
                             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
-                        coupon_code = request.data.get('coupon_code')
-                        coupon = None 
+                        total_amount = total_sale_price
                         
+                        
+                        coupon_code = request.data.get('coupon_code')
+                        coupon = None  # Initialize coupon as None
+
                         if coupon_code:
                             coupon = Coupon.objects.filter(code=coupon_code).first()
                             if not coupon or coupon.status != 'Active':
                                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                         # Calculate the total amount before applying the coupon
-                        total_amount = total_sale_price
-                        
-                        
+                        try:
+                            if coupon:
+                                discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                total_amount -= discount_amount
+                        except ValueError as e:
+                            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                         payment_method = request.data.get('payment_method')
                         if not payment_method:
                             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
                         if payment_method not in ['COD', 'razorpay']:
                             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-                        
+                
                         
                         cart_items_list = [
             
@@ -1653,7 +1659,8 @@ class CreateOrder(APIView):
                                         status='pending',
                                         payment_method=payment_method,
                                         free_quantity=total_combined_free_quantity,
-                                        coupon = coupon,
+                                        coupon=coupon if coupon else None 
+
                                     )
 
                                     for item in user_cart:
@@ -1692,13 +1699,6 @@ class CreateOrder(APIView):
                                         else:
                                             update_variant_stock(item)
                                             
-                                    if coupon_code:
-                                        try:
-                                            discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
-                                            total_amount -= discount_amount 
-                                        except ValueError as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
                                 
 
                                 # Determine shipping charge based on total_amount
@@ -1727,9 +1727,6 @@ class CreateOrder(APIView):
                             else:
                                 logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
 
-                                # Apply shipping and coupon, if available
-                                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon.code)
-
                                 # Create a Razorpay order
                                 razorpay_order_id = create_razorpay_order(total_amount)
                                 
@@ -1738,6 +1735,7 @@ class CreateOrder(APIView):
                                     "razorpay_order_id": razorpay_order_id,
                                 }, status=status.HTTP_200_OK)   
                         except Exception as e:
+                            logging.info(f"error {e}")
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
                         try:
@@ -1780,24 +1778,32 @@ class CreateOrder(APIView):
                             if not address:
                                 return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
+                            total_amount = total_cart_value_after_discount
+                            
+                            
                             coupon_code = request.data.get('coupon_code')
-                            coupon = None
+                            coupon = None  # Initialize coupon as None
+
                             if coupon_code:
                                 coupon = Coupon.objects.filter(code=coupon_code).first()
                                 if not coupon or coupon.status != 'Active':
                                     return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                             # Calculate the total amount before applying the coupon
-                            total_amount = total_cart_value_after_discount
-                            
-                            
+                            try:
+                                if coupon:
+                                    discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                    total_amount -= discount_amount
+                            except ValueError as e:
+                                return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                             payment_method = request.data.get('payment_method')
-                            if not payment_method or payment_method not in ['COD', 'razorpay']:
-                                return Response({"message": "Invalid or missing payment method"}, status=status.HTTP_400_BAD_REQUEST)
-                            
-                            
-                            
+                            if not payment_method:
+                                return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
+                            if payment_method not in ['COD', 'razorpay']:
+                                return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        
                             
                             cart_items_list = [
             
@@ -1818,7 +1824,8 @@ class CreateOrder(APIView):
                                         address=address,
                                         status='pending',
                                         payment_method=payment_method,
-                                        coupon = coupon,
+                                        coupon=coupon if coupon else None 
+
                                     )
 
                                     for item in user_cart:
@@ -1852,16 +1859,7 @@ class CreateOrder(APIView):
                                         else:
                                             update_variant_stock(item)
                                             
-                                    if coupon_code:
-                                        try:
-                                            discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
-                                            total_amount -= discount_amount 
-                                        except ValueError as e:
-                                            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-                                    
-
-                                
 
                                 # Determine shipping charge based on total_amount
                                 if total_amount <= Decimal('500.00'):
@@ -1888,9 +1886,6 @@ class CreateOrder(APIView):
                             else:
                                 logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
 
-                                # Apply shipping and coupon, if available
-                                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon.code)
-
                                 # Create a Razorpay order
                                 razorpay_order_id = create_razorpay_order(total_amount)
                                 return Response({
@@ -1898,9 +1893,11 @@ class CreateOrder(APIView):
                                     "razorpay_order_id": razorpay_order_id,
                                 }, status=status.HTTP_200_OK)        
                         except Exception as e:
+                            logging.info(f"error {e}")
                             return Response({"message": f"An error occurred during order processing: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 except Exception as e:
+                    logging.info(f"error {e}")
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
@@ -1972,23 +1969,30 @@ class CreateOrder(APIView):
                                 if not address:
                                     return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
+                                total_amount = total_cart_value
+                                
+                                
                                 coupon_code = request.data.get('coupon_code')
-                                coupon = None 
+                                coupon = None  # Initialize coupon as None
+
                                 if coupon_code:
                                     coupon = Coupon.objects.filter(code=coupon_code).first()
                                     if not coupon or coupon.status != 'Active':
                                         return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                                 # Calculate the total amount before applying the coupon
-                                total_amount = total_cart_value
-                                
-                                
+                                try:
+                                    if coupon:
+                                        discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                        total_amount -= discount_amount
+                                except ValueError as e:
+                                    return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
                                 payment_method = request.data.get('payment_method')
                                 if not payment_method:
                                     return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
                                 if payment_method not in ['COD', 'razorpay']:
                                     return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-                                
                                 
                                 
                                 cart_items_list = [
@@ -2011,7 +2015,8 @@ class CreateOrder(APIView):
                                                 address=address,
                                                 status='pending',
                                                 payment_method=payment_method,
-                                                coupon = coupon,
+                                                coupon=coupon if coupon else None 
+
 
                                             )
 
@@ -2062,15 +2067,7 @@ class CreateOrder(APIView):
                                                 else:
                                                     update_variant_stock(item)
                                                     
-                                            if coupon_code:
-                                                try:
-                                                    discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
-                                                    total_amount -= discount_amount 
-                                                except ValueError as e:
-                                                    return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-                                            
 
                                         
                                         # Determine shipping charge based on total_amount
@@ -2098,8 +2095,6 @@ class CreateOrder(APIView):
                                     else:
                                         logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
 
-                                        # Apply shipping and coupon, if available
-                                        total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon.code)
 
                                         # Create a Razorpay order
                                         razorpay_order_id = create_razorpay_order(total_amount)
@@ -2109,6 +2104,7 @@ class CreateOrder(APIView):
                                         }, status=status.HTTP_200_OK)
                                         
                                 except Exception as e:
+                                    logging.info(f"error {e}")
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         
                         try:
@@ -2175,24 +2171,30 @@ class CreateOrder(APIView):
                                 if not address:
                                     return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
 
+                                # Calculate the total amount before applying the coupon
+                                total_amount = total_cart_value
+                                 
                                 coupon_code = request.data.get('coupon_code')
-                                coupon = None 
+                                coupon = None  # Initialize coupon as None
+
                                 if coupon_code:
                                     coupon = Coupon.objects.filter(code=coupon_code).first()
                                     if not coupon or coupon.status != 'Active':
                                         return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
                                 # Calculate the total amount before applying the coupon
-                                total_amount = total_cart_value
-                                
-                                
+                                try:
+                                    if coupon:
+                                        discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                                        total_amount -= discount_amount
+                                except ValueError as e:
+                                    return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
                                 payment_method = request.data.get('payment_method')
                                 if not payment_method:
                                     return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
                                 if payment_method not in ['COD', 'razorpay']:
                                     return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
-                                
                                 
                                 try:
                                     if payment_method == "COD":
@@ -2202,7 +2204,8 @@ class CreateOrder(APIView):
                                                 address=address,
                                                 status='pending',
                                                 payment_method=payment_method,
-                                                coupon = coupon,
+                                                coupon=coupon if coupon else None 
+
                                             )
 
                                             for item in cart_items:
@@ -2252,13 +2255,6 @@ class CreateOrder(APIView):
                                                 else:
                                                     update_variant_stock(item)
 
-                                            if coupon_code:
-                                                try:
-                                                    discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
-                                                    total_amount -= discount_amount 
-                                                except ValueError as e:
-                                                    return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
                                         
 
                                         # Determine shipping charge based on total_amount
@@ -2287,9 +2283,6 @@ class CreateOrder(APIView):
                                         
                                         logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
 
-                                        # Apply shipping and coupon, if available
-                                        total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon.code)
-
                                         # Create a Razorpay order
                                         razorpay_order_id = create_razorpay_order(total_amount)
                                         
@@ -2299,34 +2292,46 @@ class CreateOrder(APIView):
                                         }, status=status.HTTP_200_OK)
                                         
                                 except Exception as e:
+                                    logging.info(f"error {e}")
                                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                         except Exception as e:
+                            logging.info(f"error {e}")
                             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
                         return Response({"message":"No matching offer type found"})
                 except Exception as e :
+                    logging.info(f"error {e}")
                     return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         
         address = Address.objects.filter(pk=pk, user=user).first()
         if not address:
             return Response({"message": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        total_amount = sum(item.product.salePrice * item.quantity for item in cart_items)
 
         coupon_code = request.data.get('coupon_code')
-        coupon = None
+        coupon = None  # Initialize coupon as None
+
         if coupon_code:
             coupon = Coupon.objects.filter(code=coupon_code).first()
             if not coupon or coupon.status != 'Active':
                 return Response({"message": "Invalid or inactive coupon"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Calculate the total amount before applying the coupon
-        total_amount = sum(item.product.salePrice * item.quantity for item in cart_items)
-            
+        try:
+            if coupon:
+                discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
+                total_amount -= discount_amount
+        except ValueError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         payment_method = request.data.get('payment_method')
         if not payment_method:
             return Response({"message": "Payment method is required"}, status=status.HTTP_400_BAD_REQUEST)
         if payment_method not in ['COD', 'razorpay']:
             return Response({"message": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST)
+
         
         cart_items_list = [
             
@@ -2349,7 +2354,7 @@ class CreateOrder(APIView):
                         address=address,
                         status='pending',
                         payment_method=payment_method,
-                        coupon = coupon,
+                        coupon=coupon if coupon else None 
                     )
 
                     
@@ -2374,50 +2379,31 @@ class CreateOrder(APIView):
                             update_variant_stock(item)
                             
                             
-                    if coupon_code:
-                        try:
-                            discount_amount = apply_coupon(coupon.code, total_amount, cart_items)
-                            total_amount -= discount_amount 
-                        except ValueError as e:
-                            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                    
                                     
 
-                    # Determine shipping charge based on total_amount
                     if total_amount <= Decimal('500.00'):
                         order.shipping_charge = Decimal('60.00')
                     else:
                         order.shipping_charge = Decimal('0.00')
 
-                    # Add COD charge
                     order.cod_charge = Decimal('40.00')
                     total_amount += order.shipping_charge + order.cod_charge
 
-                    # Update order total amount and save
                     order.total_amount = total_amount
                     order.save()
 
-                    # Send order email and delete cart items
                     send_order_email(order, cart_items_list)
                     cart_items.delete()
 
-                    # Serialize the order data and return response
                     serializer = OrderSerializer(order)
                     return Response({"message": "Order success", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
 
             else:
-                total_amount = Decimal('0.00')  # Initialize total_amount for Razorpay seen sanam
-
-                for item in cart_items:
-                    total_amount += item.product.salePrice * item.quantity
-                
                 # Log the calculated total amount for tracking purposes
                 logging.info(f"Total amount before applying shipping and coupon: {total_amount}")
-
-                # Apply shipping and coupon, if available
-                total_amount = handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon.code)
-
-                # Create a Razorpay order
+                
                 razorpay_order_id = create_razorpay_order(total_amount)
                 
                 return Response({
@@ -2426,7 +2412,6 @@ class CreateOrder(APIView):
                 }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logging.info(f"error {e}")
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def update_single_product_stock(check_color, item):
@@ -2452,37 +2437,6 @@ def update_variant_stock(item):
                 break
         else:
             raise ValueError(f"Insufficient stock for {item.product.name} - {item.color} - {item.size}")
-
-def handle_shipping_and_coupon(total_amount, cart_items, coupon, order):
-    if total_amount <= Decimal('500.00'):
-        shipping_charge = Decimal('60.00')
-        total_amount += shipping_charge
-        order.shipping_charge = shipping_charge
-
-    if coupon:
-        # Pass the coupon code string instead of the coupon object
-        discount_amount = apply_coupon(coupon, total_amount, cart_items)
-        total_amount -= discount_amount
-        order.coupon = coupon
-        
-
-    return total_amount
-
-
-
-def handle_shipping_and_coupon_razorpay(total_amount, cart_items, coupon):
-    # Add shipping charges if necessary
-    if total_amount <= Decimal('500.00'):
-        shipping_charge = Decimal('60.00')
-        total_amount += shipping_charge
-
-    # Apply the coupon if available
-    if coupon:
-        discount_amount = apply_coupon(coupon, total_amount, cart_items)
-        total_amount -= discount_amount
-
-    logging.info("Final total amount after shipping and coupon: ", total_amount)
-    return total_amount
 
 
 
@@ -2667,7 +2621,7 @@ class VerifyRazorpayPaymentAPIView(APIView):
                             razorpay_order_id=razorpay_order_id,
                             payment_id = razorpay_payment_id,
                             total_amount = total_amount,
-                            coupon = coupon,
+                            coupon=coupon if coupon else None ,
                             shipping_charge = shipping_charge
                         )
 
