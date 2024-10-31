@@ -2399,7 +2399,7 @@ class CreateOrder(APIView):
 
 
             else:
-                total_amount = Decimal('0.00')  # Initialize total_amount for Razorpay
+                total_amount = Decimal('0.00')  # Initialize total_amount for Razorpay seen sanam
 
                 for item in cart_items:
                     total_amount += item.product.salePrice * item.quantity
