@@ -2520,6 +2520,9 @@ def create_razorpay_order(total_amount):
     if total_amount <= 0:
         raise ValueError("Total amount must be greater than 0")
     
+    if total_amount <= 500:
+        total_amount += 60  # Add ₹60 shipping charge
+    
     try:
         # Initialize Razorpay client
         razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
